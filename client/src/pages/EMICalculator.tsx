@@ -300,7 +300,7 @@ export default function EMICalculator() {
                         onChange={(e) => setLoanAmount(e.target.value)}
                         placeholder="Enter amount"
                         className="flex-1 px-3 py-2 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 text-center backdrop-blur-sm"
-                        style={{ outline: "none" }}
+                        style={{ outline: "none", width: '200px' }}
                       />
                       <button
                         onClick={calculateLoanAmount}
@@ -338,7 +338,7 @@ export default function EMICalculator() {
                         onChange={(e) => setLoanTenure(e.target.value)}
                         placeholder={tenureInYears ? "Years" : "Months"}
                         className="flex-1 px-3 py-2 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 text-center backdrop-blur-sm"
-                        style={{ outline: "none" }}
+                        style={{ outline: "none", width: '200px' }}
                       />
                       <button
                         onClick={calculateTenure}
@@ -369,7 +369,7 @@ export default function EMICalculator() {
                         placeholder="Annual %"
                         step="0.1"
                         className="flex-1 px-3 py-2 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 text-center backdrop-blur-sm"
-                        style={{ outline: "none" }}
+                        style={{ outline: "none", width: '200px' }}
                       />
                       <button
                         onClick={calculateInterestRate}
@@ -399,7 +399,7 @@ export default function EMICalculator() {
                         onChange={(e) => setEmiAmount(e.target.value)}
                         placeholder="Monthly EMI"
                         className="flex-1 px-3 py-2 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 text-center backdrop-blur-sm"
-                        style={{ outline: "none" }}
+                        style={{ outline: "none", width: '200px' }}
                       />
                       <button
                         onClick={calculateEMI}
