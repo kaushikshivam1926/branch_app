@@ -8,6 +8,7 @@ import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import PlaceholderApp from "./pages/PlaceholderApp";
 import DakNumberGenerator from "./pages/DakNumberGenerator";
+import EMICalculator from "./pages/EMICalculator";
 
 
 function AppRouter() {
@@ -16,9 +17,7 @@ function AppRouter() {
       <Route path={"/"} component={Landing} />
       <Route path={"/loan-recovery"} component={Home} />
       <Route path={"/dak-number"} component={DakNumberGenerator} />
-      <Route path={"/emi-calculator"}>
-        <PlaceholderApp title="EMI Calculator" />
-      </Route>
+      <Route path={"/emi-calculator"} component={EMICalculator} />
       <Route path={"/customer-directory"}>
         <PlaceholderApp title="Customer Directory" />
       </Route>
