@@ -4,13 +4,40 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import Landing from "./pages/Landing";
 import Home from "./pages/Home";
+import PlaceholderApp from "./pages/PlaceholderApp";
 
 
 function AppRouter() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Landing} />
+      <Route path={"/loan-recovery"} component={Home} />
+      <Route path={"/dak-number"}>
+        <PlaceholderApp title="Dak Number Generator" />
+      </Route>
+      <Route path={"/emi-calculator"}>
+        <PlaceholderApp title="EMI Calculator" />
+      </Route>
+      <Route path={"/customer-directory"}>
+        <PlaceholderApp title="Customer Directory" />
+      </Route>
+      <Route path={"/account-statement"}>
+        <PlaceholderApp title="Account Statement Generator" />
+      </Route>
+      <Route path={"/branch-reports"}>
+        <PlaceholderApp title="Branch Reports" />
+      </Route>
+      <Route path={"/security-docs"}>
+        <PlaceholderApp title="Security Documents" />
+      </Route>
+      <Route path={"/branch-info"}>
+        <PlaceholderApp title="Branch Information" />
+      </Route>
+      <Route path={"/misc-reports"}>
+        <PlaceholderApp title="Miscellaneous Reports" />
+      </Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

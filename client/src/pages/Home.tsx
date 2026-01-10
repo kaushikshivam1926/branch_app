@@ -1,7 +1,15 @@
+/**
+ * Loan Recovery Notice Generator
+ * 
+ * Main application page with SBI branding
+ * Allows CSV upload, displays accounts, and generates print notices
+ */
+
 import { useState, useRef } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Printer, PrinterIcon } from "lucide-react";
+import { Upload, Printer, PrinterIcon, ArrowLeft } from "lucide-react";
 import Papa from "papaparse";
 import PrintPreview from "@/components/PrintPreview";
 
@@ -91,64 +99,97 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Loan Recovery Notice Generator
-          </h1>
-          <p className="text-slate-600">
-            Upload your CSV file and generate recovery notices for non-performing accounts
-          </p>
-        </div>
-
-        {/* Upload Section */}
-        {accounts.length === 0 ? (
-          <Card className="p-12 border-2 border-dashed border-slate-300 hover:border-slate-400 transition-colors cursor-pointer"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="flex flex-col items-center justify-center text-center">
-              <Upload className="w-16 h-16 text-slate-400 mb-4" />
-              <h2 className="text-2xl font-semibold text-slate-900 mb-2">
-                Upload CSV File
-              </h2>
-              <p className="text-slate-600 mb-4">
-                Drag and drop your CSV file here, or click to browse
-              </p>
-              <p className="text-sm text-slate-500">
-                Expected columns: ACCOUNT_NO, CUSTOMER_NAME, FATHER_NAME, SPOUSE_NAME, ADDRESS1, ADDRESS2, ADDRESS3, POSTCODE, OUTSTANDING
-              </p>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileSelect}
-              className="hidden"
+    <div 
+      className="min-h-screen flex flex-col"
+      style={{ 
+        backgroundColor: "#f7f4fb",
+        fontFamily: "'Poppins', 'Effra', sans-serif"
+      }}
+    >
+      {/* Header Banner */}
+      <header 
+        className="w-full py-4 px-6"
+        style={{ 
+          background: "linear-gradient(to right, #d4007f, #4e1a74)"
+        }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center gap-4">
+          {/* SBI Logo */}
+          <div className="flex-shrink-0">
+            <img 
+              src="/images/sbi-logo.png" 
+              alt="State Bank of India" 
+              className="h-14 w-auto"
+              style={{ filter: "brightness(0) invert(1)" }}
             />
-          </Card>
-        ) : (
-          <>
-            {/* Action Buttons */}
-            <div className="flex gap-4 mb-6">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="gap-2"
+          </div>
+          
+          {/* Bank Name */}
+          <div className="flex flex-col justify-center">
+            <h1 
+              className="text-white font-semibold leading-tight"
+              style={{ fontSize: "1.3rem" }}
+            >
+              State Bank of India
+            </h1>
+            <p 
+              className="text-white/90"
+              style={{ fontSize: "0.85rem" }}
+            >
+              PBB New Market Branch
+            </p>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 py-8 px-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Back Button & Title */}
+          <div className="mb-6">
+            <Link href="/">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-2 mb-4 hover:bg-white/50"
+                style={{ color: "#4e1a74" }}
               >
-                <Upload className="w-4 h-4" />
-                Upload New File
+                <ArrowLeft className="w-4 h-4" />
+                Back to Home
               </Button>
-              <Button
-                onClick={() => setPrintingAll(true)}
-                className="gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                <PrinterIcon className="w-4 h-4" />
-                Print All ({accounts.length})
-              </Button>
+            </Link>
+            <h2 
+              className="text-2xl font-semibold mb-2"
+              style={{ color: "#4e1a74" }}
+            >
+              Loan Recovery Notice Generator
+            </h2>
+            <p style={{ color: "#666" }}>
+              Upload your CSV file and generate recovery notices for non-performing accounts
+            </p>
+          </div>
+
+          {/* Upload Section */}
+          {accounts.length === 0 ? (
+            <Card 
+              className="p-12 border-2 border-dashed hover:border-opacity-70 transition-colors cursor-pointer bg-white"
+              style={{ borderColor: "#4e1a74" }}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="flex flex-col items-center justify-center text-center">
+                <Upload className="w-16 h-16 mb-4" style={{ color: "#4e1a74" }} />
+                <h3 className="text-2xl font-semibold mb-2" style={{ color: "#333" }}>
+                  Upload CSV File
+                </h3>
+                <p className="mb-4" style={{ color: "#666" }}>
+                  Drag and drop your CSV file here, or click to browse
+                </p>
+                <p className="text-sm" style={{ color: "#999" }}>
+                  Expected columns: ACCOUNT_NO, CUSTOMER_NAME, FATHER_NAME, SPOUSE_NAME, ADDRESS1, ADDRESS2, ADDRESS3, POSTCODE, OUTSTANDING
+                </p>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -156,79 +197,132 @@ export default function Home() {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-            </div>
-
-            {/* Accounts Table */}
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-100 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                        S.No
-                      </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                        Account Number
-                      </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">
-                        Customer Name
-                      </th>
-                      <th className="px-6 py-3 text-right text-sm font-semibold text-slate-900">
-                        Outstanding Amount
-                      </th>
-                      <th className="px-6 py-3 text-center text-sm font-semibold text-slate-900">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {accounts.map((account, index) => (
-                      <tr key={index} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          {account.sr_no}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                          {account.account_no}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-700">
-                          {account.customer_name}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-right font-semibold text-red-600">
-                          ₹ {parseFloat(account.outstanding).toLocaleString('en-IN', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Button
-                            onClick={() => setPrintingAccount(account)}
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                          >
-                            <Printer className="w-4 h-4" />
-                            Print
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </Card>
+          ) : (
+            <>
+              {/* Action Buttons */}
+              <div className="flex gap-4 mb-6">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  className="gap-2"
+                  style={{ borderColor: "#4e1a74", color: "#4e1a74" }}
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload New File
+                </Button>
+                <Button
+                  onClick={() => setPrintingAll(true)}
+                  className="gap-2"
+                  style={{ backgroundColor: "#4e1a74" }}
+                >
+                  <PrinterIcon className="w-4 h-4" />
+                  Print All ({accounts.length})
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
 
-            {/* Summary */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-900">
-                <strong>{accounts.length}</strong> accounts loaded • Total Outstanding: <strong>₹ {accounts.reduce((sum, acc) => sum + (parseFloat(acc.outstanding) || 0), 0).toLocaleString('en-IN', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}</strong>
-              </p>
-            </div>
-          </>
-        )}
-      </div>
+              {/* Accounts Table */}
+              <Card className="overflow-hidden bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead style={{ backgroundColor: "#4e1a74" }}>
+                      <tr>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">
+                          S.No
+                        </th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">
+                          Account Number
+                        </th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">
+                          Customer Name
+                        </th>
+                        <th className="px-6 py-3 text-right text-sm font-semibold text-white">
+                          Outstanding Amount
+                        </th>
+                        <th className="px-6 py-3 text-center text-sm font-semibold text-white">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {accounts.map((account, index) => (
+                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 text-sm" style={{ color: "#666" }}>
+                            {account.sr_no}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium" style={{ color: "#333" }}>
+                            {account.account_no}
+                          </td>
+                          <td className="px-6 py-4 text-sm" style={{ color: "#444" }}>
+                            {account.customer_name}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-right font-semibold" style={{ color: "#d4007f" }}>
+                            ₹ {parseFloat(account.outstanding).toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <Button
+                              onClick={() => setPrintingAccount(account)}
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              style={{ borderColor: "#4e1a74", color: "#4e1a74" }}
+                            >
+                              <Printer className="w-4 h-4" />
+                              Print
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {/* Summary */}
+              <div 
+                className="mt-6 p-4 rounded-lg border"
+                style={{ backgroundColor: "#4e1a7410", borderColor: "#4e1a7430" }}
+              >
+                <p className="text-sm" style={{ color: "#4e1a74" }}>
+                  <strong>{accounts.length}</strong> accounts loaded • Total Outstanding: <strong>₹ {accounts.reduce((sum, acc) => sum + (parseFloat(acc.outstanding) || 0), 0).toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}</strong>
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="py-4 px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Dark horizontal line */}
+          <div 
+            className="w-full h-px mb-4"
+            style={{ backgroundColor: "#333" }}
+          />
+          
+          {/* Credit text */}
+          <p 
+            className="text-center text-sm"
+            style={{ color: "#666" }}
+          >
+            Ideation by <strong className="font-semibold">Shivam Kaushik</strong> Developed with AI
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
