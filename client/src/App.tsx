@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import PlaceholderApp from "./pages/PlaceholderApp";
+import DakNumberGenerator from "./pages/DakNumberGenerator";
 
 
 function AppRouter() {
@@ -14,9 +15,7 @@ function AppRouter() {
     <Switch>
       <Route path={"/"} component={Landing} />
       <Route path={"/loan-recovery"} component={Home} />
-      <Route path={"/dak-number"}>
-        <PlaceholderApp title="Dak Number Generator" />
-      </Route>
+      <Route path={"/dak-number"} component={DakNumberGenerator} />
       <Route path={"/emi-calculator"}>
         <PlaceholderApp title="EMI Calculator" />
       </Route>
