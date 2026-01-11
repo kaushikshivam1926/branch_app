@@ -39,6 +39,120 @@ export default function EMICalculator() {
   const [calcExpression, setCalcExpression] = useState<string>("");
   const [waitingForOperand, setWaitingForOperand] = useState<boolean>(false);
 
+  // Mathematical Calculator Functions - defined before useEffect
+  const handleCalcDigitFn = (digit: string) => {
+    if (waitingForOperand) {
+      setCalcDisplay(digit);
+      setWaitingForOperand(false);
+    } else {
+      setCalcDisplay(calcDisplay === "0" ? digit : calcDisplay + digit);
+    }
+  };
+
+  const handleCalcOperatorFn = (op: string) => {
+    setCalcExpression(calcDisplay + " " + op + " ");
+    setWaitingForOperand(true);
+  };
+
+  const handleCalcEqualsFn = () => {
+    if (!calcExpression) return;
+    try {
+      const expression = (calcExpression + calcDisplay)
+        .replace(/×/g, "*")
+        .replace(/÷/g, "/")
+        .replace(/−/g, "-");
+      const result = eval(expression);
+      setCalcDisplay(String(result));
+      setCalcExpression("");
+    } catch {
+      setCalcDisplay("Error");
+    }
+    setWaitingForOperand(true);
+  };
+
+  const handleCalcClearFn = () => {
+    setCalcDisplay("0");
+    setCalcExpression("");
+    setWaitingForOperand(false);
+  };
+
+  const handleCalcClearEntryFn = () => {
+    setCalcDisplay("0");
+    setWaitingForOperand(false);
+  };
+
+  const handleCalcDecimalFn = () => {
+    if (!calcDisplay.includes(".")) {
+      setCalcDisplay(calcDisplay + ".");
+    }
+  };
+
+  const handleCalcPercentFn = () => {
+    const value = parseFloat(calcDisplay) / 100;
+    setCalcDisplay(String(value));
+  };
+
+  const handleCalcSqrtFn = () => {
+    const value = Math.sqrt(parseFloat(calcDisplay));
+    setCalcDisplay(String(value));
+  };
+
+  // Keyboard support for calculator
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not focused on an input field
+      if ((e.target as HTMLElement).tagName === 'INPUT') {
+        return;
+      }
+      
+      // Prevent default for calculator keys
+      if (/^[0-9.+\-*\/=%]$/.test(e.key) || e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Escape') {
+        e.preventDefault();
+      }
+      
+      // Number keys
+      if (/^[0-9]$/.test(e.key)) {
+        handleCalcDigitFn(e.key);
+      }
+      // Decimal point
+      else if (e.key === '.') {
+        handleCalcDecimalFn();
+      }
+      // Operators
+      else if (e.key === '+') {
+        handleCalcOperatorFn('+');
+      }
+      else if (e.key === '-') {
+        handleCalcOperatorFn('−');
+      }
+      else if (e.key === '*') {
+        handleCalcOperatorFn('×');
+      }
+      else if (e.key === '/') {
+        handleCalcOperatorFn('÷');
+      }
+      // Equals
+      else if (e.key === '=' || e.key === 'Enter') {
+        handleCalcEqualsFn();
+      }
+      // Clear
+      else if (e.key === 'Escape') {
+        handleCalcClearFn();
+      }
+      // Backspace - clear entry
+      else if (e.key === 'Backspace') {
+        handleCalcClearEntryFn();
+      }
+      // Percent
+      else if (e.key === '%') {
+        handleCalcPercentFn();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
   // EMI Calculation Functions
   const calculateEMI = () => {
     const P = parseFloat(loanAmount);
@@ -146,60 +260,15 @@ export default function EMICalculator() {
     setTotalInterest(emi * months - principal);
   };
 
-  // Mathematical Calculator Functions
-  const handleCalcDigit = (digit: string) => {
-    if (waitingForOperand) {
-      setCalcDisplay(digit);
-      setWaitingForOperand(false);
-    } else {
-      setCalcDisplay(calcDisplay === "0" ? digit : calcDisplay + digit);
-    }
-  };
-
-  const handleCalcOperator = (operator: string) => {
-    setCalcExpression(calcDisplay + " " + operator + " ");
-    setWaitingForOperand(true);
-  };
-
-  const handleCalcEquals = () => {
-    try {
-      const expression = calcExpression + calcDisplay;
-      // Safe evaluation
-      const result = Function('"use strict"; return (' + expression.replace(/×/g, '*').replace(/÷/g, '/') + ')')();
-      setCalcDisplay(String(result));
-      setCalcExpression("");
-    } catch {
-      setCalcDisplay("Error");
-    }
-    setWaitingForOperand(true);
-  };
-
-  const handleCalcClear = () => {
-    setCalcDisplay("0");
-    setCalcExpression("");
-    setWaitingForOperand(false);
-  };
-
-  const handleCalcClearEntry = () => {
-    setCalcDisplay("0");
-    setWaitingForOperand(false);
-  };
-
-  const handleCalcDecimal = () => {
-    if (!calcDisplay.includes(".")) {
-      setCalcDisplay(calcDisplay + ".");
-    }
-  };
-
-  const handleCalcPercent = () => {
-    const value = parseFloat(calcDisplay) / 100;
-    setCalcDisplay(String(value));
-  };
-
-  const handleCalcSqrt = () => {
-    const value = Math.sqrt(parseFloat(calcDisplay));
-    setCalcDisplay(String(value));
-  };
+  // Mathematical Calculator Functions (used by buttons)
+  const handleCalcDigit = handleCalcDigitFn;
+  const handleCalcOperator = handleCalcOperatorFn;
+  const handleCalcEquals = handleCalcEqualsFn;
+  const handleCalcClear = handleCalcClearFn;
+  const handleCalcClearEntry = handleCalcClearEntryFn;
+  const handleCalcDecimal = handleCalcDecimalFn;
+  const handleCalcPercent = handleCalcPercentFn;
+  const handleCalcSqrt = handleCalcSqrtFn;
 
   const formatCurrency = (num: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -437,43 +506,39 @@ export default function EMICalculator() {
                 </div>
 
                 {/* Keypad */}
-                <div className="grid grid-cols-6 gap-2">
-                  {/* Row 1 */}
+                <div className="grid grid-cols-5 gap-2">
+                  {/* Row 1: C, AC, √, %, ÷ */}
                   <CalcButton onClick={handleCalcClearEntry} label="C" variant="gray" />
                   <CalcButton onClick={handleCalcClear} label="AC" variant="gray" />
-                  <CalcButton onClick={handleCalcSqrt} label="√" variant="gray" />
-                  <CalcButton onClick={handleCalcPercent} label="%" variant="gray" />
-                  <CalcButton onClick={() => handleCalcOperator("+")} label="+" variant="pink" />
                   <CalcButton onClick={handleCalcSqrt} label="√" variant="pink" />
+                  <CalcButton onClick={handleCalcPercent} label="%" variant="pink" />
+                  <CalcButton onClick={() => handleCalcOperator("÷")} label="÷" variant="purple" />
                   
-                  {/* Row 2 */}
+                  {/* Row 2: 7, 8, 9, × */}
                   <CalcButton onClick={() => handleCalcDigit("7")} label="7" variant="gray" />
                   <CalcButton onClick={() => handleCalcDigit("8")} label="8" variant="gray" />
                   <CalcButton onClick={() => handleCalcDigit("9")} label="9" variant="gray" />
-                  <CalcButton onClick={() => handleCalcDigit("0")} label="0" variant="gray" />
                   <CalcButton onClick={() => handleCalcOperator("×")} label="×" variant="purple" />
                   <CalcButton onClick={() => handleCalcOperator("-")} label="−" variant="purple" />
                   
-                  {/* Row 3 */}
+                  {/* Row 3: 4, 5, 6, - */}
                   <CalcButton onClick={() => handleCalcDigit("4")} label="4" variant="gray" />
                   <CalcButton onClick={() => handleCalcDigit("5")} label="5" variant="gray" />
-                  <CalcButton onClick={() => handleCalcDigit("5")} label="5" variant="gray" />
                   <CalcButton onClick={() => handleCalcDigit("6")} label="6" variant="gray" />
-                  <CalcButton onClick={() => handleCalcOperator("×")} label="×" variant="cyan" />
-                  <CalcButton onClick={() => handleCalcOperator("÷")} label="÷" variant="purple" />
+                  <CalcButton onClick={() => handleCalcOperator("+")} label="+" variant="cyan" />
+                  <div></div>
                   
-                  {/* Row 4 */}
+                  {/* Row 4: 1, 2, 3, + */}
                   <CalcButton onClick={() => handleCalcDigit("1")} label="1" variant="gray" />
                   <CalcButton onClick={() => handleCalcDigit("2")} label="2" variant="gray" />
                   <CalcButton onClick={() => handleCalcDigit("3")} label="3" variant="gray" />
-                  <CalcButton onClick={() => handleCalcDigit("3")} label="3" variant="gray" />
-                  <CalcButton onClick={() => handleCalcOperator("+")} label="+" variant="cyan" />
-                  <CalcButton onClick={handleCalcEquals} label="=" variant="blue" />
+                  <div></div>
+                  <div></div>
                   
-                  {/* Row 5 */}
+                  {/* Row 5: 0, ., = (wide) */}
                   <CalcButton onClick={() => handleCalcDigit("0")} label="0" variant="gray" wide />
                   <CalcButton onClick={handleCalcDecimal} label="." variant="gray" />
-                  <CalcButton onClick={handleCalcPercent} label="%" variant="gray" />
+                  <CalcButton onClick={handleCalcEquals} label="=" variant="blue" wide />
                 </div>
               </div>
             </div>
