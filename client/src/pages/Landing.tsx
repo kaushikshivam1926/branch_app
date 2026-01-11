@@ -11,8 +11,8 @@ import {
   FileText, 
   Mail, 
   Calculator, 
-  Users, 
-  CreditCard, 
+  CheckSquare, 
+  UserPlus, 
   BarChart3, 
   Shield, 
   Building2, 
@@ -54,19 +54,19 @@ const appCards: AppCard[] = [
     color: "#0066b3"
   },
   {
-    id: "customer-directory",
-    title: "Customer Directory",
-    description: "Search and manage customer information",
-    icon: <Users className="w-8 h-8" />,
-    path: "/customer-directory",
+    id: "reminders",
+    title: "Reminder & To-Do",
+    description: "Manage tasks and reminders for daily operations",
+    icon: <CheckSquare className="w-8 h-8" />,
+    path: "/reminders",
     color: "#00a650"
   },
   {
-    id: "account-statement",
-    title: "Account Statement Generator",
-    description: "Generate account statements for customers",
-    icon: <CreditCard className="w-8 h-8" />,
-    path: "/account-statement",
+    id: "lead-management",
+    title: "Lead Management System",
+    description: "Track and manage customer leads",
+    icon: <UserPlus className="w-8 h-8" />,
+    path: "/lead-management",
     color: "#ff6b00"
   },
   {
@@ -125,7 +125,7 @@ export default function Landing() {
             <img 
               src="/images/sbi-logo.png" 
               alt="State Bank of India" 
-              className="h-14 w-auto"
+              className="h-28 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}
             />
           </div>

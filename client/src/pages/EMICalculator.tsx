@@ -299,7 +299,7 @@ export default function EMICalculator() {
             <img 
               src="/images/sbi-logo.png" 
               alt="State Bank of India" 
-              className="h-14 w-auto"
+              className="h-28 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}
             />
           </div>

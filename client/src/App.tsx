@@ -9,6 +9,8 @@ import Home from "./pages/Home";
 import PlaceholderApp from "./pages/PlaceholderApp";
 import DakNumberGenerator from "./pages/DakNumberGenerator";
 import EMICalculator from "./pages/EMICalculator";
+import RemindersApp from "./pages/RemindersApp";
+import LeadManagementApp from "./pages/LeadManagementApp";
 
 
 function AppRouter() {
@@ -18,12 +20,8 @@ function AppRouter() {
       <Route path={"/loan-recovery"} component={Home} />
       <Route path={"/dak-number"} component={DakNumberGenerator} />
       <Route path={"/emi-calculator"} component={EMICalculator} />
-      <Route path={"/customer-directory"}>
-        <PlaceholderApp title="Customer Directory" />
-      </Route>
-      <Route path={"/account-statement"}>
-        <PlaceholderApp title="Account Statement Generator" />
-      </Route>
+      <Route path={"/reminders"} component={RemindersApp} />
+      <Route path={"/lead-management"} component={LeadManagementApp} />
       <Route path={"/branch-reports"}>
         <PlaceholderApp title="Branch Reports" />
       </Route>
