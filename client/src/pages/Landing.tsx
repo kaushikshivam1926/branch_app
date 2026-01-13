@@ -30,11 +30,13 @@ import {
   GripVertical
 } from "lucide-react";
 
+type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet";
+
 interface AppCard {
   id: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
+  iconName: IconName;
   path: string;
   color: string;
   visible: boolean;
@@ -46,7 +48,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "dak-number",
     title: "Dak Number Generator",
     description: "Generate and manage Dak numbers for official correspondence",
-    icon: <Mail className="w-8 h-8" />,
+    iconName: "Mail",
     path: "/dak-number",
     color: "#d4007f"
   },
@@ -54,7 +56,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "loan-recovery",
     title: "Loan Recovery Notice Generator",
     description: "Generate recovery notices for non-performing loan accounts",
-    icon: <FileText className="w-8 h-8" />,
+    iconName: "FileText",
     path: "/loan-recovery",
     color: "#4e1a74"
   },
@@ -62,7 +64,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "emi-calculator",
     title: "EMI Calculator",
     description: "Calculate EMI for various loan products",
-    icon: <Calculator className="w-8 h-8" />,
+    iconName: "Calculator",
     path: "/emi-calculator",
     color: "#0066b3"
   },
@@ -70,7 +72,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "reminders",
     title: "Reminder & To-Do",
     description: "Manage tasks and reminders for daily operations",
-    icon: <CheckSquare className="w-8 h-8" />,
+    iconName: "CheckSquare",
     path: "/reminders",
     color: "#00a650"
   },
@@ -78,7 +80,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "lead-management",
     title: "Lead Management System",
     description: "Track and manage customer leads",
-    icon: <UserPlus className="w-8 h-8" />,
+    iconName: "UserPlus",
     path: "/lead-management",
     color: "#ff6b00"
   },
@@ -86,7 +88,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "web-resource-hub",
     title: "Web Resource Hub",
     description: "Frequently used websites and resources",
-    icon: <Globe className="w-8 h-8" />,
+    iconName: "Globe",
     path: "/web-resource-hub",
     color: "#e91e63"
   },
@@ -94,7 +96,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "security-docs",
     title: "Security Documents",
     description: "Manage loan security and collateral documents",
-    icon: <Shield className="w-8 h-8" />,
+    iconName: "Shield",
     path: "/security-docs",
     color: "#673ab7"
   },
@@ -102,7 +104,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "branch-info",
     title: "Branch Information",
     description: "View branch details and contact information",
-    icon: <Building2 className="w-8 h-8" />,
+    iconName: "Building2",
     path: "/branch-info",
     color: "#009688"
   },
@@ -110,11 +112,39 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "misc-reports",
     title: "Miscellaneous Reports",
     description: "Generate various miscellaneous reports",
-    icon: <FileSpreadsheet className="w-8 h-8" />,
+    iconName: "FileSpreadsheet",
     path: "/misc-reports",
     color: "#795548"
   }
 ];
+
+// Icon component mapper
+const IconComponent = ({ name, className }: { name: IconName; className?: string }) => {
+  const iconClass = className || "w-8 h-8";
+  
+  switch (name) {
+    case "Mail":
+      return <Mail className={iconClass} />;
+    case "FileText":
+      return <FileText className={iconClass} />;
+    case "Calculator":
+      return <Calculator className={iconClass} />;
+    case "CheckSquare":
+      return <CheckSquare className={iconClass} />;
+    case "UserPlus":
+      return <UserPlus className={iconClass} />;
+    case "Globe":
+      return <Globe className={iconClass} />;
+    case "Shield":
+      return <Shield className={iconClass} />;
+    case "Building2":
+      return <Building2 className={iconClass} />;
+    case "FileSpreadsheet":
+      return <FileSpreadsheet className={iconClass} />;
+    default:
+      return <Globe className={iconClass} />;
+  }
+};
 
 export default function Landing() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -129,7 +159,13 @@ export default function Landing() {
     if (savedSettings) {
       try {
         const settings = JSON.parse(savedSettings);
-        setAppCards(settings);
+        // Check if the data has the new iconName field
+        if (settings.length > 0 && settings[0].iconName) {
+          setAppCards(settings);
+        } else {
+          // Old format detected, reinitialize
+          initializeDefaultCards();
+        }
       } catch {
         initializeDefaultCards();
       }
@@ -321,7 +357,7 @@ export default function Landing() {
                         color: card.color
                       }}
                     >
-                      {card.icon}
+                      <IconComponent name={card.iconName} />
                     </div>
                     
                     {/* Title */}
