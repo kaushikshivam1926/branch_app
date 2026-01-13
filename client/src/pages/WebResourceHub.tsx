@@ -347,7 +347,7 @@ export default function WebResourceHub() {
                     className="flex items-center gap-2 bg-gradient-to-r from-pink-600 to-purple-700 text-white px-6 py-2 rounded-lg hover:opacity-90 transition-opacity font-medium"
                   >
                     <Plus className="w-4 h-4" />
-                    Add Resource
+                    Add URL/Website
                   </button>
                   <button
                     onClick={clearForm}
