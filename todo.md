@@ -1,27 +1,36 @@
 # TODO List - Current Requirements
 
-## Banner & Layout Updates
-- [ ] Reduce banner height by 50% (keep logo and text size same)
-- [ ] Make all landing page cards uniform in size
+## Web Resource Hub Enhancements
+- [x] Change header text from "Add New Resource" to "Add New URL/Website"
+- [ ] Implement drag-and-drop for URL cards within categories
+- [ ] Implement drag-and-drop for URL cards between categories
+- [ ] Add automatic favicon fetching from URLs
+- [ ] Use vectorized web icon as fallback for URLs without favicons
+- [ ] Build category management system (admin only)
+- [ ] Make categories collapsible
+- [ ] Implement drag-and-drop for category reordering
 
-## Landing Page Admin Controls
-- [ ] Add admin login button to landing page
-- [ ] Implement iOS-style toggle switches for each card (hide/show apps)
-- [ ] Hide toggle switches from regular users
-- [ ] Add drag-and-drop card reordering for admin
-- [ ] Store card order and visibility in localStorage
+## Backup & Restore System
+- [ ] Add centralized "Export All Data" button on landing page (admin only)
+- [ ] Add centralized "Import All Data" button on landing page (admin only)
+- [ ] Add individual backup button in each app
+- [ ] Add individual restore button in each app
+- [ ] Implement JSON export format for all app data
+- [ ] Implement JSON import with validation
 
-## Web Resource Hub App
-- [ ] Create new "Web Resource Hub" app component
-- [ ] Replace "Branch Reports" card with "Web Resource Hub"
-- [ ] Implement URL repository with:
-  - [ ] Users can add URLs
-  - [ ] Only admin can update/delete entries
-  - [ ] Admin can create categories
-  - [ ] Fetch and store favicons
-  - [ ] Mahjong tile-style cards with favicons
-  - [ ] Use web/globe icon as fallback
-  - [ ] Collapsible categories
-  - [ ] Search bar at top
-- [ ] Use admin credentials (Admin/sbi@13042)
-- [ ] Maintain SBI branding consistency
+## Data Persistence (IndexedDB)
+- [ ] Create IndexedDB wrapper/utility
+- [ ] Migrate all apps to use IndexedDB as primary storage
+- [ ] Keep localStorage as fallback
+- [ ] Add automatic data sync between IndexedDB and localStorage
+- [ ] Add export reminder system
+- [ ] Test data persistence after browser data clearing
+
+## Apps to Update with Backup/Restore
+- [ ] Dak Number Generator
+- [ ] Loan Recovery Notice Generator (CSV data)
+- [ ] EMI Calculator (calculation history)
+- [ ] Reminder & To-Do
+- [ ] Lead Management System
+- [ ] Web Resource Hub
+- [ ] Landing Page (card settings + centralized backup/restore)

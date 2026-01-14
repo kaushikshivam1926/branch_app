@@ -27,8 +27,11 @@ import {
   Globe,
   LogIn,
   LogOut,
-  GripVertical
+  GripVertical,
+  Download,
+  Upload
 } from "lucide-react";
+import { exportAllData, importAllData } from "@/lib/db";
 
 type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet";
 
@@ -237,6 +240,46 @@ export default function Landing() {
     setDraggedCard(null);
   };
 
+  const handleExportAll = async () => {
+    try {
+      const data = await exportAllData();
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `SBI_Branch_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert("All data exported successfully!");
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Failed to export data. Please try again.");
+    }
+  };
+
+  const handleImportAll = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        await importAllData(text);
+        alert("All data imported successfully! Please refresh the page.");
+        window.location.reload();
+      } catch (error) {
+        console.error("Import failed:", error);
+        alert("Failed to import data. Please check the file format.");
+      }
+    };
+    input.click();
+  };
+
   const visibleCards = isAdmin ? appCards : appCards.filter(card => card.visible);
 
   return (
@@ -283,8 +326,28 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Admin Login/Logout Button */}
-          <div>
+          {/* Admin Controls */}
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <>
+                <button
+                  onClick={handleExportAll}
+                  className="flex items-center gap-2 bg-green-600/80 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
+                  title="Export all app data"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export All</span>
+                </button>
+                <button
+                  onClick={handleImportAll}
+                  className="flex items-center gap-2 bg-blue-600/80 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
+                  title="Import backup data"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Import All</span>
+                </button>
+              </>
+            )}
             {isAdmin ? (
               <button
                 onClick={handleLogout}

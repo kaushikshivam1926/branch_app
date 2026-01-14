@@ -22,12 +22,8 @@ import {
   Search,
   LogIn,
   LogOut,
-  ArrowLeft,
-  Download,
-  Upload,
-  GripVertical
+  ArrowLeft
 } from "lucide-react";
-import { saveData, loadData } from "@/lib/db";
 
 interface WebResource {
   id: string;
@@ -53,31 +49,21 @@ export default function WebResourceHub() {
   const [formCategory, setFormCategory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Load resources from IndexedDB
+  // Load resources from localStorage
   useEffect(() => {
-    loadData("sbi-web-resources").then(data => {
-      if (data) {
-        setResources(data);
-      } else {
-        // Fallback to localStorage
-        const saved = localStorage.getItem("sbi-web-resources");
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            setResources(parsed);
-            saveData("sbi-web-resources", parsed); // Migrate to IndexedDB
-          } catch {
-            setResources([]);
-          }
-        }
+    const saved = localStorage.getItem("sbi-web-resources");
+    if (saved) {
+      try {
+        setResources(JSON.parse(saved));
+      } catch {
+        setResources([]);
       }
-    });
+    }
   }, []);
 
-  // Save resources to IndexedDB and localStorage
+  // Save resources to localStorage
   useEffect(() => {
     if (resources.length >= 0) {
-      saveData("sbi-web-resources", resources);
       localStorage.setItem("sbi-web-resources", JSON.stringify(resources));
     }
   }, [resources]);
@@ -177,44 +163,6 @@ export default function WebResourceHub() {
     });
   };
 
-  const handleExport = () => {
-    const data = JSON.stringify(resources, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Web_Resources_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    alert("Resources exported successfully!");
-  };
-
-  const handleImport = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        if (Array.isArray(data)) {
-          setResources(data);
-          alert("Resources imported successfully!");
-        } else {
-          alert("Invalid file format");
-        }
-      } catch (error) {
-        alert("Failed to import data. Please check the file format.");
-      }
-    };
-    input.click();
-  };
-
   // Group resources by category
   const categorizedResources = resources.reduce((acc, resource) => {
     const category = resource.category || "Uncategorized";
@@ -282,26 +230,6 @@ export default function WebResourceHub() {
           </div>
 
           <div className="flex items-center gap-3">
-            {isAdmin && (
-              <>
-                <button
-                  onClick={handleExport}
-                  className="flex items-center gap-2 bg-green-600/80 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
-                  title="Export resources"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export</span>
-                </button>
-                <button
-                  onClick={handleImport}
-                  className="flex items-center gap-2 bg-blue-600/80 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
-                  title="Import resources"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>Import</span>
-                </button>
-              </>
-            )}
             {isAdmin ? (
               <button
                 onClick={handleLogout}
@@ -337,7 +265,7 @@ export default function WebResourceHub() {
           {/* Add/Edit Form */}
           <div className="bg-white rounded-xl p-6 shadow-md mb-6">
             <h2 className="text-lg font-semibold mb-4" style={{ color: "#4e1a74" }}>
-              {editingId ? "Edit URL/Website" : "Add New URL/Website"}
+              {editingId ? "Edit Resource" : "Add New Resource"}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
