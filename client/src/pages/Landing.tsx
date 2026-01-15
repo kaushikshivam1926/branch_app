@@ -44,6 +44,7 @@ interface AppCard {
   color: string;
   visible: boolean;
   order: number;
+  statistics?: string; // For displaying dynamic stats on the card
 }
 
 const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
@@ -175,7 +176,45 @@ export default function Landing() {
     } else {
       initializeDefaultCards();
     }
+    
+    // Load task statistics for Reminder & To-Do card
+    loadTaskStatistics();
   }, []);
+  
+  // Load task statistics from localStorage
+  const loadTaskStatistics = () => {
+    try {
+      const tasksData = localStorage.getItem("sbi-tasks");
+      if (tasksData) {
+        const tasks = JSON.parse(tasksData);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let overdue = 0, dueToday = 0, dueTomorrow = 0;
+        
+        tasks.forEach((task: any) => {
+          if (task.completed) return;
+          
+          const taskDate = new Date(task.dueDate);
+          taskDate.setHours(0, 0, 0, 0);
+          const diffDays = Math.floor((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays < 0) overdue++;
+          else if (diffDays === 0) dueToday++;
+          else if (diffDays === 1) dueTomorrow++;
+        });
+        
+        const totalTasks = tasks.filter((t: any) => !t.completed).length;
+        const stats = `Overdue: ${overdue} | Today: ${dueToday} | Tomorrow: ${dueTomorrow} | Total: ${totalTasks}`;
+        
+        setAppCards(prev => prev.map(card => 
+          card.id === "reminders" ? { ...card, statistics: stats } : card
+        ));
+      }
+    } catch (error) {
+      console.error("Error loading task statistics:", error);
+    }
+  };
 
   const initializeDefaultCards = () => {
     const cards = defaultAppCards.map((card, index) => ({
@@ -438,6 +477,15 @@ export default function Landing() {
                     >
                       {card.description}
                     </p>
+                    
+                    {/* Statistics (if available) */}
+                    {card.statistics && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs font-medium" style={{ color: "#333" }}>
+                          {card.statistics}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </Link>
 
@@ -501,6 +549,25 @@ export default function Landing() {
             <h3 className="text-xl font-semibold mb-4" style={{ color: "#4e1a74" }}>
               Admin Login
             </h3>
+            
+            {/* Task Statistics */}
+            {(() => {
+              const reminderCard = appCards.find(card => card.id === "reminders");
+              if (reminderCard?.statistics) {
+                return (
+                  <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <h4 className="text-sm font-semibold mb-2" style={{ color: "#4e1a74" }}>
+                      Reminder & To-Do Statistics
+                    </h4>
+                    <p className="text-xs font-medium text-gray-700">
+                      {reminderCard.statistics}
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
