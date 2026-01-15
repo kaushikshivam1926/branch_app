@@ -335,23 +335,13 @@ export default function RemindersApp() {
           
           <div className="flex items-center gap-3">
             {isAdmin ? (
-              <>
-                <Button
-                  variant="outline"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/40"
-                  onClick={() => setShowTaskListDialog(true)}
-                >
-                  <List className="w-4 h-4 mr-2" />
-                  Task Lists
-                </Button>
-                <Button
-                  variant="outline"
-                  className="bg-green-500 hover:bg-green-600 text-white border-none"
-                  onClick={handleLogout}
-                >
-                  Logout Admin
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                className="bg-green-500 hover:bg-green-600 text-white border-none"
+                onClick={handleLogout}
+              >
+                Logout Admin
+              </Button>
             ) : (
               <Button
                 variant="outline"
@@ -379,18 +369,20 @@ export default function RemindersApp() {
           {/* Add Task Button */}
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-2xl font-semibold" style={{ color: "#4e1a74" }}>
-              My Tasks
+              {isAdmin ? "All Tasks (Admin View)" : "My Tasks"}
             </h2>
-            <Button
-              className="bg-gradient-to-r from-[#d4007f] to-[#4e1a74] hover:opacity-90 text-white"
-              onClick={() => {
-                resetForm();
-                setShowTaskDialog(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Task
-            </Button>
+            {!isAdmin && (
+              <Button
+                className="bg-gradient-to-r from-[#d4007f] to-[#4e1a74] hover:opacity-90 text-white"
+                onClick={() => {
+                  resetForm();
+                  setShowTaskDialog(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Task
+              </Button>
+            )}
           </div>
 
           {/* Task Categories */}
