@@ -215,6 +215,8 @@ export default function RemindersApp() {
     if (diffDays === 0) return "today";
     if (diffDays === 1) return "tomorrow";
     if (diffDays === 2) return "dayAfter";
+    // For admin, include all future tasks
+    if (isAdmin && diffDays > 2) return "future";
     return null;
   };
 
@@ -224,6 +226,7 @@ export default function RemindersApp() {
       today: [] as Task[],
       tomorrow: [] as Task[],
       dayAfter: [] as Task[],
+      future: [] as Task[],
     };
 
     tasks.forEach(task => {
@@ -431,6 +434,18 @@ export default function RemindersApp() {
                 </h3>
                 <div className="space-y-3">
                   {categorizedTasks.dayAfter.map(task => renderTaskCard(task, "dayAfter"))}
+                </div>
+              </div>
+            )}
+
+            {/* Future Tasks (Admin Only) */}
+            {isAdmin && categorizedTasks.future.length > 0 && (
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-purple-700">
+                  Future Tasks ({categorizedTasks.future.length})
+                </h3>
+                <div className="space-y-3">
+                  {categorizedTasks.future.map(task => renderTaskCard(task, "future"))}
                 </div>
               </div>
             )}
