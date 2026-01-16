@@ -205,14 +205,25 @@ export default function Landing() {
         });
         
         const totalTasks = tasks.filter((t: any) => !t.completed).length;
-        const stats = `Overdue: ${overdue} | Today: ${dueToday} | Tomorrow: ${dueTomorrow} | Total: ${totalTasks}`;
+        const stats = `Overdue: ${overdue} | Today: ${dueToday} | Total: ${totalTasks}`;
         
+        setAppCards(prev => prev.map(card => 
+          card.id === "reminders" ? { ...card, statistics: stats } : card
+        ));
+      } else {
+        // No tasks, show 0 counts
+        const stats = `Overdue: 0 | Today: 0 | Total: 0`;
         setAppCards(prev => prev.map(card => 
           card.id === "reminders" ? { ...card, statistics: stats } : card
         ));
       }
     } catch (error) {
       console.error("Error loading task statistics:", error);
+      // On error, show 0 counts
+      const stats = `Overdue: 0 | Today: 0 | Total: 0`;
+      setAppCards(prev => prev.map(card => 
+        card.id === "reminders" ? { ...card, statistics: stats } : card
+      ));
     }
   };
 
