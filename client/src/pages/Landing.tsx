@@ -31,7 +31,7 @@ import {
   Download,
   Upload
 } from "lucide-react";
-import { exportAllData, importAllData } from "@/lib/db";
+import { db, exportAllData, importAllData, loadData, saveData } from "@/lib/db";
 
 type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet";
 
@@ -157,36 +157,38 @@ export default function Landing() {
   const [appCards, setAppCards] = useState<AppCard[]>([]);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
 
-  // Load app settings from localStorage
+  // Load app settings from IndexedDB
   useEffect(() => {
-    const savedSettings = localStorage.getItem("sbi-app-settings");
-    if (savedSettings) {
+    const loadSettings = async () => {
       try {
-        const settings = JSON.parse(savedSettings);
-        // Check if the data has the new iconName field
-        if (settings.length > 0 && settings[0].iconName) {
-          setAppCards(settings);
+        const savedSettings = await loadData("sbi-app-settings");
+        if (savedSettings) {
+          // Check if the data has the new iconName field
+          if (savedSettings.length > 0 && savedSettings[0].iconName) {
+            setAppCards(savedSettings);
+          } else {
+            // Old format detected, reinitialize
+            initializeDefaultCards();
+          }
         } else {
-          // Old format detected, reinitialize
           initializeDefaultCards();
         }
-      } catch {
+      } catch (error) {
+        console.error("Failed to load settings:", error);
         initializeDefaultCards();
       }
-    } else {
-      initializeDefaultCards();
-    }
+    };
     
+    loadSettings();
     // Load task statistics for Reminder & To-Do card
     loadTaskStatistics();
   }, []);
   
   // Load task statistics from localStorage
-  const loadTaskStatistics = () => {
+  const loadTaskStatistics = async () => {
     try {
-      const tasksData = localStorage.getItem("sbi-tasks");
-      if (tasksData) {
-        const tasks = JSON.parse(tasksData);
+      const tasks = await loadData("sbi-tasks");
+      if (tasks) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -227,20 +229,27 @@ export default function Landing() {
     }
   };
 
-  const initializeDefaultCards = () => {
+  const initializeDefaultCards = async () => {
     const cards = defaultAppCards.map((card, index) => ({
       ...card,
       visible: true,
       order: index
     }));
     setAppCards(cards);
-    localStorage.setItem("sbi-app-settings", JSON.stringify(cards));
+    await saveData("sbi-app-settings", cards);
   };
 
   // Save settings whenever cards change
   useEffect(() => {
+    const saveSettings = async () => {
+      try {
+        await saveData("sbi-app-settings", appCards);
+      } catch (error) {
+        console.error("Failed to save app settings:", error);
+      }
+    };
     if (appCards.length > 0) {
-      localStorage.setItem("sbi-app-settings", JSON.stringify(appCards));
+      saveSettings();
     }
   }, [appCards]);
 

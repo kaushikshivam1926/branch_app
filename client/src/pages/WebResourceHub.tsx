@@ -74,11 +74,10 @@ export default function WebResourceHub() {
     });
   }, []);
 
-  // Save resources to IndexedDB and localStorage
+  // Save resources to IndexedDB
   useEffect(() => {
     if (resources.length >= 0) {
       saveData("sbi-web-resources", resources);
-      localStorage.setItem("sbi-web-resources", JSON.stringify(resources));
     }
   }, [resources]);
 

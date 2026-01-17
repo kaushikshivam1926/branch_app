@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { loadData, saveData } from "@/lib/db";
 
 interface Task {
   id: string;
@@ -62,18 +63,42 @@ export default function RemindersApp() {
   const [frequency, setFrequency] = useState<Task["frequency"]>("One-time");
   const [dueDate, setDueDate] = useState("");
 
-  // Load tasks from localStorage
+  // Load tasks from IndexedDB
   useEffect(() => {
-    const savedTasks = localStorage.getItem("sbi-reminders-tasks");
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    }
+    const loadTasks = async () => {
+      try {
+        const savedTasks = await loadData("sbi-tasks");
+        if (savedTasks) {
+          setTasks(savedTasks);
+        }
+      } catch (error) {
+        console.error("Failed to load tasks:", error);
+        // Fallback to localStorage
+        const localTasks = localStorage.getItem("sbi-tasks");
+        if (localTasks) {
+          const parsed = JSON.parse(localTasks);
+          setTasks(parsed);
+          // Migrate to IndexedDB
+          saveData("sbi-tasks", parsed);
+        }
+      }
+    };
+    loadTasks();
   }, []);
 
-  // Save tasks to localStorage
+  // Save tasks to IndexedDB
   useEffect(() => {
-    if (tasks.length > 0) {
-      localStorage.setItem("sbi-reminders-tasks", JSON.stringify(tasks));
+    const saveTasks = async () => {
+      try {
+        await saveData("sbi-tasks", tasks);
+      } catch (error) {
+        console.error("Failed to save tasks:", error);
+        // Fallback to localStorage
+        localStorage.setItem("sbi-tasks", JSON.stringify(tasks));
+      }
+    };
+    if (tasks.length >= 0) {
+      saveTasks();
     }
   }, [tasks]);
 

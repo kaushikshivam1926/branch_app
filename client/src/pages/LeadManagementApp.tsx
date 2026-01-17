@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { loadData, saveData } from "@/lib/db";
 
 interface Lead {
   id: string;
@@ -82,18 +83,42 @@ export default function LeadManagementApp() {
   const [sortColumn, setSortColumn] = useState<keyof Lead | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Load leads from localStorage
+  // Load leads from IndexedDB
   useEffect(() => {
-    const savedLeads = localStorage.getItem("sbi-leads");
-    if (savedLeads) {
-      setLeads(JSON.parse(savedLeads));
-    }
+    const loadLeads = async () => {
+      try {
+        const savedLeads = await loadData("sbi-leads");
+        if (savedLeads) {
+          setLeads(savedLeads);
+        }
+      } catch (error) {
+        console.error("Failed to load leads:", error);
+        // Fallback to localStorage
+        const localLeads = localStorage.getItem("sbi-leads");
+        if (localLeads) {
+          const parsed = JSON.parse(localLeads);
+          setLeads(parsed);
+          // Migrate to IndexedDB
+          saveData("sbi-leads", parsed);
+        }
+      }
+    };
+    loadLeads();
   }, []);
 
-  // Save leads to localStorage
+  // Save leads to IndexedDB
   useEffect(() => {
-    if (leads.length > 0) {
-      localStorage.setItem("sbi-leads", JSON.stringify(leads));
+    const saveLeads = async () => {
+      try {
+        await saveData("sbi-leads", leads);
+      } catch (error) {
+        console.error("Failed to save leads:", error);
+        // Fallback to localStorage
+        localStorage.setItem("sbi-leads", JSON.stringify(leads));
+      }
+    };
+    if (leads.length >= 0) {
+      saveLeads();
     }
   }, [leads]);
 

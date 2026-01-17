@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2 } from "lucide-react";
+import { loadData, saveData } from "@/lib/db";
 
 const ADMIN_PASSWORD = "sbi13042";
 const STORAGE_KEY = "sbi_letter_refs_13042";
@@ -44,16 +45,33 @@ function getTodayInfo() {
   };
 }
 
-function loadRecords(): DakRecord[] {
+async function loadRecords(): Promise<DakRecord[]> {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const data = await loadData("sbi-dak-records");
+    if (data) return data;
+    
+    // Fallback to localStorage for migration
+    const localData = localStorage.getItem(STORAGE_KEY);
+    if (localData) {
+      const parsed = JSON.parse(localData);
+      // Migrate to IndexedDB
+      await saveData("sbi-dak-records", parsed);
+      return parsed;
+    }
+    return [];
   } catch {
     return [];
   }
 }
 
-function saveRecordsToStorage(records: DakRecord[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+async function saveRecordsToStorage(records: DakRecord[]) {
+  try {
+    await saveData("sbi-dak-records", records);
+  } catch (error) {
+    console.error("Failed to save records:", error);
+    // Fallback to localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
 }
 
 function generateSerial(records: DakRecord[], fy: string): string {
@@ -140,13 +158,16 @@ export default function DakNumberGenerator() {
 
   // Load records on mount
   useEffect(() => {
-    const loadedRecords = loadRecords();
-    setRecords(loadedRecords);
-    const serial = generateSerial(loadedRecords, today.fyLabel);
-    setRefNo(buildRef(today.fyLabel, today.monthNo, serial));
+    const initRecords = async () => {
+      const loadedRecords = await loadRecords();
+      setRecords(loadedRecords);
+      const serial = generateSerial(loadedRecords, today.fyLabel);
+      setRefNo(buildRef(today.fyLabel, today.monthNo, serial));
+    };
+    initRecords();
   }, [today.fyLabel, today.monthNo]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!letterType || !letterDestination || !recipientDetails || !subject) {
       setStatus({ message: "Please fill all required fields.", type: "error" });
       return;
@@ -171,7 +192,7 @@ export default function DakNumberGenerator() {
 
     const newRecords = [...records, record];
     setRecords(newRecords);
-    saveRecordsToStorage(newRecords);
+    await saveRecordsToStorage(newRecords);
 
     setStatus({ message: "Saved successfully.", type: "success" });
 
@@ -238,9 +259,7 @@ export default function DakNumberGenerator() {
     setIsAdminLoggedIn(false);
     setAdminPassword("");
   };
-
-  const handleEditRecord = (id: number) => {
-    const r = records.find(x => x.id === id);
+  const handleUpdateRecord = async (id: number) => {    const r = records.find(x => x.id === id);
     if (!r) return;
 
     const newType = prompt("Letter Type:", r.letterType);
@@ -264,14 +283,14 @@ export default function DakNumberGenerator() {
         : rec
     );
     setRecords(updatedRecords);
-    saveRecordsToStorage(updatedRecords);
+    await saveRecordsToStorage(updatedRecords);
   };
 
-  const handleDeleteRecord = (id: number) => {
+  const handleDeleteRecord = async (id: number) => {
     if (!confirm("Delete this record?")) return;
     const updatedRecords = records.filter(r => r.id !== id);
     setRecords(updatedRecords);
-    saveRecordsToStorage(updatedRecords);
+    await saveRecordsToStorage(updatedRecords);
   };
 
   // Get unique FYs for filter
@@ -662,7 +681,7 @@ export default function DakNumberGenerator() {
                               <div className="flex gap-1">
                                 <Button 
                                   size="sm" 
-                                  onClick={() => handleEditRecord(r.id)}
+                                  onClick={() => handleUpdateRecord(r.id)}
                                   style={{ backgroundColor: "#198754", padding: "4px 8px" }}
                                 >
                                   <Pencil className="w-3 h-3" />
