@@ -182,9 +182,11 @@ export default function Landing() {
     loadSettings();
     // Load task statistics for Reminder & To-Do card
     loadTaskStatistics();
+    // Load lead statistics for Lead Management card
+    loadLeadStatistics();
   }, []);
   
-  // Load task statistics from localStorage
+  // Load task statistics from IndexedDB
   const loadTaskStatistics = async () => {
     try {
       const tasks = await loadData("sbi-tasks");
@@ -225,6 +227,54 @@ export default function Landing() {
       const stats = `Overdue: 0 | Today: 0 | Total: 0`;
       setAppCards(prev => prev.map(card => 
         card.id === "reminders" ? { ...card, statistics: stats } : card
+      ));
+    }
+  };
+
+  // Load lead statistics from IndexedDB
+  const loadLeadStatistics = async () => {
+    try {
+      const leads = await loadData("sbi-leads");
+      if (leads && leads.length > 0) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        
+        // Count active leads (Open or Pending status)
+        const activeLeads = leads.filter((lead: any) => 
+          lead.status === "Open" || lead.status === "Pending"
+        ).length;
+        
+        // Count overdue follow-ups (active leads with follow-up date before today)
+        const overdueFollowUps = leads.filter((lead: any) => {
+          if (lead.status !== "Open" && lead.status !== "Pending") return false;
+          return lead.followUpDate < todayStr;
+        }).length;
+        
+        // Count follow-ups due today (active leads with follow-up date = today)
+        const followUpToday = leads.filter((lead: any) => {
+          if (lead.status !== "Open" && lead.status !== "Pending") return false;
+          return lead.followUpDate === todayStr;
+        }).length;
+        
+        const stats = `Active: ${activeLeads} | Overdue: ${overdueFollowUps} | Today: ${followUpToday}`;
+        
+        setAppCards(prev => prev.map(card => 
+          card.id === "lead-management" ? { ...card, statistics: stats } : card
+        ));
+      } else {
+        // No leads, show 0 counts
+        const stats = `Active: 0 | Overdue: 0 | Today: 0`;
+        setAppCards(prev => prev.map(card => 
+          card.id === "lead-management" ? { ...card, statistics: stats } : card
+        ));
+      }
+    } catch (error) {
+      console.error("Error loading lead statistics:", error);
+      // On error, show 0 counts
+      const stats = `Active: 0 | Overdue: 0 | Today: 0`;
+      setAppCards(prev => prev.map(card => 
+        card.id === "lead-management" ? { ...card, statistics: stats } : card
       ));
     }
   };
