@@ -7,6 +7,7 @@
 
 import { useState, useRef } from "react";
 import { Link } from "wouter";
+import { useBranch } from "@/contexts/BranchContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, Printer, PrinterIcon, ArrowLeft } from "lucide-react";
@@ -28,6 +29,7 @@ interface LoanAccount {
 }
 
 export default function Home() {
+  const { branchName } = useBranch();
   const [accounts, setAccounts] = useState<LoanAccount[]>([]);
   const [printingAccount, setPrintingAccount] = useState<LoanAccount | null>(null);
   const [printingAll, setPrintingAll] = useState(false);
@@ -136,7 +138,7 @@ export default function Home() {
               className="text-white/90"
               style={{ fontSize: "0.85rem" }}
             >
-              PBB New Market Branch
+              {branchName}
             </p>
           </div>
         </div>

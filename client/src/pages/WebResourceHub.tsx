@@ -12,6 +12,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
+import { useBranch } from "@/contexts/BranchContext";
 import { 
   Globe, 
   Plus, 
@@ -40,6 +41,7 @@ interface WebResource {
 }
 
 export default function WebResourceHub() {
+  const { branchName } = useBranch();
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [password, setPassword] = useState("");
@@ -275,7 +277,7 @@ export default function WebResourceHub() {
                 className="text-white/90"
                 style={{ fontSize: "0.85rem" }}
               >
-                PBB New Market Branch
+                {branchName}
               </p>
             </div>
           </div>

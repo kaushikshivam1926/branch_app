@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2 } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
+import { useBranch } from "@/contexts/BranchContext";
 
 const ADMIN_PASSWORD = "sbi13042";
 const STORAGE_KEY = "sbi_letter_refs_13042";
@@ -81,8 +82,8 @@ function generateSerial(records: DakRecord[], fy: string): string {
   return String(max + 1).padStart(4, "0");
 }
 
-function buildRef(fy: string, month: string, serial: string): string {
-  return `SBI/13042/${fy}/${month}/${serial}`;
+function buildRef(fy: string, month: string, serial: string, branchCode: string): string {
+  return `SBI/${branchCode}/${fy}/${month}/${serial}`;
 }
 
 function generateSlipHTML(record: DakRecord): string {
@@ -138,6 +139,7 @@ function generateSlipHTML(record: DakRecord): string {
 }
 
 export default function DakNumberGenerator() {
+  const { branchName, branchCode } = useBranch();
   const today = getTodayInfo();
   
   const [records, setRecords] = useState<DakRecord[]>([]);
@@ -162,10 +164,10 @@ export default function DakNumberGenerator() {
       const loadedRecords = await loadRecords();
       setRecords(loadedRecords);
       const serial = generateSerial(loadedRecords, today.fyLabel);
-      setRefNo(buildRef(today.fyLabel, today.monthNo, serial));
+      setRefNo(buildRef(today.fyLabel, today.monthNo, serial, branchCode));
     };
     initRecords();
-  }, [today.fyLabel, today.monthNo]);
+  }, [today.fyLabel, today.monthNo, branchCode]);
 
   const handleSave = async () => {
     if (!letterType || !letterDestination || !recipientDetails || !subject) {
@@ -174,7 +176,7 @@ export default function DakNumberGenerator() {
     }
 
     const serial = generateSerial(records, today.fyLabel);
-    const ref = buildRef(today.fyLabel, today.monthNo, serial);
+    const ref = buildRef(today.fyLabel, today.monthNo, serial, branchCode);
 
     const record: DakRecord = {
       id: Date.now(),
@@ -205,7 +207,7 @@ export default function DakNumberGenerator() {
 
     // Generate next reference
     const nextSerial = generateSerial(newRecords, today.fyLabel);
-    setRefNo(buildRef(today.fyLabel, today.monthNo, nextSerial));
+    setRefNo(buildRef(today.fyLabel, today.monthNo, nextSerial, branchCode));
   };
 
   const handleReset = () => {
@@ -216,7 +218,7 @@ export default function DakNumberGenerator() {
     setRemarks("");
     setStatus({ message: "", type: "" });
     const serial = generateSerial(records, today.fyLabel);
-    setRefNo(buildRef(today.fyLabel, today.monthNo, serial));
+    setRefNo(buildRef(today.fyLabel, today.monthNo, serial, branchCode));
   };
 
   const handlePrintSlip = () => {
@@ -341,7 +343,7 @@ export default function DakNumberGenerator() {
               className="text-white font-semibold leading-tight"
               style={{ fontSize: "1.3rem" }}
             >
-              Letter Dak Management System – PBB New Market Branch
+              Letter Dak Management System – {branchName}
             </h1>
             <p 
               className="text-white/90"

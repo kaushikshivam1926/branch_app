@@ -12,6 +12,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
+import { useBranch } from "@/contexts/BranchContext";
 import { ArrowLeft, Plus, Edit2, Trash2, Check, Calendar, Clock, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ const ADMIN_USERNAME = "Admin";
 const ADMIN_PASSWORD = "sbi@13042";
 
 export default function RemindersApp() {
+  const { branchName } = useBranch();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
@@ -357,7 +359,7 @@ export default function RemindersApp() {
             </div>
             <div className="flex flex-col justify-center">
               <h1 className="text-white font-semibold text-xl">Reminder & To-Do</h1>
-              <p className="text-white/90 text-sm">PBB New Market Branch</p>
+              <p className="text-white/90 text-sm">{branchName}</p>
             </div>
           </div>
           

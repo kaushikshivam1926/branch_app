@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Search } from "lucide-react";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface AmortizationRow {
   month: number;
@@ -22,6 +23,7 @@ interface AmortizationRow {
 }
 
 export default function EMICalculator() {
+  const { branchName } = useBranch();
   // EMI Calculator State
   const [loanAmount, setLoanAmount] = useState<string>("");
   const [interestRate, setInterestRate] = useState<string>("");
@@ -314,7 +316,7 @@ export default function EMICalculator() {
               className="text-white/90"
               style={{ fontSize: "0.85rem" }}
             >
-              PBB New Market Branch
+              {branchName}
             </p>
           </div>
         </div>

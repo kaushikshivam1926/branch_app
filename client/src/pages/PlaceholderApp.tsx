@@ -6,6 +6,7 @@
  */
 
 import { Link } from "wouter";
+import { useBranch } from "@/contexts/BranchContext";
 import { ArrowLeft, Construction } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +15,7 @@ interface PlaceholderAppProps {
 }
 
 export default function PlaceholderApp({ title }: PlaceholderAppProps) {
+  const { branchName } = useBranch();
   return (
     <div 
       className="min-h-screen flex flex-col"
@@ -52,7 +54,7 @@ export default function PlaceholderApp({ title }: PlaceholderAppProps) {
               className="text-white/90"
               style={{ fontSize: "0.85rem" }}
             >
-              PBB New Market Branch
+              {branchName}
             </p>
           </div>
         </div>

@@ -156,6 +156,11 @@ export default function Landing() {
   const [password, setPassword] = useState("");
   const [appCards, setAppCards] = useState<AppCard[]>([]);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
+  const [branchCode, setBranchCode] = useState("13042");
+  const [branchName, setBranchName] = useState("PBB New Market Branch");
+  const [showBranchConfig, setShowBranchConfig] = useState(false);
+  const [tempBranchCode, setTempBranchCode] = useState("");
+  const [tempBranchName, setTempBranchName] = useState("");
 
   // Load app settings from IndexedDB
   useEffect(() => {
@@ -184,6 +189,8 @@ export default function Landing() {
     loadTaskStatistics();
     // Load lead statistics for Lead Management card
     loadLeadStatistics();
+    // Load branch configuration
+    loadBranchConfig();
   }, []);
   
   // Load task statistics from IndexedDB
@@ -276,6 +283,47 @@ export default function Landing() {
       setAppCards(prev => prev.map(card => 
         card.id === "lead-management" ? { ...card, statistics: stats } : card
       ));
+    }
+  };
+
+  const loadBranchConfig = async () => {
+    try {
+      const config = await loadData("sbi-branch-config");
+      if (config) {
+        setBranchCode(config.branchCode || "13042");
+        setBranchName(config.branchName || "PBB New Market Branch");
+      }
+    } catch (error) {
+      console.error("Failed to load branch config:", error);
+    }
+  };
+
+  const saveBranchConfig = async () => {
+    if (!tempBranchCode || tempBranchCode.length !== 5 || !/^\d{5}$/.test(tempBranchCode)) {
+      alert("Branch Code must be exactly 5 digits");
+      return;
+    }
+    if (!tempBranchName || tempBranchName.length > 30) {
+      alert("Branch Name must be between 1 and 30 characters");
+      return;
+    }
+    
+    const config = {
+      branchCode: tempBranchCode,
+      branchName: tempBranchName
+    };
+    
+    try {
+      await saveData("sbi-branch-config", config);
+      setBranchCode(tempBranchCode);
+      setBranchName(tempBranchName);
+      setShowBranchConfig(false);
+      setTempBranchCode("");
+      setTempBranchName("");
+      alert("Branch configuration saved successfully!");
+    } catch (error) {
+      console.error("Failed to save branch config:", error);
+      alert("Failed to save branch configuration");
     }
   };
 
@@ -430,7 +478,7 @@ export default function Landing() {
                 className="text-white/90"
                 style={{ fontSize: "0.85rem" }}
               >
-                PBB New Market Branch
+                {branchName}
               </p>
             </div>
           </div>
@@ -439,6 +487,18 @@ export default function Landing() {
           <div className="flex items-center gap-3">
             {isAdmin && (
               <>
+                <button
+                  onClick={() => {
+                    setTempBranchCode(branchCode);
+                    setTempBranchName(branchName);
+                    setShowBranchConfig(true);
+                  }}
+                  className="flex items-center gap-2 bg-purple-600/80 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
+                  title="Configure branch details"
+                >
+                  <Building2 className="w-4 h-4" />
+                  <span>Branch Config</span>
+                </button>
                 <button
                   onClick={handleExportAll}
                   className="flex items-center gap-2 bg-green-600/80 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
@@ -662,6 +722,82 @@ export default function Landing() {
                 onClick={() => {
                   setShowLoginModal(false);
                   setPassword("");
+                }}
+                className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Branch Configuration Modal */}
+      {showBranchConfig && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowBranchConfig(false)}
+        >
+          <div 
+            className="bg-white rounded-xl p-6 w-96 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-4" style={{ color: "#4e1a74" }}>
+              Branch Configuration
+            </h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Branch Code <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={tempBranchCode}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (/^\d{0,5}$/.test(value)) {
+                    setTempBranchCode(value);
+                  }
+                }}
+                maxLength={5}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                placeholder="Enter 5-digit branch code"
+              />
+              <p className="text-xs text-gray-500 mt-1">Must be exactly 5 digits</p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Branch Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={tempBranchName}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length <= 30) {
+                    setTempBranchName(value);
+                  }
+                }}
+                maxLength={30}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                placeholder="Enter branch name"
+              />
+              <p className="text-xs text-gray-500 mt-1">{tempBranchName.length}/30 characters</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={saveBranchConfig}
+                className="flex-1 bg-gradient-to-r from-pink-600 to-purple-700 text-white py-2 rounded-lg hover:opacity-90 transition-opacity font-medium"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setShowBranchConfig(false);
+                  setTempBranchCode("");
+                  setTempBranchName("");
                 }}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
