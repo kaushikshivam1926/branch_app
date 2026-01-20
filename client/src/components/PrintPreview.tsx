@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer } from "lucide-react";
+import { useBranch } from "@/contexts/BranchContext";
+import type { NoticeTemplate, TemplateElement } from "./TemplateDesigner";
 
 interface LoanAccount {
   sr_no: string;
@@ -19,13 +21,37 @@ interface LoanAccount {
 interface PrintPreviewProps {
   account?: LoanAccount;
   accounts?: LoanAccount[];
+  template?: NoticeTemplate;
   onClose: () => void;
 }
 
-export default function PrintPreview({ account, accounts, onClose }: PrintPreviewProps) {
+export default function PrintPreview({ account, accounts, template, onClose }: PrintPreviewProps) {
+  const { branchCode } = useBranch();
   const printRef = useRef<HTMLDivElement>(null);
   const [letterRefNo, setLetterRefNo] = useState("");
   const [letterDate, setLetterDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const replaceFieldValues = (content: string, acc: LoanAccount): string => {
+    const today = new Date();
+    const refNo = `SBI/${branchCode}/${today.getFullYear()}-${(today.getFullYear() + 1).toString().slice(-2)}/LRN/${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    
+    return content
+      .replace(/{{ref_no}}/g, refNo)
+      .replace(/{{date}}/g, new Date(letterDate).toLocaleDateString('en-IN'))
+      .replace(/{{customer_name}}/g, acc.customer_name)
+      .replace(/{{father_name}}/g, acc.father_name || "")
+      .replace(/{{spouse_name}}/g, acc.spouse_name || "")
+      .replace(/{{account_no}}/g, acc.account_no)
+      .replace(/{{address1}}/g, acc.address1 || "")
+      .replace(/{{address2}}/g, acc.address2 || "")
+      .replace(/{{address3}}/g, acc.address3 || "")
+      .replace(/{{postcode}}/g, acc.postcode || "")
+      .replace(/{{mobile}}/g, acc.mobile || "")
+      .replace(/{{outstanding}}/g, `₹ ${parseFloat(acc.outstanding).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`);
+  };
 
   useEffect(() => {
     // Generate letter reference number
@@ -49,7 +75,51 @@ export default function PrintPreview({ account, accounts, onClose }: PrintPrevie
     return [addr1, addr2, addr3].filter(a => a && a.trim()).join(", ");
   };
 
-  const renderNotice = (acc: LoanAccount) => (
+  const renderNotice = (acc: LoanAccount) => {
+    // If template is provided, use it; otherwise use default layout
+    if (template && template.elements.length > 0) {
+      return (
+        <div key={acc.account_no} className="page-break print:page-break-after-always">
+          <div style={{
+            width: "210mm",
+            height: "297mm",
+            margin: "0 auto",
+            padding: "20mm",
+            backgroundColor: "white",
+            fontFamily: "Arial, sans-serif",
+            position: "relative",
+          }}>
+            {template.elements.map(element => {
+              const displayContent = element.type === "field" 
+                ? replaceFieldValues(element.content, acc)
+                : element.content;
+              
+              return (
+                <div
+                  key={element.id}
+                  style={{
+                    position: "absolute",
+                    left: element.x,
+                    top: element.y,
+                    fontSize: `${element.fontSize}px`,
+                    fontWeight: element.fontWeight,
+                    fontStyle: element.fontStyle,
+                    textDecoration: element.textDecoration,
+                    textAlign: element.textAlign,
+                    width: element.width ? `${element.width}px` : "auto",
+                  }}
+                >
+                  {displayContent}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // Default template fallback
+    return (
     <div key={acc.account_no} className="page-break print:page-break-after-always">
       <div style={{
         width: "210mm",
@@ -204,7 +274,8 @@ export default function PrintPreview({ account, accounts, onClose }: PrintPrevie
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex flex-col">

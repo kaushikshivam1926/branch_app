@@ -5,14 +5,16 @@
  * Allows CSV upload, displays accounts, and generates print notices
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { useBranch } from "@/contexts/BranchContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Printer, PrinterIcon, ArrowLeft } from "lucide-react";
+import { Upload, Printer, PrinterIcon, ArrowLeft, Settings, FileText, X, Trash2 } from "lucide-react";
 import Papa from "papaparse";
 import PrintPreview from "@/components/PrintPreview";
+import TemplateDesigner, { NoticeTemplate } from "@/components/TemplateDesigner";
+import { openDB } from "idb";
 
 interface LoanAccount {
   sr_no: string;
@@ -28,12 +30,60 @@ interface LoanAccount {
   mobile?: string;
 }
 
+const DB_NAME = "sbi-templates";
+const STORE_NAME = "notice-templates";
+
+async function getTemplateDB() {
+  return openDB(DB_NAME, 1, {
+    upgrade(db: any) {
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    },
+  });
+}
+
 export default function Home() {
   const { branchName } = useBranch();
   const [accounts, setAccounts] = useState<LoanAccount[]>([]);
   const [printingAccount, setPrintingAccount] = useState<LoanAccount | null>(null);
   const [printingAll, setPrintingAll] = useState(false);
+  const [showTemplateDesigner, setShowTemplateDesigner] = useState(false);
+  const [templates, setTemplates] = useState<NoticeTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<NoticeTemplate | null>(null);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    const db = await getTemplateDB();
+    const allTemplates = await db.getAll(STORE_NAME);
+    setTemplates(allTemplates);
+    if (allTemplates.length > 0 && !selectedTemplate) {
+      setSelectedTemplate(allTemplates[0]);
+    }
+  };
+
+  const saveTemplate = async (template: NoticeTemplate) => {
+    const db = await getTemplateDB();
+    await db.put(STORE_NAME, template);
+    await loadTemplates();
+    setShowTemplateDesigner(false);
+    setSelectedTemplate(template);
+  };
+
+  const deleteTemplate = async (templateId: string) => {
+    if (!confirm("Are you sure you want to delete this template?")) return;
+    const db = await getTemplateDB();
+    await db.delete(STORE_NAME, templateId);
+    await loadTemplates();
+    if (selectedTemplate?.id === templateId) {
+      setSelectedTemplate(null);
+    }
+  };
 
   const handleFileUpload = (file: File) => {
     Papa.parse(file, {
@@ -86,6 +136,7 @@ export default function Home() {
     return (
       <PrintPreview
         account={printingAccount}
+        template={selectedTemplate || undefined}
         onClose={() => setPrintingAccount(null)}
       />
     );
@@ -95,6 +146,7 @@ export default function Home() {
     return (
       <PrintPreview
         accounts={accounts}
+        template={selectedTemplate || undefined}
         onClose={() => setPrintingAll(false)}
       />
     );
@@ -203,7 +255,7 @@ export default function Home() {
           ) : (
             <>
               {/* Action Buttons */}
-              <div className="flex gap-4 mb-6">
+              <div className="flex gap-4 mb-6 flex-wrap">
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
@@ -214,9 +266,19 @@ export default function Home() {
                   Upload New File
                 </Button>
                 <Button
+                  onClick={() => setShowTemplateManager(!showTemplateManager)}
+                  variant="outline"
+                  className="gap-2"
+                  style={{ borderColor: "#d4007f", color: "#d4007f" }}
+                >
+                  <Settings className="w-4 h-4" />
+                  Manage Templates ({templates.length})
+                </Button>
+                <Button
                   onClick={() => setPrintingAll(true)}
                   className="gap-2"
                   style={{ backgroundColor: "#4e1a74" }}
+                  disabled={!selectedTemplate}
                 >
                   <PrinterIcon className="w-4 h-4" />
                   Print All ({accounts.length})
@@ -306,6 +368,97 @@ export default function Home() {
           )}
         </div>
       </main>
+
+      {/* Template Manager Modal */}
+      {showTemplateManager && (
+        <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center p-4">
+          <Card className="bg-white p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold" style={{ color: "#4e1a74" }}>
+                Template Manager
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowTemplateManager(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                onClick={() => setShowTemplateDesigner(true)}
+                className="w-full gap-2"
+                style={{ backgroundColor: "#d4007f" }}
+              >
+                <FileText className="w-4 h-4" />
+                Create New Template
+              </Button>
+
+              {templates.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">
+                  No templates created yet. Create your first template to get started.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {templates.map(template => (
+                    <div
+                      key={template.id}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        selectedTemplate?.id === template.id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                      onClick={() => setSelectedTemplate(template)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold" style={{ color: "#333" }}>
+                            {template.name}
+                          </h4>
+                          <p className="text-sm text-gray-500">
+                            {template.elements.length} elements • Last updated:{" "}
+                            {new Date(template.updatedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowTemplateDesigner(true);
+                              setShowTemplateManager(false);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteTemplate(template.id);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Template Designer Modal */}
+      {showTemplateDesigner && (
+        <TemplateDesigner
+          onClose={() => setShowTemplateDesigner(false)}
+          onSave={saveTemplate}
+          existingTemplate={selectedTemplate || undefined}
+        />
+      )}
 
       {/* Footer */}
       <footer className="py-4 px-6">
