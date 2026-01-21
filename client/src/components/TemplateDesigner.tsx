@@ -125,20 +125,51 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file extension
     if (!file.name.endsWith('.docx')) {
-      alert('Please upload a .docx file');
+      alert('Please upload a .docx file (not .doc or other formats)');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.includes('wordprocessingml') && !file.type.includes('officedocument')) {
+      alert('Invalid file type. Please upload a valid .docx file.');
       return;
     }
 
     try {
       const arrayBuffer = await file.arrayBuffer();
+      
+      // Validate that we have data
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        throw new Error('File is empty or could not be read');
+      }
+
+      // Check if it's a valid zip file (docx is a zip archive)
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const isZip = uint8Array[0] === 0x50 && uint8Array[1] === 0x4B; // PK header
+      
+      if (!isZip) {
+        throw new Error('File is not a valid .docx file (missing zip signature)');
+      }
+
       const result = await mammoth.extractRawText({ arrayBuffer });
+      
+      if (!result.value || result.value.trim().length === 0) {
+        alert('The Word document appears to be empty. Please check the file and try again.');
+        return;
+      }
+      
       setTextContent(result.value);
       setTemplateType("text");
     } catch (error) {
       console.error('Error reading Word document:', error);
-      alert('Failed to read Word document. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to read Word document: ${errorMessage}\n\nPlease ensure you are uploading a valid .docx file (not .doc, .pdf, or other formats).`);
     }
+    
+    // Reset the input so the same file can be uploaded again if needed
+    event.target.value = '';
   };
 
   const insertFieldAtCursor = (fieldValue: string) => {
