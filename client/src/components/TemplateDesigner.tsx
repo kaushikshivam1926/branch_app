@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,12 @@ import {
   AlignRight,
   Bold,
   Italic,
-  Underline
+  Underline,
+  Upload,
+  FileText
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import mammoth from "mammoth";
 
 export interface TemplateElement {
   id: string;
@@ -34,7 +37,9 @@ export interface TemplateElement {
 export interface NoticeTemplate {
   id: string;
   name: string;
+  type: "visual" | "text"; // visual = drag-drop canvas, text = Word template
   elements: TemplateElement[];
+  textContent?: string; // For text-based templates from Word
   createdAt: number;
   updatedAt: number;
 }
@@ -62,10 +67,14 @@ const AVAILABLE_FIELDS = [
 
 export default function TemplateDesigner({ onClose, onSave, existingTemplate }: TemplateDesignerProps) {
   const [templateName, setTemplateName] = useState(existingTemplate?.name || "");
+  const [templateType, setTemplateType] = useState<"visual" | "text">(existingTemplate?.type || "visual");
+  const [textContent, setTextContent] = useState(existingTemplate?.textContent || "");
   const [elements, setElements] = useState<TemplateElement[]>(existingTemplate?.elements || []);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [draggedField, setDraggedField] = useState<string | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<number>(0);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const addElement = (content: string, x: number, y: number, type: "field" | "text" | "static" = "field") => {
     const newElement: TemplateElement = {
@@ -112,6 +121,46 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
     }
   };
 
+  const handleWordUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.docx')) {
+      alert('Please upload a .docx file');
+      return;
+    }
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      setTextContent(result.value);
+      setTemplateType("text");
+    } catch (error) {
+      console.error('Error reading Word document:', error);
+      alert('Failed to read Word document. Please try again.');
+    }
+  };
+
+  const insertFieldAtCursor = (fieldValue: string) => {
+    if (templateType !== "text") return;
+    
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText = textContent.substring(0, start) + fieldValue + textContent.substring(end);
+    
+    setTextContent(newText);
+    setCursorPosition(start + fieldValue.length);
+    
+    // Restore focus and cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + fieldValue.length, start + fieldValue.length);
+    }, 0);
+  };
+
   const handleSave = () => {
     if (!templateName.trim()) {
       alert("Please enter a template name");
@@ -121,7 +170,9 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
     const template: NoticeTemplate = {
       id: existingTemplate?.id || `template-${Date.now()}`,
       name: templateName,
+      type: templateType,
       elements,
+      textContent: templateType === "text" ? textContent : undefined,
       createdAt: existingTemplate?.createdAt || Date.now(),
       updatedAt: Date.now(),
     };
@@ -146,6 +197,38 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
               onChange={(e) => setTemplateName(e.target.value)}
               className="max-w-xs"
             />
+            <div className="flex gap-2">
+              <Button
+                variant={templateType === "visual" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTemplateType("visual")}
+              >
+                Visual Canvas
+              </Button>
+              <Button
+                variant={templateType === "text" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTemplateType("text")}
+              >
+                Text Template
+              </Button>
+            </div>
+            {templateType === "text" && (
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept=".docx"
+                  onChange={handleWordUpload}
+                  className="hidden"
+                />
+                <Button variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Word
+                  </span>
+                </Button>
+              </label>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button onClick={handleSave} style={{ backgroundColor: "#d4007f" }}>
@@ -165,13 +248,23 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
             <h3 className="font-semibold mb-3" style={{ color: "#4e1a74" }}>
               Available Fields
             </h3>
+            <p className="text-xs text-gray-600 mb-3">
+              {templateType === "text" 
+                ? "Click a field to insert at cursor position"
+                : "Drag fields onto the canvas"}
+            </p>
             <div className="space-y-2">
               {AVAILABLE_FIELDS.map(field => (
                 <div
                   key={field.id}
-                  draggable
-                  onDragStart={() => setDraggedField(field.value)}
-                  className="p-2 bg-gray-50 rounded border border-gray-200 cursor-move hover:bg-gray-100 transition-colors"
+                  draggable={templateType === "visual"}
+                  onDragStart={() => templateType === "visual" && setDraggedField(field.value)}
+                  onClick={() => templateType === "text" && insertFieldAtCursor(field.value)}
+                  className={`p-2 bg-gray-50 rounded border border-gray-200 transition-colors ${
+                    templateType === "text" 
+                      ? "cursor-pointer hover:bg-blue-50 hover:border-blue-300" 
+                      : "cursor-move hover:bg-gray-100"
+                  }`}
                 >
                   <div className="text-sm font-medium">{field.label}</div>
                   <div className="text-xs text-gray-500">{field.value}</div>
@@ -179,35 +272,38 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
               ))}
             </div>
 
-            <div className="mt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const text = prompt("Enter static text:");
-                  if (text) addElement(text, 50, 50, "static");
-                }}
-                className="w-full"
-              >
-                <Type className="w-4 h-4 mr-2" />
-                Add Static Text
-              </Button>
-            </div>
+            {templateType === "visual" && (
+              <div className="mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const text = prompt("Enter static text:");
+                    if (text) addElement(text, 50, 50, "static");
+                  }}
+                  className="w-full"
+                >
+                  <Type className="w-4 h-4 mr-2" />
+                  Add Static Text
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* Center - Canvas */}
+          {/* Center - Canvas or Text Editor */}
           <div className="flex-1 p-4 overflow-auto bg-gray-100">
-            <div
-              ref={canvasRef}
-              onDrop={handleCanvasDrop}
-              onDragOver={handleCanvasDragOver}
-              className="bg-white shadow-lg mx-auto relative"
-              style={{
-                width: "210mm",
-                height: "297mm",
-                padding: "20mm",
-              }}
-            >
+            {templateType === "visual" ? (
+              <div
+                ref={canvasRef}
+                onDrop={handleCanvasDrop}
+                onDragOver={handleCanvasDragOver}
+                className="bg-white shadow-lg mx-auto relative"
+                style={{
+                  width: "210mm",
+                  height: "297mm",
+                  padding: "20mm",
+                }}
+              >
               {elements.map(element => (
                 <div
                   key={element.id}
@@ -258,10 +354,27 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            ) : (
+              <div className="bg-white shadow-lg mx-auto" style={{ width: "210mm", minHeight: "297mm" }}>
+                <textarea
+                  ref={textareaRef}
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                  onSelect={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    setCursorPosition(target.selectionStart);
+                  }}
+                  className="w-full h-full p-8 font-serif text-sm leading-relaxed resize-none border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ minHeight: "297mm" }}
+                  placeholder="Upload a Word document or start typing your letter template. Click fields on the left to insert them at the cursor position."
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right Sidebar - Properties */}
+          {/* Right Sidebar - Properties (Visual mode only) */}
+          {templateType === "visual" && (
           <div className="w-64 border-l p-4 overflow-y-auto">
             <h3 className="font-semibold mb-3" style={{ color: "#4e1a74" }}>
               Properties
@@ -395,6 +508,7 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
               </p>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>

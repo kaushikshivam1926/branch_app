@@ -77,7 +77,29 @@ export default function PrintPreview({ account, accounts, template, onClose }: P
 
   const renderNotice = (acc: LoanAccount) => {
     // If template is provided, use it; otherwise use default layout
-    if (template && template.elements.length > 0) {
+    if (template && template.type === "text" && template.textContent) {
+      // Text-based template from Word document
+      const processedText = replaceFieldValues(template.textContent, acc);
+      return (
+        <div key={acc.account_no} className="page-break print:page-break-after-always">
+          <div style={{
+            width: "210mm",
+            minHeight: "297mm",
+            margin: "0 auto",
+            padding: "20mm",
+            backgroundColor: "white",
+            fontFamily: "serif",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            whiteSpace: "pre-wrap",
+          }}>
+            {processedText}
+          </div>
+        </div>
+      );
+    }
+    
+    if (template && template.type === "visual" && template.elements.length > 0) {
       return (
         <div key={acc.account_no} className="page-break print:page-break-after-always">
           <div style={{
