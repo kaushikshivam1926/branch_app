@@ -128,12 +128,7 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
     // Validate file extension
     if (!file.name.endsWith('.docx')) {
       alert('Please upload a .docx file (not .doc or other formats)');
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.includes('wordprocessingml') && !file.type.includes('officedocument')) {
-      alert('Invalid file type. Please upload a valid .docx file.');
+      event.target.value = '';
       return;
     }
 
@@ -145,27 +140,22 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
         throw new Error('File is empty or could not be read');
       }
 
-      // Check if it's a valid zip file (docx is a zip archive)
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const isZip = uint8Array[0] === 0x50 && uint8Array[1] === 0x4B; // PK header
-      
-      if (!isZip) {
-        throw new Error('File is not a valid .docx file (missing zip signature)');
-      }
-
+      // Try to extract text using mammoth
       const result = await mammoth.extractRawText({ arrayBuffer });
       
       if (!result.value || result.value.trim().length === 0) {
         alert('The Word document appears to be empty. Please check the file and try again.');
+        event.target.value = '';
         return;
       }
       
       setTextContent(result.value);
       setTemplateType("text");
+      alert('Word document loaded successfully! You can now edit the text and insert fields.');
     } catch (error) {
       console.error('Error reading Word document:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to read Word document: ${errorMessage}\n\nPlease ensure you are uploading a valid .docx file (not .doc, .pdf, or other formats).`);
+      alert(`Failed to read Word document: ${errorMessage}\n\nTip: You can also type or paste your letter template directly in the text editor without uploading a Word file.`);
     }
     
     // Reset the input so the same file can be uploaded again if needed
@@ -255,7 +245,7 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
                 <Button variant="outline" size="sm" asChild>
                   <span>
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Word
+                    Upload Word (Optional)
                   </span>
                 </Button>
               </label>
@@ -398,7 +388,7 @@ export default function TemplateDesigner({ onClose, onSave, existingTemplate }: 
                   }}
                   className="w-full h-full p-8 font-serif text-sm leading-relaxed resize-none border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ minHeight: "297mm" }}
-                  placeholder="Upload a Word document or start typing your letter template. Click fields on the left to insert them at the cursor position."
+                  placeholder="Start typing or paste your letter template here...\n\nTip: Click 'Upload Word' to import from a .docx file, or type directly.\nClick any field from the left panel to insert it at your cursor position.\n\nExample:\nRef: {{ref_no}}\nDate: {{date}}\n\nDear {{customer_name}},\n\nYour account {{account_no}} has an outstanding amount of {{outstanding}}..."
                 />
               </div>
             )}
