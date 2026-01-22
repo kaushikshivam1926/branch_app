@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { useBranch } from "@/contexts/BranchContext";
 import { 
   Globe, 
+  Link2,
   Plus, 
   Edit2, 
   Trash2, 
@@ -510,8 +511,8 @@ export default function WebResourceHub() {
                                     }}
                                   />
                                 ) : null}
-                                <Globe 
-                                  className={`w-8 h-8 text-gray-400 ${resource.favicon ? "hidden" : ""}`}
+                                <Link2 
+                                  className={`w-8 h-8 text-purple-400 ${resource.favicon ? "hidden" : ""}`}
                                 />
                               </div>
 
