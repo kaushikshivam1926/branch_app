@@ -45,6 +45,15 @@ interface Task {
   createdAt: string;
 }
 
+interface CompletionRecord {
+  id: string;
+  taskId: string;
+  taskName: string;
+  frequency: string;
+  completedDate: string;
+  originalDueDate: string;
+}
+
 const ADMIN_USERNAME = "Admin";
 const ADMIN_PASSWORD = "sbi@13042";
 
@@ -55,7 +64,9 @@ export default function RemindersApp() {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showTaskListDialog, setShowTaskListDialog] = useState(false);
+  const [showCompletionHistoryDialog, setShowCompletionHistoryDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [completionHistory, setCompletionHistory] = useState<CompletionRecord[]>([]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [lastReminderTime, setLastReminderTime] = useState<number>(Date.now());
@@ -65,13 +76,18 @@ export default function RemindersApp() {
   const [frequency, setFrequency] = useState<Task["frequency"]>("One-time");
   const [dueDate, setDueDate] = useState("");
 
-  // Load tasks from IndexedDB
+  // Load tasks and completion history from IndexedDB
   useEffect(() => {
     const loadTasks = async () => {
       try {
         const savedTasks = await loadData("sbi-tasks");
         if (savedTasks) {
           setTasks(savedTasks);
+        }
+        
+        const savedHistory = await loadData("sbi-completion-history");
+        if (savedHistory) {
+          setCompletionHistory(savedHistory);
         }
       } catch (error) {
         console.error("Failed to load tasks:", error);
@@ -206,10 +222,63 @@ export default function RemindersApp() {
     toast.success("Task deleted");
   };
 
-  const handleMarkCompleted = (taskId: string) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, completed: true } : task
-    ));
+  const handleMarkCompleted = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Create completion record
+    const completionRecord: CompletionRecord = {
+      id: `${taskId}-${Date.now()}`,
+      taskId: task.id,
+      taskName: task.name,
+      frequency: task.frequency,
+      completedDate: new Date().toISOString(),
+      originalDueDate: task.dueDate,
+    };
+
+    // Add to completion history
+    const updatedHistory = [...completionHistory, completionRecord];
+    setCompletionHistory(updatedHistory);
+    
+    // Save to IndexedDB
+    try {
+      await saveData("sbi-completion-history", updatedHistory);
+    } catch (error) {
+      console.error("Failed to save completion history:", error);
+    }
+
+    // Handle task based on frequency
+    if (task.frequency === "One-time") {
+      // Remove one-time tasks
+      setTasks(tasks.filter(t => t.id !== taskId));
+    } else {
+      // For cyclical tasks, update the due date
+      const currentDue = new Date(task.dueDate);
+      let nextDue = new Date(currentDue);
+      
+      switch (task.frequency) {
+        case "Daily":
+          nextDue.setDate(nextDue.getDate() + 1);
+          break;
+        case "Weekly":
+          nextDue.setDate(nextDue.getDate() + 7);
+          break;
+        case "Monthly":
+          nextDue.setMonth(nextDue.getMonth() + 1);
+          break;
+        case "Quarterly":
+          nextDue.setMonth(nextDue.getMonth() + 3);
+          break;
+        case "Annual":
+          nextDue.setFullYear(nextDue.getFullYear() + 1);
+          break;
+      }
+      
+      setTasks(tasks.map(t => 
+        t.id === taskId ? { ...t, dueDate: nextDue.toISOString().split('T')[0], completed: false } : t
+      ));
+    }
+    
     toast.success("Task marked as completed");
   };
 
@@ -364,6 +433,16 @@ export default function RemindersApp() {
           </div>
           
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/40"
+                onClick={() => setShowCompletionHistoryDialog(true)}
+              >
+                <List className="w-4 h-4 mr-2" />
+                View Completed Tasks
+              </Button>
+            )}
             {isAdmin ? (
               <Button
                 variant="outline"
@@ -615,6 +694,56 @@ export default function RemindersApp() {
           </div>
           <DialogFooter>
             <Button onClick={() => setShowTaskListDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Completion History Dialog (Admin Only) */}
+      <Dialog open={showCompletionHistoryDialog} onOpenChange={setShowCompletionHistoryDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Completed Tasks History</DialogTitle>
+            <DialogDescription>
+              View all historically completed tasks with completion dates
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {completionHistory.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">
+                No completed tasks yet
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {completionHistory
+                  .sort((a, b) => new Date(b.completedDate).getTime() - new Date(a.completedDate).getTime())
+                  .map((record) => (
+                    <div
+                      key={record.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                    >
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">{record.taskName}</h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            Due: {new Date(record.originalDueDate).toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Check className="w-4 h-4" />
+                            Completed: {new Date(record.completedDate).toLocaleDateString()}
+                          </span>
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                            {record.frequency}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowCompletionHistoryDialog(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
