@@ -477,7 +477,7 @@ export default function WebResourceHub() {
                   {/* Category Content */}
                   {!collapsedCategories.has(category) && (
                     <div className="p-4 pt-0">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                         {items.map((resource) => (
                           <div
                             key={resource.id}
@@ -488,9 +488,9 @@ export default function WebResourceHub() {
                               href={resource.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block bg-gradient-to-br from-white to-gray-50 rounded-lg p-4 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-purple-300"
+                              className="block bg-gradient-to-br from-white to-gray-50 rounded-lg p-2 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-purple-300"
                               style={{
-                                aspectRatio: "3/4",
+                                aspectRatio: "1/1",
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "center",
@@ -498,12 +498,12 @@ export default function WebResourceHub() {
                               }}
                             >
                               {/* Favicon */}
-                              <div className="mb-3">
+                              <div className="mb-1.5">
                                 {resource.favicon ? (
                                   <img
                                     src={resource.favicon}
                                     alt={resource.name}
-                                    className="w-12 h-12 object-contain"
+                                    className="w-8 h-8 object-contain"
                                     onError={(e) => {
                                       (e.target as HTMLImageElement).style.display = "none";
                                       (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
@@ -511,12 +511,12 @@ export default function WebResourceHub() {
                                   />
                                 ) : null}
                                 <Globe 
-                                  className={`w-12 h-12 text-gray-400 ${resource.favicon ? "hidden" : ""}`}
+                                  className={`w-8 h-8 text-gray-400 ${resource.favicon ? "hidden" : ""}`}
                                 />
                               </div>
 
                               {/* Name */}
-                              <p className="text-center text-sm font-medium text-gray-700 line-clamp-2">
+                              <p className="text-center text-xs font-medium text-gray-700 line-clamp-2">
                                 {resource.name}
                               </p>
                             </a>
