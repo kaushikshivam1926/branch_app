@@ -345,7 +345,39 @@ export default function DakNumberGenerator() {
             >
               Dak Management System
             </h1>
+          </div>
 
+          {/* Admin Login/Logout Button */}
+          <div className="ml-auto">
+            {!isAdminLoggedIn ? (
+              <Button
+                onClick={() => {
+                  const pwd = prompt("Enter admin password:");
+                  if (pwd === ADMIN_PASSWORD) {
+                    setIsAdminLoggedIn(true);
+                  } else if (pwd !== null) {
+                    alert("Incorrect password");
+                  }
+                }}
+                variant="outline"
+                className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
+              >
+                <LogIn className="w-4 h-4" />
+                Admin Login
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  setIsAdminLoggedIn(false);
+                  setAdminPassword("");
+                }}
+                variant="outline"
+                className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -549,7 +581,8 @@ export default function DakNumberGenerator() {
             </div>
           </Card>
 
-          {/* Admin Panel Card */}
+          {/* Admin Panel Card - Only visible when logged in */}
+          {isAdminLoggedIn && (
           <Card 
             className="p-5"
             style={{ 
@@ -562,38 +595,7 @@ export default function DakNumberGenerator() {
               Admin Panel
             </h3>
 
-            {!isAdminLoggedIn ? (
-              <div className="flex flex-wrap items-end gap-3">
-                <div>
-                  <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
-                    Admin Password
-                  </label>
-                  <input 
-                    type="password" 
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="px-3 py-2 rounded-md border text-sm"
-                    style={{ borderColor: "#d0d7de", width: "200px" }}
-                    onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
-                  />
-                </div>
-                <Button 
-                  onClick={handleAdminLogin}
-                  className="gap-2"
-                  style={{ backgroundColor: "#0b5ed7" }}
-                >
-                  <LogIn className="w-4 h-4" />
-                  Login
-                </Button>
-                {adminLoginStatus && (
-                  <span className="text-sm" style={{ color: "#dc3545" }}>
-                    {adminLoginStatus}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <div>
+            <div>
                 {/* Filters */}
                 <div className="flex flex-wrap items-end gap-3 mb-4">
                   <div>
@@ -695,12 +697,12 @@ export default function DakNumberGenerator() {
                           </tr>
                         ))
                       )}
-                    </tbody>
-                  </table>
-                </div>
+                  </tbody>
+                </table>
               </div>
-            )}
+            </div>
           </Card>
+          )}
         </div>
       </main>
 
