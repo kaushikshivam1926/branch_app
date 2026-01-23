@@ -343,14 +343,9 @@ export default function DakNumberGenerator() {
               className="text-white font-semibold leading-tight"
               style={{ fontSize: "1.3rem" }}
             >
-              Letter Dak Management System – {branchName}
+              Dak Management System
             </h1>
-            <p 
-              className="text-white/90"
-              style={{ fontSize: "0.85rem" }}
-            >
-              Offline tool for generating and managing letter references
-            </p>
+
           </div>
         </div>
       </header>
