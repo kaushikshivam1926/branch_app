@@ -1,153 +1,201 @@
-# Loan Recovery Notice Generator
+# Branch Application Catalogue
 
-A standalone offline web application for generating and printing loan recovery notices from a CSV file of non-performing accounts.
+A comprehensive web-based platform for bank branch operations, providing a unified interface for multiple productivity applications including loan recovery notices, task management, lead tracking, and more.
 
-## Features
+## Overview
 
-- **CSV Upload**: Upload your loan account CSV file with drag-and-drop support
-- **Account Display**: View all accounts in a sortable table with Name, Account Number, and Outstanding Amount
-- **Individual Printing**: Print recovery notice for a single account
-- **Batch Printing**: Print recovery notices for all accounts at once
-- **A4 Paper Format**: All notices are formatted for standard A4 paper size
-- **Custom Branding**: Add your bank's header and footer images
-- **Offline Functionality**: Completely standalone - no internet or server required
-- **Print Preview**: See exactly how the notice will look before printing
+The Branch Application Catalogue serves as a centralized hub for bank branch staff, offering a suite of integrated applications designed to streamline daily operations. All applications share a common authentication system and branch configuration, ensuring consistency across the platform.
 
-## Required CSV Columns
+## Applications
 
-Your CSV file must contain the following columns:
+### 1. Loan Recovery Notice Generator
+Generate and print professional loan recovery notices from CSV files of non-performing accounts.
 
-| Column Name | Description |
-|-------------|-------------|
-| SR_NO | Serial number |
-| ACCOUNT_NO | Loan account number |
-| CUSTOMER_NAME | Name of the account holder |
-| FATHER_NAME | Father's name (optional) |
-| SPOUSE_NAME | Spouse's name (optional) |
-| ADDRESS1 | Address line 1 |
-| ADDRESS2 | Address line 2 |
-| ADDRESS3 | Address line 3 |
-| POSTCODE | PIN/ZIP code |
-| OUTSTANDING | Outstanding amount (numeric) |
-| MOBILE | Mobile number (optional) |
+**Features:**
+- CSV upload with drag-and-drop support
+- Customizable letter templates (Word document upload or visual designer)
+- Batch and individual notice printing
+- Template management with field placeholders
+- A4 paper format with custom branding
+
+### 2. Dak Number Generator
+Generate and manage Dak numbers for official correspondence.
+
+**Features:**
+- Auto-incrementing reference numbers
+- Category-wise organization (Inward/Outward)
+- Search and filter functionality
+- Export to CSV
+- Financial year-based numbering
+
+### 3. EMI Calculator
+Calculate EMI for various loan products with detailed amortization schedules.
+
+**Features:**
+- Support for multiple loan types (Home, Personal, Car, Education)
+- Interest rate and tenure customization
+- Amortization schedule generation
+- Export calculations to PDF
+
+### 4. Reminder & To-Do
+Manage tasks and reminders for daily branch operations.
+
+**Features:**
+- Task frequency options (One-time, Daily, Weekly, Monthly, Quarterly, Annual)
+- Category-wise display (Overdue, Due Today, Due Tomorrow)
+- Color-coded priority indicators
+- Completion history tracking
+- Admin-only task management
+
+### 5. Lead Management System
+Track and manage customer leads with follow-up scheduling.
+
+**Features:**
+- Lead capture with contact details
+- Follow-up date tracking
+- Status management (Open, Pending, Converted, Closed)
+- Overdue and today's follow-up alerts
+- Dashboard statistics
+
+### 6. Web Resource Hub
+Quick access to frequently used websites and online resources.
+
+**Features:**
+- Category-wise URL organization
+- Favicon display
+- Drag-and-drop reordering
+- Admin-controlled resource management
+- Compact grid layout
+
+## Branch Configuration
+
+Administrators can configure branch-specific settings:
+
+- **Branch Code**: 5-digit identifier used in reference numbers
+- **Branch Name**: Displayed in headers across all applications
+- **Admin Access**: Secure login for administrative functions
 
 ## Getting Started
 
-1. **Open the Application**: Open `index.html` in your web browser
-2. **Upload CSV**: Click on the upload area or drag-and-drop your CSV file
-3. **View Accounts**: Once uploaded, you'll see all accounts in a table
-4. **Print Notices**: 
-   - Click "Print" next to any account for an individual notice
-   - Click "Print All" to print all notices at once
-5. **Customize Header/Footer**: See instructions below
+### Prerequisites
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Admin credentials for configuration and management
 
-## Customizing Header and Footer
+### Installation
 
-The application includes placeholders for your bank's header and footer images. To add your custom images:
+1. Clone or download the repository
+2. Open the application in a web browser
+3. Log in as admin (default password: `sbi@13042`)
+4. Configure branch details via "Branch Config" button
+5. Start using the applications
 
-### Step 1: Prepare Your Images
-- Create or obtain your bank's header image (recommended size: 800x100 pixels)
-- Create or obtain your bank's footer image (recommended size: 800x60 pixels)
-- Save them as PNG files for best quality
+### First-Time Setup
 
-### Step 2: Add Images to Root Folder
-Place the images in the same folder as `index.html`:
-- `header-placeholder.png` - Your bank's header/logo
-- `footer-placeholder.png` - Your bank's footer/contact information
+1. **Configure Branch Details**:
+   - Click "Admin Login" in the header
+   - Enter admin credentials
+   - Click "Branch Config"
+   - Enter your 5-digit Branch Code and Branch Name
+   - Click "Save"
 
-### Step 3: Verify
-The next time you generate a notice, your custom header and footer will automatically appear on all printed notices.
+2. **Access Applications**:
+   - Return to the landing page
+   - Click on any application card to launch
+   - Each app inherits the branch configuration
 
-## Letter Format
+## Technical Details
 
-Each recovery notice includes:
+### Technology Stack
+- **Frontend**: React 19 + TypeScript
+- **Styling**: Tailwind CSS 4
+- **UI Components**: shadcn/ui
+- **Routing**: Wouter
+- **Storage**: IndexedDB for persistent data
+- **Build Tool**: Vite
 
-- **Header**: Your custom bank header image
-- **Letter Reference Number**: Auto-generated unique reference
-- **Letter Date**: Current date (editable in preview)
-- **Recipient Details**:
-  - Customer name
-  - Father's/Spouse's name
-  - Complete address (4 lines)
-  - PIN code
-  - Mobile number
-- **Account Information**: Account number and outstanding amount
-- **Letter Body**: Standard recovery notice template
-- **Signature Area**: Space for authorized signatory
-- **Footer**: Your custom bank footer image
+### Data Storage
 
-## Printing Tips
+All application data is stored locally in the browser using IndexedDB:
+- `sbi-tasks`: Reminder & To-Do tasks
+- `sbi-completion-history`: Task completion records
+- `sbi-leads`: Lead Management data
+- `sbi-web-resources`: Web Resource Hub URLs
+- `sbi-dak-numbers`: Dak Number records
+- `sbi-templates`: Loan Recovery Notice templates
+- `branch-config`: Branch configuration settings
 
-1. **Print Preview**: Always review the print preview before printing
-2. **Paper Size**: Ensure your printer is set to A4 paper size
-3. **Margins**: The application uses standard margins (20mm)
-4. **Quality**: Use "Best" or "High" quality setting for professional appearance
-5. **Color**: Recommended to print in black and white for official documents
-
-## File Structure
+### File Structure
 
 ```
-loan-recovery-notices/
-├── index.html              # Main application file
-├── header-placeholder.png  # (Add your bank header here)
-├── footer-placeholder.png  # (Add your bank footer here)
-└── sample-accounts.csv     # Sample CSV file for testing
+branch-app-catalogue/
+├── client/
+│   ├── public/              # Static assets
+│   └── src/
+│       ├── components/      # Reusable UI components
+│       ├── contexts/        # React contexts (BranchContext)
+│       ├── pages/           # Application pages
+│       ├── lib/             # Utility functions
+│       └── App.tsx          # Main application router
+├── package.json
+├── README.md
+├── QUICKSTART.md
+└── SETUP_INSTRUCTIONS.md
 ```
+
+## Admin Functions
+
+Administrators have access to additional features:
+
+- **Branch Configuration**: Set branch code and name
+- **Template Management**: Create and edit notice templates
+- **Task Management**: Edit and delete reminders
+- **Lead Management**: Full CRUD operations
+- **Resource Management**: Add, edit, and organize web resources
+- **Completion History**: View all completed tasks
 
 ## Browser Compatibility
 
-This application works on all modern browsers:
-- Chrome/Chromium (recommended)
-- Firefox
-- Safari
-- Edge
+- Chrome/Chromium 90+ (recommended)
+- Firefox 88+
+- Safari 14+
+- Edge 90+
 
-## Offline Usage
+## Offline Functionality
 
-The application is completely offline and does not require:
-- Internet connection
-- Server
-- Database
-- Any external services
+The application works completely offline after initial load:
+- No internet connection required for core functionality
+- All data stored locally in browser
+- No external API dependencies
 
-All processing happens in your browser locally.
+## Security
 
-## Sample CSV Format
-
-```csv
-SR_NO,ACCOUNT_NO,CUSTOMER_NAME,FATHER_NAME,SPOUSE_NAME,ADDRESS1,ADDRESS2,ADDRESS3,POSTCODE,OUTSTANDING,MOBILE
-1,20380465101,MR. MANOHAR SINGH THAKU,SUMMER SINGH THAKUR,,LIG- 18 MACT ROAD MATA MANDIR,BHOPAL,HARSHVARDHAN NAGAR,462003,-3756.99,9876543210
-2,35618120137,MR. SUNIL JATAV,MR PREM LAL JATAV,,H NO 118 KUMARPURA,OLD VIDHAN SABHA,BHOPAL,462003,-272.27,9876543211
-```
+- Admin authentication for sensitive operations
+- Local-only data storage (no server transmission)
+- Branch-specific configuration isolation
+- Session-based admin access
 
 ## Troubleshooting
 
-### CSV Not Uploading
-- Ensure the CSV file has all required columns
-- Check that the file is not corrupted
-- Try opening it in a text editor to verify format
+### Data Not Persisting
+- Ensure browser allows IndexedDB storage
+- Check browser storage settings
+- Clear cache and reload if needed
 
-### Print Preview Not Showing
-- Check browser console for errors (F12 → Console tab)
-- Ensure JavaScript is enabled in your browser
-- Try a different browser
+### Admin Login Issues
+- Default password: `sbi@13042`
+- Password is case-sensitive
+- Contact system administrator to reset
 
-### Header/Footer Not Appearing
-- Verify files are named exactly: `header-placeholder.png` and `footer-placeholder.png`
-- Check that files are in the same folder as `index.html`
-- Ensure images are in PNG format
-- Try refreshing the browser cache (Ctrl+Shift+R)
-
-### Printing Issues
-- Ensure printer is connected and ready
-- Check printer settings for A4 paper size
-- Disable "Print backgrounds" in print dialog if needed
-- Try printing to PDF first to verify formatting
+### Application Not Loading
+- Check browser console for errors (F12)
+- Ensure JavaScript is enabled
+- Try clearing browser cache
+- Use a supported browser version
 
 ## License
 
-This application is provided as-is for loan recovery notice generation.
+This application is provided for bank branch operations management.
 
 ## Support
 
-For issues or feature requests, please contact your system administrator.
+For issues, feature requests, or technical support, please contact your system administrator or IT department.
