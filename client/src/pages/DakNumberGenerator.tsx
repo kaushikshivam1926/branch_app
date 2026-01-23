@@ -9,11 +9,14 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2 } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 
-const ADMIN_PASSWORD = "sbi13042";
+const ADMIN_PASSWORD = "sbi@13042";
 const STORAGE_KEY = "sbi_letter_refs_13042";
 
 interface DakRecord {
@@ -153,6 +156,7 @@ export default function DakNumberGenerator() {
   
   // Admin state
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoginStatus, setAdminLoginStatus] = useState("");
   const [filterFy, setFilterFy] = useState("");
@@ -251,7 +255,9 @@ export default function DakNumberGenerator() {
   const handleAdminLogin = () => {
     if (adminPassword === ADMIN_PASSWORD) {
       setIsAdminLoggedIn(true);
+      setShowLoginModal(false);
       setAdminLoginStatus("");
+      setAdminPassword("");
     } else {
       setAdminLoginStatus("Incorrect password.");
     }
@@ -351,14 +357,7 @@ export default function DakNumberGenerator() {
           <div className="ml-auto">
             {!isAdminLoggedIn ? (
               <Button
-                onClick={() => {
-                  const pwd = prompt("Enter admin password:");
-                  if (pwd === ADMIN_PASSWORD) {
-                    setIsAdminLoggedIn(true);
-                  } else if (pwd !== null) {
-                    alert("Incorrect password");
-                  }
-                }}
+                onClick={() => setShowLoginModal(true)}
                 variant="outline"
                 className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
               >
@@ -367,10 +366,7 @@ export default function DakNumberGenerator() {
               </Button>
             ) : (
               <Button
-                onClick={() => {
-                  setIsAdminLoggedIn(false);
-                  setAdminPassword("");
-                }}
+                onClick={handleAdminLogout}
                 variant="outline"
                 className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
               >
@@ -724,6 +720,48 @@ export default function DakNumberGenerator() {
           </p>
         </div>
       </footer>
+
+      {/* Admin Login Modal */}
+      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Admin Login</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">Password</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+                placeholder="Enter admin password"
+                autoFocus
+              />
+            </div>
+            {adminLoginStatus && (
+              <p className="text-sm text-destructive">{adminLoginStatus}</p>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowLoginModal(false);
+                  setAdminPassword("");
+                  setAdminLoginStatus("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAdminLogin}>
+                <LogIn className="w-4 h-4 mr-2" />
+                Login
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
