@@ -162,6 +162,7 @@ export default function DakNumberGenerator() {
   const [filterFy, setFilterFy] = useState("");
   const [searchText, setSearchText] = useState("");
   const [showEntriesTable, setShowEntriesTable] = useState(true);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   // Load records on mount
   useEffect(() => {
@@ -180,28 +181,45 @@ export default function DakNumberGenerator() {
       return;
     }
 
-    const serial = generateSerial(records, today.fyLabel);
-    const ref = buildRef(today.fyLabel, today.monthNo, serial, branchCode);
+    if (editingId !== null) {
+      // Update existing record
+      const updatedRecords = records.map(rec => 
+        rec.id === editingId 
+          ? { ...rec, letterType, letterDestination, recipientDetails, subject, remarks }
+          : rec
+      );
+      setRecords(updatedRecords);
+      await saveRecordsToStorage(updatedRecords);
+      setStatus({ message: "Entry updated successfully.", type: "success" });
+      setEditingId(null);
+    } else {
+      // Create new record
+      const serial = generateSerial(records, today.fyLabel);
+      const ref = buildRef(today.fyLabel, today.monthNo, serial, branchCode);
 
-    const record: DakRecord = {
-      id: Date.now(),
-      refNo: ref,
-      serialNo: serial,
-      financialYear: today.fyLabel,
-      monthNo: today.monthNo,
-      dateDisplay: today.dateDisplay,
-      letterType,
-      letterDestination,
-      recipientDetails,
-      subject,
-      remarks
-    };
+      const record: DakRecord = {
+        id: Date.now(),
+        refNo: ref,
+        serialNo: serial,
+        financialYear: today.fyLabel,
+        monthNo: today.monthNo,
+        dateDisplay: today.dateDisplay,
+        letterType,
+        letterDestination,
+        recipientDetails,
+        subject,
+        remarks
+      };
 
-    const newRecords = [...records, record];
-    setRecords(newRecords);
-    await saveRecordsToStorage(newRecords);
-
-    setStatus({ message: "Saved successfully.", type: "success" });
+      const newRecords = [...records, record];
+      setRecords(newRecords);
+      await saveRecordsToStorage(newRecords);
+      setStatus({ message: "Saved successfully.", type: "success" });
+      
+      // Generate next reference
+      const nextSerial = generateSerial(newRecords, today.fyLabel);
+      setRefNo(buildRef(today.fyLabel, today.monthNo, nextSerial, branchCode));
+    }
 
     // Reset form
     setLetterType("");
@@ -209,10 +227,6 @@ export default function DakNumberGenerator() {
     setRecipientDetails("");
     setSubject("");
     setRemarks("");
-
-    // Generate next reference
-    const nextSerial = generateSerial(newRecords, today.fyLabel);
-    setRefNo(buildRef(today.fyLabel, today.monthNo, nextSerial, branchCode));
   };
 
   const handleReset = () => {
@@ -222,6 +236,7 @@ export default function DakNumberGenerator() {
     setSubject("");
     setRemarks("");
     setStatus({ message: "", type: "" });
+    setEditingId(null);
     const serial = generateSerial(records, today.fyLabel);
     setRefNo(buildRef(today.fyLabel, today.monthNo, serial, branchCode));
   };
@@ -268,31 +283,23 @@ export default function DakNumberGenerator() {
     setIsAdminLoggedIn(false);
     setAdminPassword("");
   };
-  const handleUpdateRecord = async (id: number) => {    const r = records.find(x => x.id === id);
+  const handleUpdateRecord = async (id: number) => {
+    const r = records.find(x => x.id === id);
     if (!r) return;
 
-    const newType = prompt("Letter Type:", r.letterType);
-    if (newType === null) return;
-
-    const newDest = prompt("Destination:", r.letterDestination);
-    if (newDest === null) return;
-
-    const newRec = prompt("Recipient:", r.recipientDetails);
-    if (newRec === null) return;
-
-    const newSub = prompt("Subject:", r.subject);
-    if (newSub === null) return;
-
-    const newRem = prompt("Remarks:", r.remarks);
-    if (newRem === null) return;
-
-    const updatedRecords = records.map(rec => 
-      rec.id === id 
-        ? { ...rec, letterType: newType, letterDestination: newDest, recipientDetails: newRec, subject: newSub, remarks: newRem }
-        : rec
-    );
-    setRecords(updatedRecords);
-    await saveRecordsToStorage(updatedRecords);
+    // Populate form with existing data
+    setRefNo(r.refNo);
+    setLetterType(r.letterType);
+    setLetterDestination(r.letterDestination);
+    setRecipientDetails(r.recipientDetails);
+    setSubject(r.subject);
+    setRemarks(r.remarks);
+    setEditingId(id);
+    
+    // Scroll to top to show the form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    setStatus({ message: "Editing entry. Update the fields and click Save.", type: "success" });
   };
 
   const handleDeleteRecord = async (id: number) => {
@@ -541,7 +548,7 @@ export default function DakNumberGenerator() {
                 style={{ backgroundColor: "#0b5ed7" }}
               >
                 <Save className="w-4 h-4" />
-                Save
+                {editingId !== null ? "Update" : "Save"}
               </Button>
               <Button 
                 onClick={handleReset}
@@ -582,10 +589,44 @@ export default function DakNumberGenerator() {
             </div>
 
             {showEntriesTable && (
-              <div 
-                className="overflow-auto rounded-md border bg-white"
-                style={{ maxHeight: "400px", borderColor: "#d0d7de" }}
-              >
+              <>
+                {/* Admin Filters */}
+                {isAdminLoggedIn && (
+                  <div className="flex flex-wrap items-end gap-3 mb-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
+                        Filter by FY
+                      </label>
+                      <select
+                        value={filterFy}
+                        onChange={(e) => setFilterFy(e.target.value)}
+                        className="px-3 py-1.5 border rounded text-sm"
+                        style={{ borderColor: "#d0d7de" }}
+                      >
+                        <option value="">All</option>
+                        {Array.from(new Set(records.map(r => r.financialYear))).sort().reverse().map(fy => (
+                          <option key={fy} value={fy}>{fy}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
+                        Search
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="Search by ref, subject, recipient..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div 
+                  className="overflow-auto rounded-md border bg-white"
+                  style={{ maxHeight: "400px", borderColor: "#d0d7de" }}
+                >
                 <table className="w-full text-sm">
                   <thead style={{ backgroundColor: "#f1f3f5", position: "sticky", top: 0 }}>
                     <tr>
@@ -594,18 +635,20 @@ export default function DakNumberGenerator() {
                       <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Type</th>
                       <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Destination</th>
                       <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Subject</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Recipient</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Remarks</th>
                       <th className="px-3 py-2 text-center font-semibold" style={{ color: "#6c757d" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {records.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-3 py-4 text-center text-gray-500">
+                        <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
                           No entries yet. Create your first entry above.
                         </td>
                       </tr>
                     ) : (
-                      records.slice().reverse().map((record) => (
+                      filteredRecords.slice().reverse().map((record) => (
                         <tr key={record.id} className="border-t hover:bg-gray-50" style={{ borderColor: "#d0d7de" }}>
                           <td className="px-3 py-2" style={{ color: "#0969da" }}>{record.refNo}</td>
                           <td className="px-3 py-2" style={{ color: "#6c757d" }}>{record.dateDisplay}</td>
@@ -613,6 +656,12 @@ export default function DakNumberGenerator() {
                           <td className="px-3 py-2" style={{ color: "#6c757d" }}>{record.letterDestination}</td>
                           <td className="px-3 py-2" style={{ color: "#6c757d" }}>
                             {record.subject.length > 50 ? record.subject.substring(0, 50) + "..." : record.subject}
+                          </td>
+                          <td className="px-3 py-2" style={{ color: "#6c757d" }}>
+                            {record.recipientDetails || "-"}
+                          </td>
+                          <td className="px-3 py-2" style={{ color: "#6c757d" }}>
+                            {record.remarks ? (record.remarks.length > 30 ? record.remarks.substring(0, 30) + "..." : record.remarks) : "-"}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center justify-center gap-2">
@@ -677,131 +726,11 @@ export default function DakNumberGenerator() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </Card>
 
-          {/* Admin Panel Card - Only visible when logged in */}
-          {isAdminLoggedIn && (
-          <Card 
-            className="p-5"
-            style={{ 
-              background: "rgba(255, 255, 255, 0.55)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255, 255, 255, 0.4)"
-            }}
-          >
-            <h3 className="text-lg font-semibold mb-4" style={{ color: "#084298" }}>
-              Admin Panel
-            </h3>
 
-            <div>
-                {/* Filters */}
-                <div className="flex flex-wrap items-end gap-3 mb-4">
-                  <div>
-                    <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
-                      Filter by FY
-                    </label>
-                    <select 
-                      value={filterFy}
-                      onChange={(e) => setFilterFy(e.target.value)}
-                      className="px-3 py-2 rounded-md border text-sm bg-white"
-                      style={{ borderColor: "#d0d7de", minWidth: "120px" }}
-                    >
-                      <option value="">All</option>
-                      {uniqueFYs.map(fy => (
-                        <option key={fy} value={fy}>{fy}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
-                      Search
-                    </label>
-                    <input 
-                      type="text" 
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      placeholder="Search..."
-                      className="px-3 py-2 rounded-md border text-sm"
-                      style={{ borderColor: "#d0d7de", width: "180px" }}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleAdminLogout}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </Button>
-                </div>
-
-                {/* Records Table */}
-                <div 
-                  className="overflow-auto rounded-md border bg-white"
-                  style={{ maxHeight: "360px", borderColor: "#d0d7de" }}
-                >
-                  <table className="w-full text-sm">
-                    <thead style={{ backgroundColor: "#f1f3f5" }}>
-                      <tr>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Ref No</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Date</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>FY</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Month</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Type</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Destination</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Recipient</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Subject</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Remarks</th>
-                        <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRecords.length === 0 ? (
-                        <tr>
-                          <td colSpan={10} className="px-3 py-4 text-center" style={{ color: "#6c757d" }}>
-                            No records
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredRecords.map(r => (
-                          <tr key={r.id} className="border-t" style={{ borderColor: "#e5e7eb" }}>
-                            <td className="px-3 py-2">{r.refNo}</td>
-                            <td className="px-3 py-2">{r.dateDisplay}</td>
-                            <td className="px-3 py-2">{r.financialYear}</td>
-                            <td className="px-3 py-2">{r.monthNo}</td>
-                            <td className="px-3 py-2">{r.letterType}</td>
-                            <td className="px-3 py-2">{r.letterDestination}</td>
-                            <td className="px-3 py-2">{r.recipientDetails}</td>
-                            <td className="px-3 py-2">{r.subject}</td>
-                            <td className="px-3 py-2">{r.remarks}</td>
-                            <td className="px-3 py-2">
-                              <div className="flex gap-1">
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleUpdateRecord(r.id)}
-                                  style={{ backgroundColor: "#198754", padding: "4px 8px" }}
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleDeleteRecord(r.id)}
-                                  style={{ backgroundColor: "#dc3545", padding: "4px 8px" }}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </Card>
-          )}
         </div>
       </main>
 
