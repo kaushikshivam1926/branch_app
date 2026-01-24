@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 
@@ -161,6 +161,7 @@ export default function DakNumberGenerator() {
   const [adminLoginStatus, setAdminLoginStatus] = useState("");
   const [filterFy, setFilterFy] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [showEntriesTable, setShowEntriesTable] = useState(true);
 
   // Load records on mount
   useEffect(() => {
@@ -550,22 +551,6 @@ export default function DakNumberGenerator() {
                 <RotateCcw className="w-4 h-4" />
                 Reset
               </Button>
-              <Button 
-                onClick={handlePrintSlip}
-                variant="outline"
-                className="gap-2"
-              >
-                <Printer className="w-4 h-4" />
-                Print Slip
-              </Button>
-              <Button 
-                onClick={handleExportPDF}
-                variant="outline"
-                className="gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                Export PDF
-              </Button>
               {status.message && (
                 <span 
                   className="text-sm self-center ml-2"
@@ -575,6 +560,124 @@ export default function DakNumberGenerator() {
                 </span>
               )}
             </div>
+          </Card>
+
+          {/* All Entries Table - Visible to all users */}
+          <Card 
+            className="p-5 mt-5"
+            style={{ 
+              background: "rgba(255, 255, 255, 0.55)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255, 255, 255, 0.4)"
+            }}
+          >
+            <div 
+              className="flex items-center justify-between cursor-pointer mb-4"
+              onClick={() => setShowEntriesTable(!showEntriesTable)}
+            >
+              <h3 className="text-lg font-semibold" style={{ color: "#084298" }}>
+                All Entries ({records.length})
+              </h3>
+              {showEntriesTable ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </div>
+
+            {showEntriesTable && (
+              <div 
+                className="overflow-auto rounded-md border bg-white"
+                style={{ maxHeight: "400px", borderColor: "#d0d7de" }}
+              >
+                <table className="w-full text-sm">
+                  <thead style={{ backgroundColor: "#f1f3f5", position: "sticky", top: 0 }}>
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Ref No</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Date</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Type</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Destination</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: "#6c757d" }}>Subject</th>
+                      <th className="px-3 py-2 text-center font-semibold" style={{ color: "#6c757d" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-4 text-center text-gray-500">
+                          No entries yet. Create your first entry above.
+                        </td>
+                      </tr>
+                    ) : (
+                      records.slice().reverse().map((record) => (
+                        <tr key={record.id} className="border-t hover:bg-gray-50" style={{ borderColor: "#d0d7de" }}>
+                          <td className="px-3 py-2" style={{ color: "#0969da" }}>{record.refNo}</td>
+                          <td className="px-3 py-2" style={{ color: "#6c757d" }}>{record.dateDisplay}</td>
+                          <td className="px-3 py-2" style={{ color: "#6c757d" }}>{record.letterType}</td>
+                          <td className="px-3 py-2" style={{ color: "#6c757d" }}>{record.letterDestination}</td>
+                          <td className="px-3 py-2" style={{ color: "#6c757d" }}>
+                            {record.subject.length > 50 ? record.subject.substring(0, 50) + "..." : record.subject}
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  const slipWindow = window.open("", "_blank", "width=600,height=700");
+                                  if (slipWindow) {
+                                    slipWindow.document.write(generateSlipHTML(record));
+                                    slipWindow.document.close();
+                                    slipWindow.onload = () => slipWindow.print();
+                                  }
+                                }}
+                                title="Print Slip"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  const pdfWindow = window.open("", "_blank", "width=800,height=600");
+                                  if (pdfWindow) {
+                                    pdfWindow.document.write(generateSlipHTML(record));
+                                    pdfWindow.document.close();
+                                  }
+                                }}
+                                title="Export as PDF"
+                                className="h-8 w-8 p-0"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                              {isAdminLoggedIn && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleUpdateRecord(record.id)}
+                                    title="Edit Entry"
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteRecord(record.id)}
+                                    title="Delete Entry"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
 
           {/* Admin Panel Card - Only visible when logged in */}
