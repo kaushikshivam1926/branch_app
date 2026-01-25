@@ -29,11 +29,12 @@ import {
   LogOut,
   GripVertical,
   Download,
-  Upload
+  Upload,
+  Receipt
 } from "lucide-react";
 import { db, exportAllData, importAllData, loadData, saveData } from "@/lib/db";
 
-type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet";
+type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt";
 
 interface AppCard {
   id: string;
@@ -97,11 +98,11 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     color: "#e91e63"
   },
   {
-    id: "security-docs",
-    title: "Security Documents",
-    description: "Manage loan security and collateral documents",
-    iconName: "Shield",
-    path: "/security-docs",
+    id: "charges-return",
+    title: "Charges Return",
+    description: "Prepare charges return report for controlling office",
+    iconName: "Receipt",
+    path: "/charges-return",
     color: "#673ab7"
   },
   {
@@ -145,6 +146,8 @@ const IconComponent = ({ name, className }: { name: IconName; className?: string
       return <Building2 className={iconClass} />;
     case "FileSpreadsheet":
       return <FileSpreadsheet className={iconClass} />;
+    case "Receipt":
+      return <Receipt className={iconClass} />;
     default:
       return <Globe className={iconClass} />;
   }
@@ -170,7 +173,23 @@ export default function Landing() {
         if (savedSettings) {
           // Check if the data has the new iconName field
           if (savedSettings.length > 0 && savedSettings[0].iconName) {
-            setAppCards(savedSettings);
+            // Migrate security-docs to charges-return
+            const migratedSettings = savedSettings.map((card: AppCard) => {
+              if (card.id === "security-docs") {
+                return {
+                  ...card,
+                  id: "charges-return",
+                  title: "Charges Return",
+                  description: "Prepare charges return report for controlling office",
+                  iconName: "Receipt" as IconName,
+                  path: "/charges-return"
+                };
+              }
+              return card;
+            });
+            setAppCards(migratedSettings);
+            // Save migrated settings
+            await saveData("sbi-app-settings", migratedSettings);
           } else {
             // Old format detected, reinitialize
             initializeDefaultCards();

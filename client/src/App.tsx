@@ -8,6 +8,7 @@ import { BranchProvider } from "./contexts/BranchContext";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import PlaceholderApp from "./pages/PlaceholderApp";
+import ChargesReturnApp from "./pages/ChargesReturnApp";
 import DakNumberGenerator from "./pages/DakNumberGenerator";
 import EMICalculator from "./pages/EMICalculator";
 import RemindersApp from "./pages/RemindersApp";
@@ -25,9 +26,7 @@ function AppRouter() {
       <Route path={"/reminders"} component={RemindersApp} />
       <Route path={"/lead-management"} component={LeadManagementApp} />
       <Route path={"/web-resource-hub"} component={WebResourceHub} />
-      <Route path={"/security-docs"}>
-        <PlaceholderApp title="Security Documents" />
-      </Route>
+      <Route path={"/charges-return"} component={ChargesReturnApp} />
       <Route path={"/branch-info"}>
         <PlaceholderApp title="Branch Information" />
       </Route>
