@@ -87,47 +87,122 @@ function getDB() {
 }
 
 // ========== ACM Parsing Logic ==========
-function parseAcmText(text: string, includeTotals: boolean): { reportDate: { iso: string; label: string }; rows: ACMRow[] } {
-  const lines = text.split("\n");
-  let reportDate = { iso: "", label: "" };
+const MONTHS: Record<string, string> = {
+  JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06",
+  JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12"
+};
+
+function normalizeSpaces(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function parseMoneyToken(token: string | null): number | null {
+  const t = String(token ?? "").trim();
+  if (!t) return null;
+  if (!/^-?[\d,]+(\.\d{1,2})?$/.test(t)) return null;
+  const n = Number(t.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function extractReportDate(text: string): { iso: string; label: string } | null {
+  const m = text.match(/AS\s+AT\s+([A-Z]{3})\s+(\d{1,2}),\s*(\d{4})/i);
+  if (!m) return null;
+  const mon = (m[1] || "").toUpperCase();
+  const dd = String(m[2]).padStart(2, "0");
+  const yyyy = m[3];
+  const mm = MONTHS[mon];
+  if (!mm) return null;
+  return { iso: `${yyyy}-${mm}-${dd}`, label: `${mon.charAt(0)}${mon.slice(1).toLowerCase()} ${Number(dd)}, ${yyyy}` };
+}
+
+function isLikelyNoiseLine(line: string): boolean {
+  const s = normalizeSpaces(line).toUpperCase();
+  if (!s) return true;
+  if (s.startsWith("ACM001")) return true;
+  if (s.includes("MONTHLY ABSTRACT OF CHARGES")) return true;
+  if (s.includes("STATE BANK OF INDIA")) return true;
+  if (s.startsWith("BRANCH")) return true;
+  if (s.includes("RUN DATE")) return true;
+  if (s.includes("INDIAN RUPEE")) return true;
+  if (s.startsWith("-----")) return true;
+  if (s.startsWith("HEAD")) return true;
+  if (s.includes("PARTICULAR OF ENCLOSURE")) return true;
+  if (s.includes("REMARK")) return true;
+  if (s.includes("I HEREBY CERTIFY")) return true;
+  if (s.startsWith("NOTE")) return true;
+  if (s.includes("END OF REPORT")) return false;
+  return false;
+}
+
+function shouldIncludeHead(head: string, includeTotalsFlag: boolean): boolean {
+  const u = normalizeSpaces(head).toUpperCase();
+  if (includeTotalsFlag) return true;
+  if (u.startsWith("TOTAL CHARGES")) return false;
+  if (u.startsWith("BALANCE AS PER")) return false;
+  if (u === "MISCELLANEOUS") return false;
+  return true;
+}
+
+function extractHeadAndNumbersFromLine(line: string): { head: string; monthAmount: number | null; prevTotal: number | null } | null {
+  const raw = String(line || "");
+  if (isLikelyNoiseLine(raw)) return null;
+  
+  // Try to match: HEAD + 2 numbers
+  const m2 = raw.match(/^(.*?)(-?[\d,]+(?:\.\d{1,2})?)\s+(-?[\d,]+(?:\.\d{1,2})?)\s*$/);
+  if (m2) {
+    const head = normalizeSpaces(m2[1]);
+    const a = parseMoneyToken(m2[2]);
+    const b = parseMoneyToken(m2[3]);
+    if (!head || (a == null && b == null)) return null;
+    return { head, monthAmount: a, prevTotal: b };
+  }
+  
+  // Try to match: HEAD + 1 number
+  const m1 = raw.match(/^(.*?)(-?[\d,]+(?:\.\d{1,2})?)\s*$/);
+  if (m1) {
+    const head = normalizeSpaces(m1[1]);
+    const a = parseMoneyToken(m1[2]);
+    if (!head || a == null) return null;
+    return { head, monthAmount: a, prevTotal: null };
+  }
+  
+  return null;
+}
+
+function finalizeRow(r: { head: string; monthAmount: number | null; prevTotal: number | null }): ACMRow {
+  const month = (r.monthAmount == null ? 0 : r.monthAmount);
+  const prev = (r.prevTotal == null ? 0 : r.prevTotal);
+  return { head: r.head, monthAmount: r.monthAmount, prevTotal: r.prevTotal, asOnTotal: month + prev };
+}
+
+function parseAcmText(text: string, includeTotalsFlag: boolean): { reportDate: { iso: string; label: string }; rows: ACMRow[] } {
+  const reportDate = extractReportDate(text) || { iso: "", label: "—" };
+  const lines = String(text || "").split(/\r?\n/);
   const rows: ACMRow[] = [];
-
-  // Extract report date (AS AT MON DD, YYYY format)
+  
   for (const line of lines) {
-    const match = line.match(/AS\s+AT\s+([A-Z]+)\s+(\d{1,2}),\s+(\d{4})/i);
-    if (match) {
-      const monthStr = match[1];
-      const day = match[2].padStart(2, "0");
-      const year = match[3];
-      const monthMap: Record<string, string> = {
-        JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06",
-        JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12"
-      };
-      const month = monthMap[monthStr.toUpperCase()] || "01";
-      reportDate = { iso: `${year}-${month}-${day}`, label: `${monthStr} ${day}, ${year}` };
-      break;
-    }
+    const r = extractHeadAndNumbersFromLine(line);
+    if (!r) continue;
+    if (!shouldIncludeHead(r.head, includeTotalsFlag)) continue;
+    rows.push(finalizeRow(r));
   }
-
-  // Parse data rows (BGL code pattern: 5 digits followed by amounts)
-  for (const line of lines) {
-    const match = line.match(/^(\d{5})\s+(.+?)\s+([\d,]+\.\d{2}|-)\s+([\d,]+\.\d{2}|-)\s+([\d,]+\.\d{2}|-)$/);
-    if (match) {
-      const head = match[2].trim();
-      const monthAmount = match[3] === "-" ? null : parseFloat(match[3].replace(/,/g, ""));
-      const prevTotal = match[4] === "-" ? null : parseFloat(match[4].replace(/,/g, ""));
-      const asOnTotal = match[5] === "-" ? null : parseFloat(match[5].replace(/,/g, ""));
-      
-      // Filter out total rows if includeTotals is false
-      if (!includeTotals && (head.toLowerCase().includes("total") || head.toLowerCase().includes("grand"))) {
-        continue;
-      }
-      
-      rows.push({ head, monthAmount, prevTotal, asOnTotal });
-    }
-  }
-
-  return { reportDate, rows };
+  
+  // Deduplicate by head (keep last occurrence)
+  const map = new Map<string, ACMRow>();
+  for (const r of rows) map.set(r.head, r);
+  const dedup = Array.from(map.values());
+  
+  // Sort: totals at end, rest alphabetically
+  dedup.sort((a, b) => {
+    const au = a.head.toUpperCase();
+    const bu = b.head.toUpperCase();
+    const aIsTot = au.startsWith("TOTAL") || au.startsWith("BALANCE");
+    const bIsTot = bu.startsWith("TOTAL") || bu.startsWith("BALANCE");
+    if (aIsTot !== bIsTot) return aIsTot ? 1 : -1;
+    return au.localeCompare(bu);
+  });
+  
+  return { reportDate, rows: dedup };
 }
 
 // ========== Main Component ==========
