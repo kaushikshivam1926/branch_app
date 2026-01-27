@@ -774,18 +774,31 @@ function ChargesEntryTab() {
       await tx.store.clear();
       
       // Parse and add new BGL codes (supports both comma and tab separation)
+      let lineCount = 0;
       for (const line of lines) {
+        lineCount++;
+        // Skip header row (if first line contains "BGL" or "Code" or "Head")
+        if (lineCount === 1 && /BGL|Code|Head/i.test(line)) {
+          continue;
+        }
+        
         // Try comma first, then tab
         let parts = line.split(',');
         if (parts.length < 3) {
           parts = line.split(/\t/);
         }
         if (parts.length >= 3) {
-          await tx.store.add({
-            bglCode: parts[0].trim(),
-            head: parts[1].trim(),
-            subHead: parts[2].trim(),
-          });
+          const bglCode = parts[0].trim();
+          const head = parts[1].trim();
+          const subHead = parts[2].trim();
+          
+          if (bglCode && head && subHead) {
+            await tx.store.add({
+              bglCode,
+              head,
+              subHead,
+            });
+          }
         }
       }
       
@@ -921,13 +934,13 @@ function ChargesEntryTab() {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <div>
               <Label htmlFor="bgl-code">BGL Code</Label>
-              <input
+              <Input
                 id="bgl-code"
                 list="bgl-list"
                 value={formData.bglCode}
                 onChange={(e) => handleBGLChange(e.target.value)}
-                placeholder="e.g. 100101"
-                className="w-full mt-1 px-2 py-1.5 border rounded text-sm"
+                placeholder="e.g. 21111"
+                className="mt-1"
               />
               <datalist id="bgl-list">
                 {bglMaster.map(bgl => (
@@ -997,13 +1010,13 @@ function ChargesEntryTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
               <Label htmlFor="payee">Payee Name</Label>
-              <input
+              <Input
                 id="payee"
                 list="payee-list"
                 value={formData.payee}
                 onChange={(e) => setFormData({ ...formData, payee: e.target.value })}
                 placeholder="Who was paid?"
-                className="w-full mt-1 px-2 py-1.5 border rounded text-sm"
+                className="text-sm"
               />
               <datalist id="payee-list">
                 {payeeSuggestions.map(p => (
