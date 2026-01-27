@@ -192,17 +192,44 @@ function parseAcmText(text: string, includeTotalsFlag: boolean): { reportDate: {
   for (const r of rows) map.set(r.head, r);
   const dedup = Array.from(map.values());
   
-  // Sort: totals at end, rest alphabetically
-  dedup.sort((a, b) => {
-    const au = a.head.toUpperCase();
-    const bu = b.head.toUpperCase();
-    const aIsTot = au.startsWith("TOTAL") || au.startsWith("BALANCE");
-    const bIsTot = bu.startsWith("TOTAL") || bu.startsWith("BALANCE");
-    if (aIsTot !== bIsTot) return aIsTot ? 1 : -1;
-    return au.localeCompare(bu);
+  // Separate total rows from data rows
+  const totalRows: ACMRow[] = [];
+  const dataRows: ACMRow[] = [];
+  
+  for (const row of dedup) {
+    const u = row.head.toUpperCase();
+    if (u.includes("TOTAL CHARGES FOR THE MONTH") || 
+        u.includes("TOTAL CHARGES UPTO PREVIOUS MONTH") || 
+        u.includes("BALANCE AS PER GENERAL LEDGER")) {
+      totalRows.push(row);
+    } else {
+      dataRows.push(row);
+    }
+  }
+  
+  // Sort data rows by monthAmount descending (nulls last)
+  dataRows.sort((a, b) => {
+    const aAmt = a.monthAmount ?? -Infinity;
+    const bAmt = b.monthAmount ?? -Infinity;
+    return bAmt - aAmt;
   });
   
-  return { reportDate, rows: dedup };
+  // Sort total rows in specific order
+  const totalOrder = [
+    "TOTAL CHARGES FOR THE MONTH",
+    "TOTAL CHARGES UPTO PREVIOUS MONTH",
+    "BALANCE AS PER GENERAL LEDGER"
+  ];
+  totalRows.sort((a, b) => {
+    const aIdx = totalOrder.findIndex(t => a.head.toUpperCase().includes(t));
+    const bIdx = totalOrder.findIndex(t => b.head.toUpperCase().includes(t));
+    return aIdx - bIdx;
+  });
+  
+  // Combine: data rows first, then total rows
+  const sorted = [...dataRows, ...totalRows];
+  
+  return { reportDate, rows: sorted };
 }
 
 // ========== Main Component ==========
@@ -210,6 +237,11 @@ export default function ChargesReturnApp() {
   const [, navigate] = useLocation();
   const { branchName } = useBranch();
   const [activeTab, setActiveTab] = useState<"extractor" | "entry" | "report">("extractor");
+  
+  // Shared ACM Extractor state (persists across tab switches)
+  const [acmCurrentRows, setAcmCurrentRows] = useState<ACMRow[]>([]);
+  const [acmReportLabel, setAcmReportLabel] = useState<string>("—");
+  const [acmPreviewData, setAcmPreviewData] = useState<{ reportDate: { iso: string; label: string }; rows: ACMRow[] } | null>(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
@@ -276,7 +308,16 @@ export default function ChargesReturnApp() {
 
       {/* Tab Content */}
       <div className="container mx-auto px-4 pb-8">
-        {activeTab === "extractor" && <ACMExtractorTab />}
+        {activeTab === "extractor" && (
+          <ACMExtractorTab 
+            currentRows={acmCurrentRows}
+            setCurrentRows={setAcmCurrentRows}
+            reportLabel={acmReportLabel}
+            setReportLabel={setAcmReportLabel}
+            previewData={acmPreviewData}
+            setPreviewData={setAcmPreviewData}
+          />
+        )}
         {activeTab === "entry" && <ChargesEntryTab />}
         {activeTab === "report" && <ChargesReturnReportTab />}
       </div>
@@ -285,13 +326,19 @@ export default function ChargesReturnApp() {
 }
 
 // ========== ACM Extractor Tab ==========
-function ACMExtractorTab() {
+interface ACMExtractorTabProps {
+  currentRows: ACMRow[];
+  setCurrentRows: React.Dispatch<React.SetStateAction<ACMRow[]>>;
+  reportLabel: string;
+  setReportLabel: React.Dispatch<React.SetStateAction<string>>;
+  previewData: { reportDate: { iso: string; label: string }; rows: ACMRow[] } | null;
+  setPreviewData: React.Dispatch<React.SetStateAction<{ reportDate: { iso: string; label: string }; rows: ACMRow[] } | null>>;
+}
+
+function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLabel, previewData, setPreviewData }: ACMExtractorTabProps) {
   const [reports, setReports] = useState<ACMReport[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string>("");
-  const [currentRows, setCurrentRows] = useState<ACMRow[]>([]);
-  const [reportLabel, setReportLabel] = useState<string>("—");
   const [includeTotals, setIncludeTotals] = useState(true);
-  const [previewData, setPreviewData] = useState<{ reportDate: { iso: string; label: string }; rows: ACMRow[] } | null>(null);
 
   useEffect(() => {
     loadReports();
