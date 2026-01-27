@@ -27,13 +27,14 @@ interface ACMReport {
 
 interface ChargeEntry {
   id: string;
-  bglCode: string;
-  head: string;
-  subHead: string;
-  paymentMode: string;
-  chequeNo: string;
+  bgl: string;
+  payDate: string;
+  billNo: string;
+  billDate: string;
+  payee: string;
+  purpose: string;
   amount: number;
-  remarks: string;
+  approver: string;
   createdAt: string;
 }
 
@@ -597,20 +598,30 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
   );
 }
 
-// ========== Charges Entry Tab ==========
+// Complete Charges Entry Tab Implementation
+// This is the replacement for lines 601-889 in ChargesReturnApp.tsx
+
 function ChargesEntryTab() {
   const [entries, setEntries] = useState<ChargeEntry[]>([]);
   const [bglMaster, setBglMaster] = useState<BGLMaster[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sortState, setSortState] = useState<{ key: string | null; asc: boolean }>({ key: null, asc: true });
+  const [payeeSuggestions, setPayeeSuggestions] = useState<string[]>([]);
+  const [bglConfigOpen, setBglConfigOpen] = useState(false);
+  
+  const today = new Date().toISOString().slice(0, 10);
   
   const [formData, setFormData] = useState({
     bglCode: "",
     head: "",
     subHead: "",
-    paymentMode: "Cash",
-    chequeNo: "",
+    payDate: today,
+    billNo: "",
+    billDate: today,
+    payee: "",
+    purpose: "",
     amount: "",
-    remarks: "",
+    approver: "",
   });
 
   useEffect(() => {
@@ -621,8 +632,12 @@ function ChargesEntryTab() {
     const db = await getDB();
     const allEntries = await db.getAll("chargeEntries");
     const allBGL = await db.getAll("bglMaster");
-    setEntries(allEntries.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    setEntries(allEntries);
     setBglMaster(allBGL);
+    
+    // Update payee suggestions
+    const payees = [...new Set(allEntries.map((e: any) => e.payee).filter((p: string) => p && p.trim()))].sort();
+    setPayeeSuggestions(payees);
   }
 
   function handleBGLChange(bglCode: string) {
@@ -636,27 +651,40 @@ function ChargesEntryTab() {
   }
 
   async function handleSave() {
-    if (!formData.bglCode || !formData.amount) {
-      toast.error("BGL Code and Amount are required");
+    if (!formData.bglCode || !formData.payDate || !formData.billNo || !formData.billDate || 
+        !formData.payee || !formData.purpose || !formData.amount || !formData.approver) {
+      toast.error("All fields are mandatory");
+      return;
+    }
+
+    if (formData.payDate > today || formData.billDate > today) {
+      toast.error("Future dates are not allowed");
+      return;
+    }
+
+    const amt = parseFloat(formData.amount);
+    if (!Number.isFinite(amt) || amt === 0) {
+      toast.error("Enter a non-zero numeric amount");
       return;
     }
 
     try {
       const db = await getDB();
-      const entry: ChargeEntry = {
+      const entry: any = {
         id: editingId || `charge_${Date.now()}`,
-        bglCode: formData.bglCode,
-        head: formData.head,
-        subHead: formData.subHead,
-        paymentMode: formData.paymentMode,
-        chequeNo: formData.chequeNo,
-        amount: parseFloat(formData.amount),
-        remarks: formData.remarks,
+        bgl: formData.bglCode,
+        payDate: formData.payDate,
+        billNo: formData.billNo.trim(),
+        billDate: formData.billDate,
+        payee: formData.payee.trim(),
+        purpose: formData.purpose.trim(),
+        amount: amt,
+        approver: formData.approver.trim(),
         createdAt: editingId ? entries.find(e => e.id === editingId)?.createdAt || new Date().toISOString() : new Date().toISOString(),
       };
 
       await db.put("chargeEntries", entry);
-      toast.success(editingId ? "Entry updated" : "Entry added");
+      toast.success(editingId ? "Entry updated" : "Charge added");
       handleReset();
       await loadData();
     } catch (error) {
@@ -670,23 +698,29 @@ function ChargesEntryTab() {
       bglCode: "",
       head: "",
       subHead: "",
-      paymentMode: "Cash",
-      chequeNo: "",
+      payDate: today,
+      billNo: "",
+      billDate: today,
+      payee: "",
+      purpose: "",
       amount: "",
-      remarks: "",
+      approver: "",
     });
     setEditingId(null);
   }
 
-  function handleEdit(entry: ChargeEntry) {
+  function handleEdit(entry: any) {
     setFormData({
-      bglCode: entry.bglCode,
-      head: entry.head,
-      subHead: entry.subHead,
-      paymentMode: entry.paymentMode,
-      chequeNo: entry.chequeNo,
+      bglCode: entry.bgl,
+      head: bglMaster.find(b => b.bglCode === entry.bgl)?.head || "",
+      subHead: bglMaster.find(b => b.bglCode === entry.bgl)?.subHead || "",
+      payDate: entry.payDate,
+      billNo: entry.billNo,
+      billDate: entry.billDate,
+      payee: entry.payee,
+      purpose: entry.purpose,
       amount: entry.amount.toString(),
-      remarks: entry.remarks,
+      approver: entry.approver,
     });
     setEditingId(entry.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -706,188 +740,414 @@ function ChargesEntryTab() {
     }
   }
 
-  // Group entries by head
-  const groupedEntries = entries.reduce((acc, entry) => {
-    if (!acc[entry.head]) acc[entry.head] = [];
-    acc[entry.head].push(entry);
+  async function handleBGLUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      toast.error("Please select a CSV/TXT file");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const db = await getDB();
+      
+      // Clear existing BGL master
+      const tx = db.transaction("bglMaster", "readwrite");
+      await tx.store.clear();
+      
+      // Parse and add new BGL codes
+      for (const line of lines) {
+        const parts = line.split(/\t/);
+        if (parts.length >= 3) {
+          await tx.store.add({
+            bglCode: parts[0].trim(),
+            head: parts[1].trim(),
+            subHead: parts[2].trim(),
+          });
+        }
+      }
+      
+      await tx.done;
+      toast.success("BGL Codes updated successfully");
+      await loadData();
+      setBglConfigOpen(false);
+    } catch (error) {
+      toast.error("Error reading BGL file");
+      console.error(error);
+    }
+  }
+
+  async function handleExportCSV() {
+    if (entries.length === 0) {
+      toast.error("No charges to export");
+      return;
+    }
+
+    const escapeCSV = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const csv = [
+      ["S.N.", "BGL Number", "Payment Head", "Sub-Head", "Date of Payment", "Bill No.", "Bill Date", "Payee Name", "Purpose", "Amount Paid", "Approver"]
+        .map(escapeCSV).join(",")
+    ];
+
+    entries.forEach((r: any, i) => {
+      const info = bglMaster.find(b => b.bglCode === r.bgl) || { head: "", subHead: "" };
+      csv.push([
+        String(i + 1),
+        r.bgl,
+        info.head,
+        info.subHead,
+        formatDateDDMMYYYY(r.payDate),
+        r.billNo,
+        formatDateDDMMYYYY(r.billDate),
+        r.payee,
+        r.purpose,
+        r.amount.toFixed(2),
+        r.approver
+      ].map(escapeCSV).join(","));
+    });
+
+    const blob = new Blob([csv.join("\r\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `charges_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported");
+  }
+
+  async function handleClearAll() {
+    if (!confirm("Clear all charges?")) return;
+
+    try {
+      const db = await getDB();
+      const tx = db.transaction("chargeEntries", "readwrite");
+      await tx.store.clear();
+      await tx.done;
+      toast.success("All charges cleared");
+      await loadData();
+    } catch (error) {
+      toast.error("Failed to clear charges");
+      console.error(error);
+    }
+  }
+
+  function formatDateDDMMYYYY(isoDate: string): string {
+    if (!isoDate) return "";
+    const [y, m, d] = isoDate.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  function handleSort(key: string) {
+    setSortState({
+      key,
+      asc: sortState.key === key ? !sortState.asc : true
+    });
+  }
+
+  // Sort entries
+  let sortedEntries = [...entries];
+  if (sortState.key) {
+    sortedEntries.sort((a: any, b: any) => {
+      let x = a[sortState.key!] ?? "";
+      let y = b[sortState.key!] ?? "";
+      if (sortState.key === "amount") {
+        x = Number(x);
+        y = Number(y);
+      }
+      return sortState.asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
+    });
+  }
+
+  // Group entries by BGL code
+  const groupedEntries = sortedEntries.reduce((acc: any, entry: any) => {
+    if (!acc[entry.bgl]) acc[entry.bgl] = [];
+    acc[entry.bgl].push(entry);
     return acc;
-  }, {} as Record<string, ChargeEntry[]>);
+  }, {});
+
+  const grandTotal = entries.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
 
   return (
     <div className="space-y-4">
       <Card className="p-6 bg-white/80 backdrop-blur-sm">
-        <h2 className="text-xl font-bold mb-4 text-purple-900">
-          {editingId ? "Edit Charge Entry" : "Add Charge Entry"}
-        </h2>
+        <h2 className="text-xl font-bold mb-4 text-purple-900">Charges Entry</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <Label htmlFor="bgl-code">BGL Code *</Label>
-            <select
-              id="bgl-code"
-              value={formData.bglCode}
-              onChange={(e) => handleBGLChange(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border rounded-md"
-            >
-              <option value="">Select BGL Code...</option>
-              {bglMaster.map(bgl => (
-                <option key={bgl.bglCode} value={bgl.bglCode}>
-                  {bgl.bglCode} - {bgl.head}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <Label htmlFor="head">Head</Label>
+        {/* BGL Configuration */}
+        <details open={bglConfigOpen} onToggle={(e: any) => setBglConfigOpen(e.target.open)} className="mb-4 border rounded-lg p-3">
+          <summary className="cursor-pointer font-semibold text-purple-700">BGL Configuration</summary>
+          <div className="mt-3 flex items-center gap-2">
+            <Label className="whitespace-nowrap">Update BGL Codes (CSV):</Label>
             <Input
-              id="head"
-              value={formData.head}
-              readOnly
-              className="bg-gray-50"
+              type="file"
+              accept=".csv,.txt"
+              onChange={handleBGLUpload}
+              className="flex-1"
             />
+            <div className="text-xs text-gray-500 w-full mt-1">
+              Format: Code [TAB] Head [TAB] Sub-Head
+            </div>
+          </div>
+        </details>
+
+        {/* Form */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div>
+              <Label htmlFor="bgl-code">BGL Code</Label>
+              <input
+                id="bgl-code"
+                list="bgl-list"
+                value={formData.bglCode}
+                onChange={(e) => handleBGLChange(e.target.value)}
+                placeholder="e.g. 100101"
+                className="w-full mt-1 px-2 py-1.5 border rounded text-sm"
+              />
+              <datalist id="bgl-list">
+                {bglMaster.map(bgl => (
+                  <option key={bgl.bglCode} value={bgl.bglCode}>{bgl.head}</option>
+                ))}
+              </datalist>
+            </div>
+
+            <div>
+              <Label htmlFor="head">Payment Head (Auto)</Label>
+              <Input
+                id="head"
+                value={formData.head}
+                readOnly
+                placeholder="Select BGL Code first"
+                className="bg-gray-50 text-sm"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="sub-head">Sub-Head (Auto)</Label>
+              <Input
+                id="sub-head"
+                value={formData.subHead}
+                readOnly
+                placeholder="Select BGL Code first"
+                className="bg-gray-50 text-sm"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="pay-date">Payment Date</Label>
+              <Input
+                id="pay-date"
+                type="date"
+                value={formData.payDate}
+                max={today}
+                onChange={(e) => setFormData({ ...formData, payDate: e.target.value })}
+                className="text-sm"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bill-no">Bill No.</Label>
+              <Input
+                id="bill-no"
+                value={formData.billNo}
+                onChange={(e) => setFormData({ ...formData, billNo: e.target.value })}
+                placeholder="Bill #"
+                className="text-sm"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bill-date">Bill Date</Label>
+              <Input
+                id="bill-date"
+                type="date"
+                value={formData.billDate}
+                max={today}
+                onChange={(e) => setFormData({ ...formData, billDate: e.target.value })}
+                className="text-sm"
+              />
+            </div>
           </div>
 
-          <div>
-            <Label htmlFor="sub-head">Sub Head</Label>
-            <Input
-              id="sub-head"
-              value={formData.subHead}
-              readOnly
-              className="bg-gray-50"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+              <Label htmlFor="payee">Payee Name</Label>
+              <input
+                id="payee"
+                list="payee-list"
+                value={formData.payee}
+                onChange={(e) => setFormData({ ...formData, payee: e.target.value })}
+                placeholder="Who was paid?"
+                className="w-full mt-1 px-2 py-1.5 border rounded text-sm"
+              />
+              <datalist id="payee-list">
+                {payeeSuggestions.map(p => (
+                  <option key={p} value={p} />
+                ))}
+              </datalist>
+            </div>
 
-          <div>
-            <Label htmlFor="payment-mode">Payment Mode</Label>
-            <select
-              id="payment-mode"
-              value={formData.paymentMode}
-              onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
-              className="w-full mt-1 px-3 py-2 border rounded-md"
-            >
-              <option value="Cash">Cash</option>
-              <option value="Cheque">Cheque</option>
-              <option value="Online">Online</option>
-            </select>
-          </div>
+            <div>
+              <Label htmlFor="purpose">Purpose</Label>
+              <Input
+                id="purpose"
+                value={formData.purpose}
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                placeholder="Description"
+                className="text-sm"
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="cheque-no">Cheque/Ref No</Label>
-            <Input
-              id="cheque-no"
-              value={formData.chequeNo}
-              onChange={(e) => setFormData({ ...formData, chequeNo: e.target.value })}
-            />
-          </div>
+            <div>
+              <Label htmlFor="amount">Amount (Rs)</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                placeholder="0.00"
+                className="text-sm"
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="amount">Amount (Rs.) *</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            />
-          </div>
+            <div>
+              <Label htmlFor="approver">Approver</Label>
+              <Input
+                id="approver"
+                value={formData.approver}
+                onChange={(e) => setFormData({ ...formData, approver: e.target.value })}
+                placeholder="Initials"
+                className="text-sm"
+              />
+            </div>
 
-          <div className="md:col-span-2">
-            <Label htmlFor="remarks">Remarks</Label>
-            <Input
-              id="remarks"
-              value={formData.remarks}
-              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-            />
+            <div className="flex items-end">
+              <Button onClick={handleSave} className="w-full bg-purple-600 hover:bg-purple-700">
+                {editingId ? "Update" : "Add"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
-            {editingId ? <Save className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-            {editingId ? "Update" : "Add Entry"}
-          </Button>
-          {editingId && (
-            <Button onClick={handleReset} variant="outline">
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-          )}
+        <div className="mt-3 text-sm text-gray-600">
+          Enter details and click Add.
         </div>
       </Card>
 
       {/* Entries Table */}
       <Card className="p-6 bg-white/80 backdrop-blur-sm">
-        <h3 className="text-lg font-bold mb-4 text-purple-900">
-          All Entries ({entries.length})
-        </h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold text-purple-900">
+            All Entries ({entries.length})
+          </h3>
+          <div className="flex gap-2">
+            <Button onClick={handleExportCSV} variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-1" />
+              Export CSV
+            </Button>
+            <Button onClick={handleClearAll} variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+              <Trash2 className="w-4 h-4 mr-1" />
+              Clear Charges
+            </Button>
+          </div>
+        </div>
 
         {Object.keys(groupedEntries).length === 0 ? (
-          <p className="text-center text-gray-500 py-8">No entries yet. Add your first charge entry above.</p>
+          <p className="text-center text-gray-500 py-8">No charges yet.</p>
         ) : (
-          Object.entries(groupedEntries).map(([head, headEntries]) => {
-            const subtotal = headEntries.reduce((sum, e) => sum + e.amount, 0);
-            return (
-              <div key={head} className="mb-6">
-                <h4 className="font-bold text-purple-700 mb-2 flex justify-between items-center">
-                  <span>{head}</span>
-                  <span className="text-sm">Subtotal: ₹{subtotal.toFixed(2)}</span>
-                </h4>
-                <div className="overflow-x-auto border rounded-lg">
-                  <table className="w-full text-sm">
-                    <thead className="bg-purple-100">
-                      <tr>
-                        <th className="px-3 py-2 text-left">BGL Code</th>
-                        <th className="px-3 py-2 text-left">Sub Head</th>
-                        <th className="px-3 py-2 text-left">Payment Mode</th>
-                        <th className="px-3 py-2 text-left">Cheque/Ref</th>
-                        <th className="px-3 py-2 text-right">Amount</th>
-                        <th className="px-3 py-2 text-left">Remarks</th>
-                        <th className="px-3 py-2 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {headEntries.map(entry => (
-                        <tr key={entry.id} className="border-t hover:bg-purple-50">
-                          <td className="px-3 py-2">{entry.bglCode}</td>
-                          <td className="px-3 py-2">{entry.subHead}</td>
-                          <td className="px-3 py-2">{entry.paymentMode}</td>
-                          <td className="px-3 py-2">{entry.chequeNo || "-"}</td>
-                          <td className="px-3 py-2 text-right">₹{entry.amount.toFixed(2)}</td>
-                          <td className="px-3 py-2">{entry.remarks || "-"}</td>
-                          <td className="px-3 py-2 text-center">
-                            <div className="flex gap-1 justify-center">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEdit(entry)}
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDelete(entry.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </td>
+          <div className="space-y-4">
+            {Object.keys(groupedEntries).sort().map(bgl => {
+              const bglInfo = bglMaster.find(b => b.bglCode === bgl) || { head: bgl, subHead: "" };
+              const bglEntries = groupedEntries[bgl];
+              const subtotal = bglEntries.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+              return (
+                <div key={bgl}>
+                  <h4 className="font-bold text-purple-700 mb-2 bg-purple-50 px-3 py-2 rounded">
+                    {bgl} - {bglInfo.head}
+                  </h4>
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-xs">
+                      <thead className="bg-purple-100">
+                        <tr>
+                          <th className="px-2 py-2 text-left">S.N.</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("bgl")}>BGL Number</th>
+                          <th className="px-2 py-2 text-left">Head</th>
+                          <th className="px-2 py-2 text-left">Sub-Head</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("payDate")}>Date of Payment</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("billNo")}>Bill No.</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("billDate")}>Bill Date</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("payee")}>Payee Name</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("purpose")}>Purpose</th>
+                          <th className="px-2 py-2 text-right cursor-pointer hover:bg-purple-200" onClick={() => handleSort("amount")}>Amount Paid (Rs.)</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("approver")}>Approver</th>
+                          <th className="px-2 py-2 text-center">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {bglEntries.map((entry: any, idx: number) => {
+                          const currentInfo = bglMaster.find(b => b.bglCode === entry.bgl) || { head: "", subHead: "" };
+                          return (
+                            <tr key={entry.id} className="border-t hover:bg-purple-50">
+                              <td className="px-2 py-2">{idx + 1}</td>
+                              <td className="px-2 py-2">{entry.bgl}</td>
+                              <td className="px-2 py-2">{currentInfo.head}</td>
+                              <td className="px-2 py-2">{currentInfo.subHead}</td>
+                              <td className="px-2 py-2">{formatDateDDMMYYYY(entry.payDate)}</td>
+                              <td className="px-2 py-2">{entry.billNo}</td>
+                              <td className="px-2 py-2">{formatDateDDMMYYYY(entry.billDate)}</td>
+                              <td className="px-2 py-2">{entry.payee}</td>
+                              <td className="px-2 py-2">{entry.purpose}</td>
+                              <td className="px-2 py-2 text-right">{Number(entry.amount || 0).toFixed(2)}</td>
+                              <td className="px-2 py-2">{entry.approver}</td>
+                              <td className="px-2 py-2 text-center">
+                                <div className="flex gap-1 justify-center">
+                                  <Button size="sm" variant="ghost" onClick={() => handleEdit(entry)} title="Edit">
+                                    ✎
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDelete(entry.id)} className="text-red-600" title="Delete">
+                                    🗑
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-purple-50 font-semibold">
+                          <td colSpan={9} className="px-2 py-2"><em>Subtotal</em></td>
+                          <td className="px-2 py-2 text-right">{subtotal.toFixed(2)}</td>
+                          <td colSpan={2}></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+
+            {/* Grand Total */}
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <tbody>
+                  <tr className="bg-purple-200 font-bold">
+                    <td colSpan={9} className="px-2 py-2">GRAND TOTAL</td>
+                    <td className="px-2 py-2 text-right">{grandTotal.toFixed(2)}</td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </Card>
     </div>
   );
 }
-
 // ========== Charges Return Report Tab ==========
 function ChargesReturnReportTab() {
   const [entries, setEntries] = useState<ChargeEntry[]>([]);
