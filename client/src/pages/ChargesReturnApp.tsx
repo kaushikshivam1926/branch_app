@@ -1082,13 +1082,11 @@ function ChargesEntryTab() {
   const grandTotal = entries.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
 
   // Validation: Compare category totals between ACM and Charges Entry
-  const [acmCategoryTotals, setAcmCategoryTotals] = useState<Record<string, number>>({});
   const [validationResults, setValidationResults] = useState<Array<{category: string; acmTotal: number; chargesTotal: number; difference: number}>>([]);
 
   useEffect(() => {
     async function loadACMTotalsForValidation() {
       if (!selectedMonthFilter) {
-        setAcmCategoryTotals({});
         setValidationResults([]);
         return;
       }
@@ -1119,12 +1117,17 @@ function ChargesEntryTab() {
           const amount = row.monthAmount || 0;
           categoryTotals[category] = (categoryTotals[category] || 0) + amount;
         }
-        
-        setAcmCategoryTotals(categoryTotals);
 
-        // Calculate charges entry totals by category
+        // Calculate charges entry totals by category from filtered entries
         const chargesCategoryTotals: Record<string, number> = {};
-        for (const entry of filteredEntries) {
+        const currentFilteredEntries = selectedMonthFilter ? 
+          entries.filter((e: any) => {
+            const entryDate = e.payDate || "";
+            const [year, month] = selectedMonthFilter.split('-');
+            return entryDate.startsWith(`${year}-${month}`);
+          }) : entries;
+        
+        for (const entry of currentFilteredEntries) {
           const cat = entry.reportCategory || "Uncategorized";
           chargesCategoryTotals[cat] = (chargesCategoryTotals[cat] || 0) + Number(entry.amount || 0);
         }
@@ -1145,7 +1148,7 @@ function ChargesEntryTab() {
     }
 
     loadACMTotalsForValidation();
-  }, [selectedMonthFilter, filteredEntries, categoryMappings, bglMaster, savedACMReports]);
+  }, [selectedMonthFilter, entries, categoryMappings, bglMaster, savedACMReports]);
 
   return (
     <div className="space-y-4">
