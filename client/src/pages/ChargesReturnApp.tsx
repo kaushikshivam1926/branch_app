@@ -12,6 +12,7 @@ import { openDB, IDBPDatabase } from "idb";
 // ========== Types ==========
 interface ACMRow {
   head: string;
+  particular: string;
   monthAmount: number | null;
   prevTotal: number | null;
   asOnTotal: number | null;
@@ -161,36 +162,43 @@ function shouldIncludeHead(head: string, includeTotalsFlag: boolean): boolean {
   return true;
 }
 
-function extractHeadAndNumbersFromLine(line: string): { head: string; monthAmount: number | null; prevTotal: number | null } | null {
+function extractHeadAndNumbersFromLine(line: string): { head: string; particular: string; monthAmount: number | null; prevTotal: number | null } | null {
   const raw = String(line || "");
   if (isLikelyNoiseLine(raw)) return null;
   
-  // Try to match: HEAD + 2 numbers
-  const m2 = raw.match(/^(.*?)(-?[\d,]+(?:\.\d{1,2})?)\s+(-?[\d,]+(?:\.\d{1,2})?)\s*$/);
-  if (m2) {
-    const head = normalizeSpaces(m2[1]);
-    const a = parseMoneyToken(m2[2]);
-    const b = parseMoneyToken(m2[3]);
-    if (!head || (a == null && b == null)) return null;
-    return { head, monthAmount: a, prevTotal: b };
-  }
+  // Fixed-width column extraction based on ACM format
+  // HEAD: columns 0-42
+  // PARTICULAR: columns 42-74
+  // AMOUNT: columns 74-89
+  // TOTAL TILL PREV MONTH: columns 89-104
   
-  // Try to match: HEAD + 1 number
-  const m1 = raw.match(/^(.*?)(-?[\d,]+(?:\.\d{1,2})?)\s*$/);
-  if (m1) {
-    const head = normalizeSpaces(m1[1]);
-    const a = parseMoneyToken(m1[2]);
-    if (!head || a == null) return null;
-    return { head, monthAmount: a, prevTotal: null };
-  }
+  if (raw.length < 42) return null; // Line too short to have meaningful data
   
-  return null;
+  const headRaw = raw.substring(0, 42).trim();
+  const particularRaw = raw.length > 42 ? raw.substring(42, 74).trim() : "";
+  const amountRaw = raw.length > 74 ? raw.substring(74, 89).trim() : "";
+  const prevTotalRaw = raw.length > 89 ? raw.substring(89, 104).trim() : "";
+  
+  // Skip if HEAD is empty
+  if (!headRaw) return null;
+  
+  // Skip if both amounts are empty
+  const monthAmount = parseMoneyToken(amountRaw);
+  const prevTotal = parseMoneyToken(prevTotalRaw);
+  if (monthAmount === null && prevTotal === null) return null;
+  
+  return { 
+    head: headRaw, 
+    particular: particularRaw || "----",
+    monthAmount, 
+    prevTotal 
+  };
 }
 
-function finalizeRow(r: { head: string; monthAmount: number | null; prevTotal: number | null }): ACMRow {
+function finalizeRow(r: { head: string; particular: string; monthAmount: number | null; prevTotal: number | null }): ACMRow {
   const month = (r.monthAmount == null ? 0 : r.monthAmount);
   const prev = (r.prevTotal == null ? 0 : r.prevTotal);
-  return { head: r.head, monthAmount: r.monthAmount, prevTotal: r.prevTotal, asOnTotal: month + prev };
+  return { head: r.head, particular: r.particular, monthAmount: r.monthAmount, prevTotal: r.prevTotal, asOnTotal: month + prev };
 }
 
 function parseAcmText(text: string, includeTotalsFlag: boolean): { reportDate: { iso: string; label: string }; rows: ACMRow[] } {
@@ -460,15 +468,15 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
       return;
     }
 
-    const headers = ["Payment Head", "Amount (Rs.)", "Total till last month", `Total as on ${reportLabel}`];
+    const headers = ["HEAD", "PARTICULAR OF ENCLOSURE", "AMOUNT (Rs.)", "TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH"];
     const csvRows = [headers.join(",")];
     
     currentRows.forEach(row => {
       csvRows.push([
         `"${row.head}"`,
+        `"${row.particular}"`,
         row.monthAmount ?? "-",
-        row.prevTotal ?? "-",
-        row.asOnTotal ?? "-"
+        row.prevTotal ?? "-"
       ].join(","));
     });
 
@@ -575,10 +583,10 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
           <table className="w-full">
             <thead className="bg-purple-100 sticky top-0">
               <tr>
-                <th className="px-4 py-2 text-left">Payment Head</th>
-                <th className="px-4 py-2 text-right">Amount (Rs.)</th>
-                <th className="px-4 py-2 text-right">Total till last month</th>
-                <th className="px-4 py-2 text-right">Total as on {reportLabel}</th>
+                <th className="px-4 py-2 text-left">HEAD</th>
+                <th className="px-4 py-2 text-left">PARTICULAR OF ENCLOSURE</th>
+                <th className="px-4 py-2 text-right">AMOUNT (Rs.)</th>
+                <th className="px-4 py-2 text-right">TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH</th>
               </tr>
             </thead>
             <tbody>
@@ -592,9 +600,9 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
                 currentRows.map((row, idx) => (
                   <tr key={idx} className="border-t hover:bg-purple-50">
                     <td className="px-4 py-2">{row.head}</td>
+                    <td className="px-4 py-2">{row.particular}</td>
                     <td className="px-4 py-2 text-right">{row.monthAmount !== null ? formatIndianCurrency(row.monthAmount) : "-"}</td>
                     <td className="px-4 py-2 text-right">{row.prevTotal !== null ? formatIndianCurrency(row.prevTotal) : "-"}</td>
-                    <td className="px-4 py-2 text-right">{row.asOnTotal !== null ? formatIndianCurrency(row.asOnTotal) : "-"}</td>
                   </tr>
                 ))
               )}
