@@ -452,7 +452,44 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
       const rows = await index.getAll(selectedReportId);
       await tx.done;
 
-      setCurrentRows(rows);
+      // Apply sorting logic: separate total rows from data rows
+      const totalRows: ACMRow[] = [];
+      const dataRows: ACMRow[] = [];
+      
+      for (const row of rows) {
+        const u = row.head.toUpperCase();
+        if (u.includes("TOTAL CHARGES FOR THE MONTH") || 
+            u.includes("TOTAL CHARGES UPTO PREVIOUS MONTH") || 
+            u.includes("BALANCE AS PER GENERAL LEDGER")) {
+          totalRows.push(row);
+        } else {
+          dataRows.push(row);
+        }
+      }
+      
+      // Sort data rows by monthAmount descending (nulls last)
+      dataRows.sort((a, b) => {
+        const aAmt = a.monthAmount ?? -Infinity;
+        const bAmt = b.monthAmount ?? -Infinity;
+        return bAmt - aAmt;
+      });
+      
+      // Sort total rows in specific order
+      const totalOrder = [
+        "TOTAL CHARGES FOR THE MONTH",
+        "TOTAL CHARGES UPTO PREVIOUS MONTH",
+        "BALANCE AS PER GENERAL LEDGER"
+      ];
+      totalRows.sort((a, b) => {
+        const aIdx = totalOrder.findIndex(t => a.head.toUpperCase().includes(t));
+        const bIdx = totalOrder.findIndex(t => b.head.toUpperCase().includes(t));
+        return aIdx - bIdx;
+      });
+      
+      // Combine: data rows first, then total rows
+      const sortedRows = [...dataRows, ...totalRows];
+
+      setCurrentRows(sortedRows);
       setReportLabel(report.reportDateLabel);
       setIncludeTotals(report.includeTotals);
       toast.success(`Loaded: ${report.reportDateLabel}`);
@@ -468,15 +505,17 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
       return;
     }
 
-    const headers = ["HEAD", "PARTICULAR OF ENCLOSURE", "AMOUNT (Rs.)", "TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH"];
+    const headers = ["HEAD", "PARTICULAR OF ENCLOSURE", "AMOUNT (Rs.)", "TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH", `TOTAL AMOUNT AS AT END OF MONTH ENDED AS ON ${reportLabel}`];
     const csvRows = [headers.join(",")];
     
     currentRows.forEach(row => {
+      const totalAsOn = (row.monthAmount ?? 0) + (row.prevTotal ?? 0);
       csvRows.push([
         `"${row.head}"`,
         `"${row.particular}"`,
         row.monthAmount ?? "-",
-        row.prevTotal ?? "-"
+        row.prevTotal ?? "-",
+        totalAsOn
       ].join(","));
     });
 
@@ -587,24 +626,29 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
                 <th className="px-4 py-2 text-left">PARTICULAR OF ENCLOSURE</th>
                 <th className="px-4 py-2 text-right">AMOUNT (Rs.)</th>
                 <th className="px-4 py-2 text-right">TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH</th>
+                <th className="px-4 py-2 text-right">TOTAL AMOUNT AS AT END OF MONTH ENDED AS ON {reportLabel}</th>
               </tr>
             </thead>
             <tbody>
               {currentRows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     No data loaded. Upload a file or load a saved report.
                   </td>
                 </tr>
               ) : (
-                currentRows.map((row, idx) => (
-                  <tr key={idx} className="border-t hover:bg-purple-50">
-                    <td className="px-4 py-2">{row.head}</td>
-                    <td className="px-4 py-2">{row.particular}</td>
-                    <td className="px-4 py-2 text-right">{row.monthAmount !== null ? formatIndianCurrency(row.monthAmount) : "-"}</td>
-                    <td className="px-4 py-2 text-right">{row.prevTotal !== null ? formatIndianCurrency(row.prevTotal) : "-"}</td>
-                  </tr>
-                ))
+                currentRows.map((row, idx) => {
+                  const totalAsOn = (row.monthAmount ?? 0) + (row.prevTotal ?? 0);
+                  return (
+                    <tr key={idx} className="border-t hover:bg-purple-50">
+                      <td className="px-4 py-2">{row.head}</td>
+                      <td className="px-4 py-2">{row.particular}</td>
+                      <td className="px-4 py-2 text-right">{row.monthAmount !== null ? formatIndianCurrency(row.monthAmount) : "-"}</td>
+                      <td className="px-4 py-2 text-right">{row.prevTotal !== null ? formatIndianCurrency(row.prevTotal) : "-"}</td>
+                      <td className="px-4 py-2 text-right font-semibold">{formatIndianCurrency(totalAsOn)}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
