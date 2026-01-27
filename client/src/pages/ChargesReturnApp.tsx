@@ -44,6 +44,23 @@ interface BGLMaster {
   subHead: string;
 }
 
+// ========== Utility Functions ==========
+// Indian currency formatting (1,23,456.00)
+const formatIndianCurrency = (amount: number | null): string => {
+  if (amount === null || amount === undefined) return "0.00";
+  const fixed = amount.toFixed(2);
+  const [integer, decimal] = fixed.split(".");
+  
+  // Indian numbering: last 3 digits, then groups of 2
+  const lastThree = integer.slice(-3);
+  const otherDigits = integer.slice(0, -3);
+  const formatted = otherDigits.length > 0
+    ? otherDigits.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree
+    : lastThree;
+  
+  return formatted + "." + decimal;
+};
+
 // ========== IndexedDB Setup ==========
 const DB_NAME = "ChargesReturnDB";
 const DB_VERSION = 1;
@@ -575,9 +592,9 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
                 currentRows.map((row, idx) => (
                   <tr key={idx} className="border-t hover:bg-purple-50">
                     <td className="px-4 py-2">{row.head}</td>
-                    <td className="px-4 py-2 text-right">{row.monthAmount?.toFixed(2) ?? "-"}</td>
-                    <td className="px-4 py-2 text-right">{row.prevTotal?.toFixed(2) ?? "-"}</td>
-                    <td className="px-4 py-2 text-right">{row.asOnTotal?.toFixed(2) ?? "-"}</td>
+                    <td className="px-4 py-2 text-right">{row.monthAmount !== null ? formatIndianCurrency(row.monthAmount) : "-"}</td>
+                    <td className="px-4 py-2 text-right">{row.prevTotal !== null ? formatIndianCurrency(row.prevTotal) : "-"}</td>
+                    <td className="px-4 py-2 text-right">{row.asOnTotal !== null ? formatIndianCurrency(row.asOnTotal) : "-"}</td>
                   </tr>
                 ))
               )}
@@ -756,9 +773,13 @@ function ChargesEntryTab() {
       const tx = db.transaction("bglMaster", "readwrite");
       await tx.store.clear();
       
-      // Parse and add new BGL codes
+      // Parse and add new BGL codes (supports both comma and tab separation)
       for (const line of lines) {
-        const parts = line.split(/\t/);
+        // Try comma first, then tab
+        let parts = line.split(',');
+        if (parts.length < 3) {
+          parts = line.split(/\t/);
+        }
         if (parts.length >= 3) {
           await tx.store.add({
             bglCode: parts[0].trim(),
@@ -806,7 +827,7 @@ function ChargesEntryTab() {
         formatDateDDMMYYYY(r.billDate),
         r.payee,
         r.purpose,
-        r.amount.toFixed(2),
+        formatIndianCurrency(r.amount),
         r.approver
       ].map(escapeCSV).join(","));
     });
@@ -890,7 +911,7 @@ function ChargesEntryTab() {
               className="flex-1"
             />
             <div className="text-xs text-gray-500 w-full mt-1">
-              Format: Code [TAB] Head [TAB] Sub-Head
+              Format: BGL Code, Payment Head, Sub-Head (CSV or tab-separated)
             </div>
           </div>
         </details>
@@ -1103,7 +1124,7 @@ function ChargesEntryTab() {
                               <td className="px-2 py-2">{formatDateDDMMYYYY(entry.billDate)}</td>
                               <td className="px-2 py-2">{entry.payee}</td>
                               <td className="px-2 py-2">{entry.purpose}</td>
-                              <td className="px-2 py-2 text-right">{Number(entry.amount || 0).toFixed(2)}</td>
+                              <td className="px-2 py-2 text-right">{formatIndianCurrency(Number(entry.amount || 0))}</td>
                               <td className="px-2 py-2">{entry.approver}</td>
                               <td className="px-2 py-2 text-center">
                                 <div className="flex gap-1 justify-center">
@@ -1120,7 +1141,7 @@ function ChargesEntryTab() {
                         })}
                         <tr className="bg-purple-50 font-semibold">
                           <td colSpan={9} className="px-2 py-2"><em>Subtotal</em></td>
-                          <td className="px-2 py-2 text-right">{subtotal.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-right">{formatIndianCurrency(subtotal)}</td>
                           <td colSpan={2}></td>
                         </tr>
                       </tbody>
@@ -1136,7 +1157,7 @@ function ChargesEntryTab() {
                 <tbody>
                   <tr className="bg-purple-200 font-bold">
                     <td colSpan={9} className="px-2 py-2">GRAND TOTAL</td>
-                    <td className="px-2 py-2 text-right">{grandTotal.toFixed(2)}</td>
+                    <td className="px-2 py-2 text-right">{formatIndianCurrency(grandTotal)}</td>
                     <td colSpan={2}></td>
                   </tr>
                 </tbody>
@@ -1191,12 +1212,12 @@ function ChargesReturnReportTab() {
       entry.bglCode,
       entry.paymentMode,
       entry.chequeNo || "-",
-      entry.amount.toFixed(2),
-      `"${entry.remarks || "-"}"`
+      formatIndianCurrency(entry.amount),
+      `"${entry.remarks || "-"}`
     ].join(","));
     });
 
-    csvRows.push(["", "", "", "", "Grand Total", grandTotal.toFixed(2), ""].join(","));
+    csvRows.push(["", "", "", "", "Grand Total", formatIndianCurrency(grandTotal), ""].join(","));
 
     const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -1263,13 +1284,13 @@ function ChargesReturnReportTab() {
                           <td className="px-3 py-2 border-r">{entry.subHead}</td>
                           <td className="px-3 py-2 border-r">{entry.paymentMode}</td>
                           <td className="px-3 py-2 border-r">{entry.chequeNo || "-"}</td>
-                          <td className="px-3 py-2 text-right border-r">{entry.amount.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right border-r">{formatIndianCurrency(entry.amount)}</td>
                           <td className="px-3 py-2">{entry.remarks || "-"}</td>
                         </tr>
                       ))}
                       <tr className="border-t bg-purple-50 font-semibold">
                         <td colSpan={4} className="px-3 py-2 text-right border-r">Subtotal:</td>
-                        <td className="px-3 py-2 text-right border-r">₹{subtotal.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right border-r">₹{formatIndianCurrency(subtotal)}</td>
                         <td></td>
                       </tr>
                     </tbody>
@@ -1282,7 +1303,7 @@ function ChargesReturnReportTab() {
               <div className="flex justify-end">
                 <div className="text-right">
                   <p className="text-lg font-bold text-purple-900">
-                    Grand Total: ₹{grandTotal.toFixed(2)}
+                    Grand Total: ₹{formatIndianCurrency(grandTotal)}
                   </p>
                 </div>
               </div>
