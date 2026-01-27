@@ -913,19 +913,20 @@ function ChargesEntryTab() {
         <h2 className="text-xl font-bold mb-4 text-purple-900">Charges Entry</h2>
         
         {/* BGL Configuration */}
-        <details open={bglConfigOpen} onToggle={(e: any) => setBglConfigOpen(e.target.open)} className="mb-4 border rounded-lg p-3">
-          <summary className="cursor-pointer font-semibold text-purple-700">BGL Configuration</summary>
-          <div className="mt-3 flex items-center gap-2">
-            <Label className="whitespace-nowrap">Update BGL Codes (CSV):</Label>
+        <details open={bglConfigOpen} onToggle={(e: any) => setBglConfigOpen(e.target.open)} className="mb-4 border rounded-lg p-4">
+          <summary className="cursor-pointer font-semibold text-purple-700 mb-3">BGL Configuration</summary>
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="bgl-upload" className="text-sm font-medium">Update BGL Codes (CSV)</Label>
             <Input
+              id="bgl-upload"
               type="file"
               accept=".csv,.txt"
               onChange={handleBGLUpload}
-              className="flex-1"
+              className="w-full"
             />
-            <div className="text-xs text-gray-500 w-full mt-1">
+            <p className="text-xs text-gray-500">
               Format: BGL Code, Payment Head, Sub-Head (CSV or tab-separated)
-            </div>
+            </p>
           </div>
         </details>
 
