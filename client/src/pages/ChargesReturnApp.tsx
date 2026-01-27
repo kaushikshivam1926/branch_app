@@ -36,6 +36,7 @@ interface ChargeEntry {
   purpose: string;
   amount: number;
   approver: string;
+  reportCategory: string;
   createdAt: string;
 }
 
@@ -43,6 +44,11 @@ interface BGLMaster {
   bglCode: string;
   head: string;
   subHead: string;
+}
+
+interface CategoryMapping {
+  bglCode: string;
+  reportCategory: string;
 }
 
 // ========== Utility Functions ==========
@@ -98,6 +104,9 @@ function getDB() {
             { bglCode: "21191", head: "Miscellaneous", subHead: "Other expenses" },
           ];
           defaultBGL.forEach(item => bglStore.add(item));
+        }
+        if (!db.objectStoreNames.contains("categoryMappings")) {
+          db.createObjectStore("categoryMappings", { keyPath: "bglCode" });
         }
       },
     });
@@ -673,10 +682,15 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
 function ChargesEntryTab() {
   const [entries, setEntries] = useState<ChargeEntry[]>([]);
   const [bglMaster, setBglMaster] = useState<BGLMaster[]>([]);
+  const [categoryMappings, setCategoryMappings] = useState<CategoryMapping[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortState, setSortState] = useState<{ key: string | null; asc: boolean }>({ key: null, asc: true });
   const [payeeSuggestions, setPayeeSuggestions] = useState<string[]>([]);
   const [bglConfigOpen, setBglConfigOpen] = useState(false);
+  const [categoryConfigOpen, setCategoryConfigOpen] = useState(false);
+  const [savedACMReports, setSavedACMReports] = useState<ACMReport[]>([]);
+  const [selectedACMMonth, setSelectedACMMonth] = useState<string>("");
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState<string>("");
   
   const today = new Date().toISOString().slice(0, 10);
   
@@ -701,8 +715,12 @@ function ChargesEntryTab() {
     const db = await getDB();
     const allEntries = await db.getAll("chargeEntries");
     const allBGL = await db.getAll("bglMaster");
+    const allMappings = await db.getAll("categoryMappings");
+    const allReports = await db.getAll("acmReports");
     setEntries(allEntries);
     setBglMaster(allBGL);
+    setCategoryMappings(allMappings);
+    setSavedACMReports(allReports);
     
     // Update payee suggestions
     const payees = [...new Set(allEntries.map((e: any) => e.payee).filter((p: string) => p && p.trim()))].sort();
@@ -739,6 +757,10 @@ function ChargesEntryTab() {
 
     try {
       const db = await getDB();
+      // Get report category from mapping
+      const categoryMapping = categoryMappings.find(m => m.bglCode === formData.bglCode);
+      const reportCategory = categoryMapping?.reportCategory || "Uncategorized";
+      
       const entry: any = {
         id: editingId || `charge_${Date.now()}`,
         bgl: formData.bglCode,
@@ -749,6 +771,7 @@ function ChargesEntryTab() {
         purpose: formData.purpose.trim(),
         amount: amt,
         approver: formData.approver.trim(),
+        reportCategory,
         createdAt: editingId ? entries.find(e => e.id === editingId)?.createdAt || new Date().toISOString() : new Date().toISOString(),
       };
 
@@ -864,6 +887,90 @@ function ChargesEntryTab() {
     }
   }
 
+  async function handleCategoryMappingUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      toast.error("Please select a CSV/TXT file");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const db = await getDB();
+      
+      // Clear existing category mappings
+      const tx = db.transaction("categoryMappings", "readwrite");
+      await tx.store.clear();
+      
+      // Parse and add new category mappings (supports both comma and tab separation)
+      let lineCount = 0;
+      for (const line of lines) {
+        lineCount++;
+        // Skip header row (if first line contains "BGL" or "Code" or "Category")
+        if (lineCount === 1 && /BGL|Code|Category/i.test(line)) {
+          continue;
+        }
+        
+        // Try comma first, then tab
+        let parts = line.split(',');
+        if (parts.length < 2) {
+          parts = line.split(/\t/);
+        }
+        if (parts.length >= 2) {
+          const bglCode = parts[0].trim();
+          const reportCategory = parts[1].trim();
+          
+          if (bglCode && reportCategory) {
+            await tx.store.put({
+              bglCode,
+              reportCategory,
+            });
+          }
+        }
+      }
+      
+      await tx.done;
+      toast.success("Report Category mappings updated successfully");
+      await loadData();
+      setCategoryConfigOpen(false);
+    } catch (error) {
+      toast.error("Error reading category mapping file");
+      console.error(error);
+    }
+  }
+
+  async function handleImportFromACM() {
+    if (!selectedACMMonth) {
+      toast.error("Please select an ACM report month");
+      return;
+    }
+
+    try {
+      const db = await getDB();
+      // Find the report by date
+      const report = savedACMReports.find(r => r.reportDateISO === selectedACMMonth);
+      if (!report) {
+        toast.error("Selected ACM report not found");
+        return;
+      }
+
+      // Get ACM rows for this report
+      const acmRows: ACMRow[] = await db.getAllFromIndex("acmRows", "byReportId", report.reportId);
+      
+      if (acmRows.length === 0) {
+        toast.error("No data found in selected ACM report");
+        return;
+      }
+
+      toast.success(`Loaded ${acmRows.length} items from ACM report for ${report.reportDateLabel}`);
+      setSelectedMonthFilter(selectedACMMonth);
+    } catch (error) {
+      toast.error("Failed to import ACM data");
+      console.error(error);
+    }
+  }
+
   async function handleExportCSV() {
     if (entries.length === 0) {
       toast.error("No charges to export");
@@ -936,8 +1043,19 @@ function ChargesEntryTab() {
     });
   }
 
+  // Filter entries by selected month
+  let filteredEntries = [...entries];
+  if (selectedMonthFilter) {
+    // Filter entries where payDate is in the selected month
+    const [year, month] = selectedMonthFilter.split('-');
+    filteredEntries = filteredEntries.filter((e: any) => {
+      const entryDate = e.payDate || "";
+      return entryDate.startsWith(`${year}-${month}`);
+    });
+  }
+
   // Sort entries
-  let sortedEntries = [...entries];
+  let sortedEntries = [...filteredEntries];
   if (sortState.key) {
     sortedEntries.sort((a: any, b: any) => {
       let x = a[sortState.key!] ?? "";
@@ -950,37 +1068,155 @@ function ChargesEntryTab() {
     });
   }
 
-  // Group entries by BGL code
-  const groupedEntries = sortedEntries.reduce((acc: any, entry: any) => {
-    if (!acc[entry.bgl]) acc[entry.bgl] = [];
-    acc[entry.bgl].push(entry);
+  // Group entries by report category
+  const groupedByCategory = sortedEntries.reduce((acc: any, entry: any) => {
+    const category = entry.reportCategory || "Uncategorized";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(entry);
     return acc;
   }, {});
 
   const grandTotal = entries.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+  // Validation: Compare category totals between ACM and Charges Entry
+  const [acmCategoryTotals, setAcmCategoryTotals] = useState<Record<string, number>>({});
+  const [validationResults, setValidationResults] = useState<Array<{category: string; acmTotal: number; chargesTotal: number; difference: number}>>([]);
+
+  useEffect(() => {
+    async function loadACMTotalsForValidation() {
+      if (!selectedMonthFilter) {
+        setAcmCategoryTotals({});
+        setValidationResults([]);
+        return;
+      }
+
+      try {
+        const db = await getDB();
+        const report = savedACMReports.find(r => r.reportDateISO === selectedMonthFilter);
+        if (!report) return;
+
+        const acmRows: ACMRow[] = await db.getAllFromIndex("acmRows", "byReportId", report.reportId);
+        
+        // Calculate totals by category from ACM data
+        const categoryTotals: Record<string, number> = {};
+        for (const row of acmRows) {
+          // Find which category this HEAD belongs to
+          const headUpper = row.head.toUpperCase();
+          let category = "Uncategorized";
+          
+          // Try to match HEAD with BGL master to find category
+          for (const mapping of categoryMappings) {
+            const bgl = bglMaster.find(b => b.bglCode === mapping.bglCode);
+            if (bgl && headUpper.includes(bgl.head.toUpperCase())) {
+              category = mapping.reportCategory;
+              break;
+            }
+          }
+          
+          const amount = row.monthAmount || 0;
+          categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+        }
+        
+        setAcmCategoryTotals(categoryTotals);
+
+        // Calculate charges entry totals by category
+        const chargesCategoryTotals: Record<string, number> = {};
+        for (const entry of filteredEntries) {
+          const cat = entry.reportCategory || "Uncategorized";
+          chargesCategoryTotals[cat] = (chargesCategoryTotals[cat] || 0) + Number(entry.amount || 0);
+        }
+
+        // Compare and create validation results
+        const allCategories = new Set([...Object.keys(categoryTotals), ...Object.keys(chargesCategoryTotals)]);
+        const results = Array.from(allCategories).map(cat => ({
+          category: cat,
+          acmTotal: categoryTotals[cat] || 0,
+          chargesTotal: chargesCategoryTotals[cat] || 0,
+          difference: (chargesCategoryTotals[cat] || 0) - (categoryTotals[cat] || 0)
+        }));
+        
+        setValidationResults(results);
+      } catch (error) {
+        console.error("Error loading ACM totals for validation:", error);
+      }
+    }
+
+    loadACMTotalsForValidation();
+  }, [selectedMonthFilter, filteredEntries, categoryMappings, bglMaster, savedACMReports]);
 
   return (
     <div className="space-y-4">
       <Card className="p-6 bg-white/80 backdrop-blur-sm">
         <h2 className="text-xl font-bold mb-4 text-purple-900">Charges Entry</h2>
         
-        {/* BGL Configuration */}
-        <details open={bglConfigOpen} onToggle={(e: any) => setBglConfigOpen(e.target.open)} className="mb-4 border rounded-lg p-4">
-          <summary className="cursor-pointer font-semibold text-purple-700 mb-3">BGL Configuration</summary>
-          <div className="mt-4 space-y-2">
-            <Label htmlFor="bgl-upload" className="text-sm font-medium">Update BGL Codes (CSV)</Label>
-            <Input
-              id="bgl-upload"
-              type="file"
-              accept=".csv,.txt"
-              onChange={handleBGLUpload}
-              className="w-full"
-            />
-            <p className="text-xs text-gray-500">
-              Format: BGL Code, Payment Head, Sub-Head (CSV or tab-separated)
-            </p>
+        {/* Configuration Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* BGL Configuration */}
+          <details open={bglConfigOpen} onToggle={(e: any) => setBglConfigOpen(e.target.open)} className="border rounded-lg p-4">
+            <summary className="cursor-pointer font-semibold text-purple-700 mb-3">BGL Configuration</summary>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="bgl-upload" className="text-sm font-medium">Update BGL Codes (CSV)</Label>
+              <Input
+                id="bgl-upload"
+                type="file"
+                accept=".csv,.txt"
+                onChange={handleBGLUpload}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500">
+                Format: BGL Code, Payment Head, Sub-Head (CSV or tab-separated)
+              </p>
+            </div>
+          </details>
+
+          {/* Report Category Configuration */}
+          <details open={categoryConfigOpen} onToggle={(e: any) => setCategoryConfigOpen(e.target.open)} className="border rounded-lg p-4">
+            <summary className="cursor-pointer font-semibold text-purple-700 mb-3">Report Category Configuration</summary>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="category-upload" className="text-sm font-medium">Update BGL to Category Mapping (CSV)</Label>
+              <Input
+                id="category-upload"
+                type="file"
+                accept=".csv,.txt"
+                onChange={handleCategoryMappingUpload}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500">
+                Format: BGL Code, Report Category (CSV or tab-separated)
+              </p>
+            </div>
+          </details>
+        </div>
+
+        {/* ACM Import Section */}
+        <Card className="p-4 bg-blue-50/80 backdrop-blur-sm mb-4">
+          <h3 className="font-semibold text-purple-700 mb-3">Import from ACM Report</h3>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <Label htmlFor="acm-month-select" className="text-sm">Select ACM Month</Label>
+              <select
+                id="acm-month-select"
+                value={selectedACMMonth}
+                onChange={(e) => setSelectedACMMonth(e.target.value)}
+                className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              >
+                <option value="">-- Select a saved ACM report --</option>
+                {savedACMReports.map(report => (
+                  <option key={report.reportId} value={report.reportDateISO}>
+                    {report.reportDateLabel} ({report.reportDateISO})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              onClick={handleImportFromACM}
+              disabled={!selectedACMMonth}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Import ACM Data
+            </Button>
           </div>
-        </details>
+        </Card>
 
         {/* Form */}
         <div className="space-y-4">
@@ -1037,12 +1273,12 @@ function ChargesEntryTab() {
             </div>
 
             <div>
-              <Label htmlFor="bill-no">Bill No.</Label>
+              <Label htmlFor="bill-no">Bill No. / PF No. of Staff</Label>
               <Input
                 id="bill-no"
                 value={formData.billNo}
                 onChange={(e) => setFormData({ ...formData, billNo: e.target.value })}
-                placeholder="Bill #"
+                placeholder="Bill # / PF #"
                 className="text-sm"
               />
             </div>
@@ -1129,9 +1365,25 @@ function ChargesEntryTab() {
       {/* Entries Table */}
       <Card className="p-6 bg-white/80 backdrop-blur-sm">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-purple-900">
-            All Entries ({entries.length})
-          </h3>
+          <div>
+            <h3 className="text-lg font-bold text-purple-900">
+              All Entries ({entries.length})
+            </h3>
+            <div className="mt-2">
+              <select
+                value={selectedMonthFilter}
+                onChange={(e) => setSelectedMonthFilter(e.target.value)}
+                className="text-sm px-2 py-1 border rounded"
+              >
+                <option value="">All Months</option>
+                {savedACMReports.map(report => (
+                  <option key={report.reportId} value={report.reportDateISO}>
+                    {report.reportDateLabel}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleExportCSV} variant="outline" size="sm">
               <Download className="w-4 h-4 mr-1" />
@@ -1144,19 +1396,18 @@ function ChargesEntryTab() {
           </div>
         </div>
 
-        {Object.keys(groupedEntries).length === 0 ? (
+        {Object.keys(groupedByCategory).length === 0 ? (
           <p className="text-center text-gray-500 py-8">No charges yet.</p>
         ) : (
           <div className="space-y-4">
-            {Object.keys(groupedEntries).sort().map(bgl => {
-              const bglInfo = bglMaster.find(b => b.bglCode === bgl) || { head: bgl, subHead: "" };
-              const bglEntries = groupedEntries[bgl];
-              const subtotal = bglEntries.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+            {Object.keys(groupedByCategory).sort().map(category => {
+              const categoryEntries = groupedByCategory[category];
+              const subtotal = categoryEntries.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
 
               return (
-                <div key={bgl}>
+                <div key={category}>
                   <h4 className="font-bold text-purple-700 mb-2 bg-purple-50 px-3 py-2 rounded">
-                    {bgl} - {bglInfo.head}
+                    {category}
                   </h4>
                   <div className="overflow-x-auto border rounded-lg">
                     <table className="w-full text-xs">
@@ -1177,7 +1428,7 @@ function ChargesEntryTab() {
                         </tr>
                       </thead>
                       <tbody>
-                        {bglEntries.map((entry: any, idx: number) => {
+                        {categoryEntries.map((entry: any, idx: number) => {
                           const currentInfo = bglMaster.find(b => b.bglCode === entry.bgl) || { head: "", subHead: "" };
                           return (
                             <tr key={entry.id} className="border-t hover:bg-purple-50">
@@ -1232,6 +1483,51 @@ function ChargesEntryTab() {
           </div>
         )}
       </Card>
+
+      {/* Validation Results */}
+      {selectedMonthFilter && validationResults.length > 0 && (
+        <Card className="p-6 bg-yellow-50/80 backdrop-blur-sm">
+          <h3 className="text-lg font-bold text-purple-900 mb-4">Validation: ACM vs Charges Entry</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-yellow-100">
+                <tr>
+                  <th className="px-3 py-2 text-left">Category</th>
+                  <th className="px-3 py-2 text-right">ACM Total (Rs.)</th>
+                  <th className="px-3 py-2 text-right">Charges Entry Total (Rs.)</th>
+                  <th className="px-3 py-2 text-right">Difference (Rs.)</th>
+                  <th className="px-3 py-2 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {validationResults.map(result => {
+                  const isMatch = Math.abs(result.difference) < 0.01;
+                  return (
+                    <tr key={result.category} className={`border-t ${isMatch ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <td className="px-3 py-2 font-medium">{result.category}</td>
+                      <td className="px-3 py-2 text-right">{formatIndianCurrency(result.acmTotal)}</td>
+                      <td className="px-3 py-2 text-right">{formatIndianCurrency(result.chargesTotal)}</td>
+                      <td className="px-3 py-2 text-right font-semibold">
+                        {result.difference >= 0 ? '+' : ''}{formatIndianCurrency(result.difference)}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {isMatch ? (
+                          <span className="text-green-700 font-semibold">✓ Match</span>
+                        ) : (
+                          <span className="text-red-700 font-semibold">✗ Mismatch</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-gray-600 mt-3">
+            Note: Validation compares category totals between ACM report and Charges Entry for the selected month.
+          </p>
+        </Card>
+      )}
     </div>
   );
 }
