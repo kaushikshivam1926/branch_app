@@ -505,7 +505,7 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
       return;
     }
 
-    const headers = ["HEAD", "PARTICULAR OF ENCLOSURE", "AMOUNT (Rs.)", "TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH", `TOTAL AMOUNT AS AT END OF MONTH ENDED AS ON ${reportLabel}`];
+    const headers = ["HEAD", "PARTICULAR OF ENCLOSURE", "AMOUNT (Rs.)", "TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH", `TOTAL EXPENDITURE TILL ${reportLabel}`];
     const csvRows = [headers.join(",")];
     
     currentRows.forEach(row => {
@@ -626,7 +626,7 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
                 <th className="px-4 py-2 text-left">PARTICULAR OF ENCLOSURE</th>
                 <th className="px-4 py-2 text-right">AMOUNT (Rs.)</th>
                 <th className="px-4 py-2 text-right">TOTAL EXPENDITURE TILL END OF PREVIOUS MONTH</th>
-                <th className="px-4 py-2 text-right">TOTAL AMOUNT AS AT END OF MONTH ENDED AS ON {reportLabel}</th>
+                <th className="px-4 py-2 text-right">TOTAL EXPENDITURE TILL {reportLabel}</th>
               </tr>
             </thead>
             <tbody>
