@@ -44,12 +44,7 @@ interface BGLMaster {
   bglCode: string;
   head: string;
   subHead: string;
-}
-
-interface CategoryMapping {
-  bglCode: string;
   reportCategory: string;
-  paymentSubHead: string;
 }
 
 // ========== Utility Functions ==========
@@ -683,12 +678,10 @@ function ACMExtractorTab({ currentRows, setCurrentRows, reportLabel, setReportLa
 function ChargesEntryTab() {
   const [entries, setEntries] = useState<ChargeEntry[]>([]);
   const [bglMaster, setBglMaster] = useState<BGLMaster[]>([]);
-  const [categoryMappings, setCategoryMappings] = useState<CategoryMapping[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sortState, setSortState] = useState<{ key: string | null; asc: boolean }>({ key: null, asc: true });
   const [payeeSuggestions, setPayeeSuggestions] = useState<string[]>([]);
   const [bglConfigOpen, setBglConfigOpen] = useState(false);
-  const [categoryConfigOpen, setCategoryConfigOpen] = useState(false);
   const [savedACMReports, setSavedACMReports] = useState<ACMReport[]>([]);
   const [selectedACMMonth, setSelectedACMMonth] = useState<string>("");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<string>("");
@@ -716,11 +709,9 @@ function ChargesEntryTab() {
     const db = await getDB();
     const allEntries = await db.getAll("chargeEntries");
     const allBGL = await db.getAll("bglMaster");
-    const allMappings = await db.getAll("categoryMappings");
     const allReports = await db.getAll("acmReports");
     setEntries(allEntries);
     setBglMaster(allBGL);
-    setCategoryMappings(allMappings);
     setSavedACMReports(allReports);
     
     // Update payee suggestions
@@ -759,8 +750,8 @@ function ChargesEntryTab() {
     try {
       const db = await getDB();
       // Get report category from mapping
-      const categoryMapping = categoryMappings.find(m => m.bglCode === formData.bglCode);
-      const reportCategory = categoryMapping?.reportCategory || "Uncategorized";
+      const bglRecord = bglMaster.find(b => b.bglCode === formData.bglCode);
+      const reportCategory = bglRecord?.reportCategory || "Uncategorized";
       
       const entry: any = {
         id: editingId || `charge_${Date.now()}`,
@@ -863,16 +854,18 @@ function ChargesEntryTab() {
         if (parts.length < 3) {
           parts = line.split(/\t/);
         }
-        if (parts.length >= 3) {
+        if (parts.length >= 4) {
           const bglCode = parts[0].trim();
           const head = parts[1].trim();
           const subHead = parts[2].trim();
+          const reportCategory = parts[3].trim();
           
-          if (bglCode && head && subHead) {
+          if (bglCode && head && subHead && reportCategory) {
             await tx.store.add({
               bglCode,
               head,
               subHead,
+              reportCategory,
             });
           }
         }
@@ -884,61 +877,6 @@ function ChargesEntryTab() {
       setBglConfigOpen(false);
     } catch (error) {
       toast.error("Error reading BGL file");
-      console.error(error);
-    }
-  }
-
-  async function handleCategoryMappingUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) {
-      toast.error("Please select a CSV/TXT file");
-      return;
-    }
-
-    try {
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
-      const db = await getDB();
-      
-      // Clear existing category mappings
-      const tx = db.transaction("categoryMappings", "readwrite");
-      await tx.store.clear();
-      
-      // Parse and add new category mappings (supports both comma and tab separation)
-      let lineCount = 0;
-      for (const line of lines) {
-        lineCount++;
-        // Skip header row (if first line contains "BGL" or "Code" or "Category")
-        if (lineCount === 1 && /BGL|Code|Category/i.test(line)) {
-          continue;
-        }
-        
-        // Try comma first, then tab
-        let parts = line.split(',');
-        if (parts.length < 2) {
-          parts = line.split(/\t/);
-        }
-        if (parts.length >= 3) {
-          const bglCode = parts[0].trim();
-          const reportCategory = parts[1].trim();
-          const paymentSubHead = parts[2].trim();
-          
-          if (bglCode && reportCategory && paymentSubHead) {
-            await tx.store.put({
-              bglCode,
-              reportCategory,
-              paymentSubHead,
-            });
-          }
-        }
-      }
-      
-      await tx.done;
-      toast.success("Report Category mappings updated successfully");
-      await loadData();
-      setCategoryConfigOpen(false);
-    } catch (error) {
-      toast.error("Error reading category mapping file");
       console.error(error);
     }
   }
@@ -1106,10 +1044,9 @@ function ChargesEntryTab() {
           let category = "Uncategorized";
           
           // Try to match HEAD with BGL master to find category
-          for (const mapping of categoryMappings) {
-            const bgl = bglMaster.find(b => b.bglCode === mapping.bglCode);
-            if (bgl && headUpper.includes(bgl.head.toUpperCase())) {
-              category = mapping.reportCategory;
+          for (const bgl of bglMaster) {
+            if (headUpper.includes(bgl.head.toUpperCase())) {
+              category = bgl.reportCategory;
               break;
             }
           }
@@ -1148,20 +1085,19 @@ function ChargesEntryTab() {
     }
 
     loadACMTotalsForValidation();
-  }, [selectedMonthFilter, entries, categoryMappings, bglMaster, savedACMReports]);
+  }, [selectedMonthFilter, entries, bglMaster, savedACMReports]);
 
   return (
     <div className="space-y-4">
       <Card className="p-6 bg-white/80 backdrop-blur-sm">
         <h2 className="text-xl font-bold mb-4 text-purple-900">Charges Entry</h2>
         
-        {/* Configuration Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* BGL Configuration */}
+        {/* BGL Master Configuration */}
+        <div className="mb-4">
           <details open={bglConfigOpen} onToggle={(e: any) => setBglConfigOpen(e.target.open)} className="border rounded-lg p-4">
-            <summary className="cursor-pointer font-semibold text-purple-700 mb-3">BGL Configuration</summary>
+            <summary className="cursor-pointer font-semibold text-purple-700 mb-3">BGL Master Configuration</summary>
             <div className="mt-4 space-y-2">
-              <Label htmlFor="bgl-upload" className="text-sm font-medium">Update BGL Codes (CSV)</Label>
+              <Label htmlFor="bgl-upload" className="text-sm font-medium">Upload BGL Master File (CSV)</Label>
               <Input
                 id="bgl-upload"
                 type="file"
@@ -1170,25 +1106,10 @@ function ChargesEntryTab() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500">
-                Format: BGL Code, Payment Head, Sub-Head (CSV or tab-separated)
+                Format: BGL Code, Payment Head, Sub-Head, Report Category (CSV or tab-separated)
               </p>
-            </div>
-          </details>
-
-          {/* Report Category Configuration */}
-          <details open={categoryConfigOpen} onToggle={(e: any) => setCategoryConfigOpen(e.target.open)} className="border rounded-lg p-4">
-            <summary className="cursor-pointer font-semibold text-purple-700 mb-3">Report Category Configuration</summary>
-            <div className="mt-4 space-y-2">
-              <Label htmlFor="category-upload" className="text-sm font-medium">Update BGL to Category & Sub-head Mapping (CSV)</Label>
-              <Input
-                id="category-upload"
-                type="file"
-                accept=".csv,.txt"
-                onChange={handleCategoryMappingUpload}
-                className="w-full"
-              />
-              <p className="text-xs text-gray-500">
-                Format: BGL Code, Report Category, Payment Sub-head (CSV or tab-separated)
+              <p className="text-xs text-blue-600 mt-1">
+                This single file contains all BGL codes with their payment heads, sub-heads, and report categories.
               </p>
             </div>
           </details>
