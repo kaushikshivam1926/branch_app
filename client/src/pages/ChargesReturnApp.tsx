@@ -49,6 +49,7 @@ interface BGLMaster {
 interface CategoryMapping {
   bglCode: string;
   reportCategory: string;
+  paymentSubHead: string;
 }
 
 // ========== Utility Functions ==========
@@ -917,14 +918,16 @@ function ChargesEntryTab() {
         if (parts.length < 2) {
           parts = line.split(/\t/);
         }
-        if (parts.length >= 2) {
+        if (parts.length >= 3) {
           const bglCode = parts[0].trim();
           const reportCategory = parts[1].trim();
+          const paymentSubHead = parts[2].trim();
           
-          if (bglCode && reportCategory) {
+          if (bglCode && reportCategory && paymentSubHead) {
             await tx.store.put({
               bglCode,
               reportCategory,
+              paymentSubHead,
             });
           }
         }
@@ -1173,7 +1176,7 @@ function ChargesEntryTab() {
           <details open={categoryConfigOpen} onToggle={(e: any) => setCategoryConfigOpen(e.target.open)} className="border rounded-lg p-4">
             <summary className="cursor-pointer font-semibold text-purple-700 mb-3">Report Category Configuration</summary>
             <div className="mt-4 space-y-2">
-              <Label htmlFor="category-upload" className="text-sm font-medium">Update BGL to Category Mapping (CSV)</Label>
+              <Label htmlFor="category-upload" className="text-sm font-medium">Update BGL to Category & Sub-head Mapping (CSV)</Label>
               <Input
                 id="category-upload"
                 type="file"
@@ -1182,7 +1185,7 @@ function ChargesEntryTab() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500">
-                Format: BGL Code, Report Category (CSV or tab-separated)
+                Format: BGL Code, Report Category, Payment Sub-head (CSV or tab-separated)
               </p>
             </div>
           </details>
