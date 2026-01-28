@@ -28,7 +28,9 @@ interface ACMReport {
 
 interface ChargeEntry {
   id: string;
-  bgl: string;
+  bglCode: string;
+  head: string;
+  subHead: string;
   payDate: string;
   billNo: string;
   billDate: string;
@@ -89,16 +91,16 @@ function getDB() {
           const bglStore = db.createObjectStore("bglMaster", { keyPath: "bglCode" });
           // Pre-populate with default BGL codes
           const defaultBGL: BGLMaster[] = [
-            { bglCode: "21111", head: "Rent", subHead: "Rent for office building" },
-            { bglCode: "21112", head: "Rent", subHead: "Rent for staff quarters" },
-            { bglCode: "21121", head: "Telephone", subHead: "Telephone charges" },
-            { bglCode: "21131", head: "Stationery", subHead: "Stationery & printing" },
-            { bglCode: "21141", head: "Postage", subHead: "Postage & courier" },
-            { bglCode: "21151", head: "Electricity", subHead: "Electricity charges" },
-            { bglCode: "21161", head: "Water", subHead: "Water charges" },
-            { bglCode: "21171", head: "Repairs", subHead: "Repairs & maintenance" },
-            { bglCode: "21181", head: "Insurance", subHead: "Insurance premium" },
-            { bglCode: "21191", head: "Miscellaneous", subHead: "Other expenses" },
+            { bglCode: "21111", head: "Rent", subHead: "Rent for office building", acmCategory: "RENT (OFFICE PREMISES)", reportCategory: "Rent Office" },
+            { bglCode: "21112", head: "Rent", subHead: "Rent for staff quarters", acmCategory: "RENT (OTHER PREMISES)", reportCategory: "Rent Other Premises" },
+            { bglCode: "21121", head: "Telephone", subHead: "Telephone charges", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
+            { bglCode: "21131", head: "Stationery", subHead: "Stationery & printing", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
+            { bglCode: "21141", head: "Postage", subHead: "Postage & courier", acmCategory: "POSTAGE, TELEGRAM, TELEX, STAMPS", reportCategory: "Postage" },
+            { bglCode: "21151", head: "Electricity", subHead: "Electricity charges", acmCategory: "ELECTRICITY & GAS CHARGES", reportCategory: "Electricity & Gas" },
+            { bglCode: "21161", head: "Water", subHead: "Water charges", acmCategory: "WATER CHARGES", reportCategory: "Sundries" },
+            { bglCode: "21171", head: "Repairs", subHead: "Repairs & maintenance", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
+            { bglCode: "21181", head: "Insurance", subHead: "Insurance premium", acmCategory: "INSURANCE", reportCategory: "Insurance" },
+            { bglCode: "21191", head: "Miscellaneous", subHead: "Other expenses", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
           ];
           defaultBGL.forEach(item => bglStore.add(item));
         }
@@ -716,7 +718,8 @@ function ChargesEntryTab() {
     setSavedACMReports(allReports);
     
     // Update payee suggestions
-    const payees = [...new Set(allEntries.map((e: any) => e.payee).filter((p: string) => p && p.trim()))].sort();
+    const payeeSet = new Set(allEntries.map((e: any) => e.payee).filter((p: string) => p && p.trim()));
+    const payees = Array.from(payeeSet).sort();
     setPayeeSuggestions(payees);
   }
 
@@ -1131,7 +1134,8 @@ function ChargesEntryTab() {
         }
 
         // Compare and create validation results
-        const allCategories = new Set([...Object.keys(categoryTotals), ...Object.keys(chargesCategoryTotals)]);
+        const allCategoriesArray = [...Object.keys(categoryTotals), ...Object.keys(chargesCategoryTotals)];
+        const allCategories = new Set(allCategoriesArray);
         const results = Array.from(allCategories).map(cat => ({
           category: cat,
           acmTotal: categoryTotals[cat] || 0,
@@ -1522,6 +1526,8 @@ function ChargesEntryTab() {
 // ========== Charges Return Report Tab ==========
 function ChargesReturnReportTab() {
   const [entries, setEntries] = useState<ChargeEntry[]>([]);
+  const [selectedView, setSelectedView] = useState<string>("summary");
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const { branchName, branchCode } = useBranch();
 
   useEffect(() => {
@@ -1534,149 +1540,264 @@ function ChargesReturnReportTab() {
     setEntries(allEntries);
   }
 
-  const groupedEntries = entries.reduce((acc, entry) => {
-    if (!acc[entry.head]) acc[entry.head] = [];
-    acc[entry.head].push(entry);
+  // Filter entries by selected month
+  const filteredEntries = selectedMonth === "all" 
+    ? entries
+    : entries.filter(e => {
+        const entryMonth = e.payDate.substring(0, 7); // YYYY-MM
+        return entryMonth === selectedMonth;
+      });
+
+  // Group by report category
+  const groupedByCategory = filteredEntries.reduce((acc, entry) => {
+    const category = entry.reportCategory || "Uncategorized";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(entry);
     return acc;
   }, {} as Record<string, ChargeEntry[]>);
 
-  const grandTotal = entries.reduce((sum, e) => sum + e.amount, 0);
+  // Get unique months from entries
+  const monthsSet = new Set(entries.map(e => e.payDate.substring(0, 7)));
+  const availableMonths = Array.from(monthsSet).sort().reverse();
+
+  // Calculate category totals
+  const categoryTotals = Object.entries(groupedByCategory).map(([category, catEntries]) => ({
+    category,
+    total: catEntries.reduce((sum, e) => sum + e.amount, 0)
+  }));
+
+  const grandTotal = filteredEntries.reduce((sum, e) => sum + e.amount, 0);
 
   function handlePrint() {
     window.print();
   }
 
-  function handleExportCSV() {
-    if (entries.length === 0) {
-      toast.error("No data to export");
-      return;
-    }
-
-    const headers = ["Head", "Sub Head", "BGL Code", "Payment Mode", "Cheque/Ref", "Amount", "Remarks"];
-    const csvRows = [headers.join(",")];
-    
-    entries.forEach(entry => {
-    csvRows.push([
-      `"${entry.head}"`,
-      `"${entry.subHead}"`,
-      entry.bglCode,
-      entry.paymentMode,
-      entry.chequeNo || "-",
-      formatIndianCurrency(entry.amount),
-      `"${entry.remarks || "-"}`
-    ].join(","));
+  // Get unique BGL codes used in a category
+  function getUniqueBGLs(catEntries: ChargeEntry[]): Array<{code: string, head: string, subHead: string}> {
+    const bglMap = new Map<string, {code: string, head: string, subHead: string}>();
+    catEntries.forEach(entry => {
+      if (!bglMap.has(entry.bglCode)) {
+        bglMap.set(entry.bglCode, {
+          code: entry.bglCode,
+          head: entry.head,
+          subHead: entry.subHead
+        });
+      }
     });
-
-    csvRows.push(["", "", "", "", "Grand Total", formatIndianCurrency(grandTotal), ""].join(","));
-
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Charges_Return_${branchCode}_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("CSV exported");
+    return Array.from(bglMap.values());
   }
+
+  // Render Summary Sheet
+  function renderSummary() {
+    const monthLabel = selectedMonth === "all" ? "All Months" : new Date(selectedMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    
+    return (
+      <div className="print:p-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
+          <h2 className="text-lg font-semibold mt-2">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
+          <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
+          <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : SUMMARY</h4>
+        </div>
+
+        {/* Summary Table */}
+        <div className="overflow-x-auto mb-8">
+          <table className="w-full text-sm border-collapse border border-black">
+            <thead>
+              <tr className="bg-gray-100">
+                {categoryTotals.map(({category}) => (
+                  <th key={category} className="border border-black px-2 py-2 text-center font-semibold text-xs">
+                    {category}
+                  </th>
+                ))}
+                <th className="border border-black px-2 py-2 text-center font-bold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {categoryTotals.map(({category, total}) => (
+                  <td key={category} className="border border-black px-2 py-2 text-right">
+                    {formatIndianCurrency(total)}
+                  </td>
+                ))}
+                <td className="border border-black px-2 py-2 text-right font-bold">
+                  {formatIndianCurrency(grandTotal)}
+                  </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Certification */}
+        <div className="mt-12 mb-8 text-sm">
+          <p className="italic">
+            I hereby certify that the above expenses paid as per approval received from Controlling Authority / within my financial powers and it is within the eligibility / beyond the eligibility, amount has been recovered TDS if applicable, it has been deducted and remitted to the Govt. Account.
+          </p>
+        </div>
+
+        {/* Signature Block */}
+        <div className="mt-16 flex justify-between items-end">
+          <div>
+            <p className="font-semibold">Place: {branchName.split(",")[0]}</p>
+            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-IN")}</p>
+          </div>
+          <div className="text-right">
+            <div className="border-t border-black w-48 pt-2">
+              <p className="font-semibold">Chief/Branch Manager</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Individual Category Sheet
+  function renderCategorySheet(category: string) {
+    const catEntries = groupedByCategory[category] || [];
+    const categoryTotal = catEntries.reduce((sum, e) => sum + e.amount, 0);
+    const uniqueBGLs = getUniqueBGLs(catEntries);
+    const monthLabel = selectedMonth === "all" ? "All Months" : new Date(selectedMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+    return (
+      <div className="print:p-8 print:page-break-after">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
+          <h2 className="text-lg font-semibold mt-2">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
+          <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
+          <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : {category.toUpperCase()}</h4>
+        </div>
+
+        {/* BGL Account References */}
+        <div className="mb-4 text-sm">
+          {uniqueBGLs.map((bgl, idx) => (
+            <p key={idx} className="text-gray-700">
+              <span className="font-semibold">BGL A/c No. {bgl.code}-</span> {bgl.head} / {bgl.subHead}
+            </p>
+          ))}
+        </div>
+
+        {/* Entries Table */}
+        <table className="w-full text-sm border-collapse border border-black mb-6">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="border border-black px-2 py-2 text-center">Sr.</th>
+              <th className="border border-black px-2 py-2 text-center">Date of Payment</th>
+              <th className="border border-black px-2 py-2 text-center">Bill No. / PF No.</th>
+              <th className="border border-black px-2 py-2 text-center">Date</th>
+              <th className="border border-black px-2 py-2 text-center">To whom paid</th>
+              <th className="border border-black px-2 py-2 text-center">Purpose</th>
+              <th className="border border-black px-2 py-2 text-center">Approved by BM/RM</th>
+              <th className="border border-black px-2 py-2 text-center">Amount Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            {catEntries.map((entry, idx) => (
+              <tr key={entry.id}>
+                <td className="border border-black px-2 py-2 text-center">{idx + 1}</td>
+                <td className="border border-black px-2 py-2 text-center">
+                  {new Date(entry.payDate).toLocaleDateString("en-IN")}
+                </td>
+                <td className="border border-black px-2 py-2 text-center">{entry.billNo}</td>
+                <td className="border border-black px-2 py-2 text-center">
+                  {new Date(entry.billDate).toLocaleDateString("en-IN")}
+                </td>
+                <td className="border border-black px-2 py-2">{entry.payee}</td>
+                <td className="border border-black px-2 py-2">{entry.purpose}</td>
+                <td className="border border-black px-2 py-2 text-center">{entry.approver}</td>
+                <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(entry.amount)}</td>
+              </tr>
+            ))}
+            <tr className="font-bold bg-gray-50">
+              <td colSpan={7} className="border border-black px-2 py-2 text-right">
+                Total (Amount tallied with report ACM001)
+              </td>
+              <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(categoryTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Certification */}
+        <div className="mt-8 mb-6 text-sm">
+          <p className="italic">
+            I hereby certify that the above expenses paid as per approval received from Controlling Authority / within my financial powers and it is within the eligibility / beyond the eligibility, amount has been recovered TDS if applicable, it has been deducted and remitted to the Govt. Account.
+          </p>
+        </div>
+
+        {/* Signature Block */}
+        <div className="mt-12 flex justify-between items-end">
+          <div>
+            <p className="font-semibold">Place: {branchName.split(",")[0]}</p>
+            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-IN")}</p>
+          </div>
+          <div className="text-right">
+            <div className="border-t border-black w-48 pt-2">
+              <p className="font-semibold">RM, RBO-1, {branchName.split(",")[0]}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const categories = Object.keys(groupedByCategory).sort();
 
   return (
     <div className="space-y-4">
-      <Card className="p-6 bg-white/80 backdrop-blur-sm print:shadow-none">
-        <div className="flex justify-between items-center mb-6 print:hidden">
-          <h2 className="text-xl font-bold text-purple-900">Charges Return Report</h2>
-          <div className="flex gap-2">
-            <Button onClick={handlePrint} variant="outline">
-              <FileText className="w-4 h-4 mr-2" />
-              Print
-            </Button>
-            <Button onClick={handleExportCSV} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
+      <Card className="p-6 bg-white/80 backdrop-blur-sm print:shadow-none print:border-0">
+        {/* Controls - Hidden when printing */}
+        <div className="mb-6 print:hidden space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-purple-900">Charges Return Report</h2>
+            <div className="flex gap-2">
+              <Button onClick={handlePrint} variant="outline">
+                <FileText className="w-4 h-4 mr-2" />
+                Print
+              </Button>
+            </div>
+          </div>
+
+          {/* Month Selector */}
+          <div className="flex gap-4 items-center">
+            <Label>Select Month:</Label>
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="border rounded px-3 py-2"
+            >
+              <option value="all">All Months</option>
+              {availableMonths.map(month => (
+                <option key={month} value={month}>
+                  {new Date(month + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* View Selector */}
+          <div className="flex gap-4 items-center">
+            <Label>Select Sheet:</Label>
+            <select 
+              value={selectedView} 
+              onChange={(e) => setSelectedView(e.target.value)}
+              className="border rounded px-3 py-2 flex-1"
+            >
+              <option value="summary">Summary</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Report Header */}
-        <div className="text-center mb-6 print:mb-8">
-          <h1 className="text-2xl font-bold">State Bank of India</h1>
-          <h2 className="text-xl font-semibold mt-2">{branchName}</h2>
-          <h3 className="text-lg mt-2">Charges Return Statement</h3>
-          <p className="text-sm text-gray-600 mt-1">Branch Code: {branchCode}</p>
-          <p className="text-sm text-gray-600">Date: {new Date().toLocaleDateString("en-IN")}</p>
-        </div>
-
-        {entries.length === 0 ? (
+        {/* Report Content */}
+        {filteredEntries.length === 0 ? (
           <p className="text-center text-gray-500 py-8">No entries to display. Add charges in the "Charges Entry" tab.</p>
         ) : (
-          <>
-            {Object.entries(groupedEntries).map(([head, headEntries]) => {
-              const subtotal = headEntries.reduce((sum, e) => sum + e.amount, 0);
-              return (
-                <div key={head} className="mb-6 break-inside-avoid">
-                  <h4 className="font-bold text-purple-700 bg-purple-50 px-3 py-2 rounded-t-lg">
-                    {head}
-                  </h4>
-                  <table className="w-full text-sm border border-t-0 rounded-b-lg">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="px-3 py-2 text-left border-r">BGL Code</th>
-                        <th className="px-3 py-2 text-left border-r">Sub Head</th>
-                        <th className="px-3 py-2 text-left border-r">Payment Mode</th>
-                        <th className="px-3 py-2 text-left border-r">Cheque/Ref</th>
-                        <th className="px-3 py-2 text-right border-r">Amount (₹)</th>
-                        <th className="px-3 py-2 text-left">Remarks</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {headEntries.map(entry => (
-                        <tr key={entry.id} className="border-t">
-                          <td className="px-3 py-2 border-r">{entry.bglCode}</td>
-                          <td className="px-3 py-2 border-r">{entry.subHead}</td>
-                          <td className="px-3 py-2 border-r">{entry.paymentMode}</td>
-                          <td className="px-3 py-2 border-r">{entry.chequeNo || "-"}</td>
-                          <td className="px-3 py-2 text-right border-r">{formatIndianCurrency(entry.amount)}</td>
-                          <td className="px-3 py-2">{entry.remarks || "-"}</td>
-                        </tr>
-                      ))}
-                      <tr className="border-t bg-purple-50 font-semibold">
-                        <td colSpan={4} className="px-3 py-2 text-right border-r">Subtotal:</td>
-                        <td className="px-3 py-2 text-right border-r">₹{formatIndianCurrency(subtotal)}</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
-
-            <div className="mt-6 pt-4 border-t-2 border-purple-600">
-              <div className="flex justify-end">
-                <div className="text-right">
-                  <p className="text-lg font-bold text-purple-900">
-                    Grand Total: ₹{formatIndianCurrency(grandTotal)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Signature Section */}
-            <div className="mt-12 print:mt-16 grid grid-cols-2 gap-8">
-              <div>
-                <p className="font-semibold mb-8">Prepared by:</p>
-                <div className="border-t border-gray-400 pt-2">
-                  <p className="text-sm">Name & Signature</p>
-                  <p className="text-sm text-gray-600">Date: __________</p>
-                </div>
-              </div>
-              <div>
-                <p className="font-semibold mb-8">Verified by:</p>
-                <div className="border-t border-gray-400 pt-2">
-                  <p className="text-sm">Branch Manager</p>
-                  <p className="text-sm text-gray-600">Date: __________</p>
-                </div>
-              </div>
-            </div>
-          </>
+          <div className="print:p-0">
+            {selectedView === "summary" ? renderSummary() : renderCategorySheet(selectedView)}
+          </div>
         )}
       </Card>
     </div>

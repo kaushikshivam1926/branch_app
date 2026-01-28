@@ -175,3 +175,91 @@
     }
   }
 }
+/* Print Styles for Charges Return Report */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm 1cm;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Hide unnecessary elements */
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Remove shadows and backgrounds for print */
+  .print\\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\\:border-0 {
+    border: 0 !important;
+  }
+
+  /* Page break control */
+  .print\\:page-break-after {
+    page-break-after: always;
+  }
+
+  .print\\:page-break-before {
+    page-break-before: always;
+  }
+
+  .break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure tables don't break awkwardly */
+  table {
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Adjust spacing for print */
+  .print\\:p-8 {
+    padding: 2rem !important;
+  }
+
+  .print\\:p-0 {
+    padding: 0 !important;
+  }
+
+  .print\\:mb-8 {
+    margin-bottom: 2rem !important;
+  }
+
+  .print\\:mt-16 {
+    margin-top: 4rem !important;
+  }
+
+  /* Ensure black text for printing */
+  h1, h2, h3, h4, h5, h6, p, td, th, span, div {
+    color: black !important;
+  }
+
+  /* Ensure borders are visible */
+  .border-black {
+    border-color: black !important;
+  }
+
+  /* Background colors for print */
+  .bg-gray-100 {
+    background-color: #f3f4f6 !important;
+  }
+
+  .bg-gray-50 {
+    background-color: #f9fafb !important;
+  }
+}
