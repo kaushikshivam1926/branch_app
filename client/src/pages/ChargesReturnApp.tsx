@@ -1526,6 +1526,7 @@ function ChargesEntryTab() {
 // ========== Charges Return Report Tab ==========
 function ChargesReturnReportTab() {
   const [entries, setEntries] = useState<ChargeEntry[]>([]);
+  const [bglMaster, setBglMaster] = useState<BGLMaster[]>([]);
   const [selectedView, setSelectedView] = useState<string>("summary");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const { branchName, branchCode } = useBranch();
@@ -1537,7 +1538,9 @@ function ChargesReturnReportTab() {
   async function loadEntries() {
     const db = await getDB();
     const allEntries = await db.getAll("chargeEntries");
+    const allBGL = await db.getAll("bglMaster");
     setEntries(allEntries);
+    setBglMaster(allBGL);
   }
 
   // Filter entries by selected month
@@ -1601,29 +1604,29 @@ function ChargesReturnReportTab() {
           <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : SUMMARY</h4>
         </div>
 
-        {/* Summary Table */}
-        <div className="overflow-x-auto mb-8">
+        {/* Summary Table - Portrait Mode with 2 Columns */}
+        <div className="mb-8 max-w-2xl mx-auto">
           <table className="w-full text-sm border-collapse border border-black">
             <thead>
               <tr className="bg-gray-100">
-                {categoryTotals.map(({category}) => (
-                  <th key={category} className="border border-black px-2 py-2 text-center font-semibold text-xs">
-                    {category}
-                  </th>
-                ))}
-                <th className="border border-black px-2 py-2 text-center font-bold">Total</th>
+                <th className="border border-black px-4 py-2 text-left font-semibold">Payment Head</th>
+                <th className="border border-black px-4 py-2 text-right font-semibold">Amount (Rs.)</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                {categoryTotals.map(({category, total}) => (
-                  <td key={category} className="border border-black px-2 py-2 text-right">
+              {categoryTotals.map(({category, total}) => (
+                <tr key={category}>
+                  <td className="border border-black px-4 py-2">{category}</td>
+                  <td className="border border-black px-4 py-2 text-right">
                     {formatIndianCurrency(total)}
                   </td>
-                ))}
-                <td className="border border-black px-2 py-2 text-right font-bold">
+                </tr>
+              ))}
+              <tr className="bg-gray-50 font-bold">
+                <td className="border border-black px-4 py-2">Grand Total</td>
+                <td className="border border-black px-4 py-2 text-right">
                   {formatIndianCurrency(grandTotal)}
-                  </td>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -1640,7 +1643,7 @@ function ChargesReturnReportTab() {
         <div className="mt-16 flex justify-between items-end">
           <div>
             <p className="font-semibold">Place: {branchName.split(",")[0]}</p>
-            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-IN")}</p>
+            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-GB")}</p>
           </div>
           <div className="text-right">
             <div className="border-t border-black w-48 pt-2">
@@ -1658,6 +1661,14 @@ function ChargesReturnReportTab() {
     const categoryTotal = catEntries.reduce((sum, e) => sum + e.amount, 0);
     const uniqueBGLs = getUniqueBGLs(catEntries);
     const monthLabel = selectedMonth === "all" ? "All Months" : new Date(selectedMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    
+    // Group entries by BGL Code
+    const entriesByBGL = catEntries.reduce((acc, entry) => {
+      const bglCode = entry.bglCode || "Unknown";
+      if (!acc[bglCode]) acc[bglCode] = [];
+      acc[bglCode].push(entry);
+      return acc;
+    }, {} as Record<string, ChargeEntry[]>);
 
     return (
       <div className="print:p-8 print:page-break-after">
@@ -1669,20 +1680,14 @@ function ChargesReturnReportTab() {
           <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : {category.toUpperCase()}</h4>
         </div>
 
-        {/* BGL Account References */}
-        <div className="mb-4 text-sm">
-          {uniqueBGLs.map((bgl, idx) => (
-            <p key={idx} className="text-gray-700">
-              <span className="font-semibold">BGL A/c No. {bgl.code}-</span> {bgl.head} / {bgl.subHead}
-            </p>
-          ))}
-        </div>
 
-        {/* Entries Table */}
+
+        {/* Entries Table - Grouped by BGL Code */}
         <table className="w-full text-sm border-collapse border border-black mb-6">
           <thead className="bg-gray-100">
             <tr>
               <th className="border border-black px-2 py-2 text-center">Sr.</th>
+              <th className="border border-black px-2 py-2 text-center">BGL Code</th>
               <th className="border border-black px-2 py-2 text-center">Date of Payment</th>
               <th className="border border-black px-2 py-2 text-center">Bill No. / PF No.</th>
               <th className="border border-black px-2 py-2 text-center">Date</th>
@@ -1693,24 +1698,47 @@ function ChargesReturnReportTab() {
             </tr>
           </thead>
           <tbody>
-            {catEntries.map((entry, idx) => (
-              <tr key={entry.id}>
-                <td className="border border-black px-2 py-2 text-center">{idx + 1}</td>
-                <td className="border border-black px-2 py-2 text-center">
-                  {new Date(entry.payDate).toLocaleDateString("en-IN")}
-                </td>
-                <td className="border border-black px-2 py-2 text-center">{entry.billNo}</td>
-                <td className="border border-black px-2 py-2 text-center">
-                  {new Date(entry.billDate).toLocaleDateString("en-IN")}
-                </td>
-                <td className="border border-black px-2 py-2">{entry.payee}</td>
-                <td className="border border-black px-2 py-2">{entry.purpose}</td>
-                <td className="border border-black px-2 py-2 text-center">{entry.approver}</td>
-                <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(entry.amount)}</td>
-              </tr>
-            ))}
+            {Object.entries(entriesByBGL).map(([bglCode, bglEntries]) => {
+              const bglTotal = bglEntries.reduce((sum, e) => sum + e.amount, 0);
+              const bglInfo = bglMaster.find(b => b.bglCode === bglCode);
+              let serialCounter = 0;
+              
+              return (
+                <React.Fragment key={bglCode}>
+                  {bglEntries.map((entry, idx) => {
+                    serialCounter++;
+                    return (
+                      <tr key={entry.id}>
+                        <td className="border border-black px-2 py-2 text-center">{serialCounter}</td>
+                        <td className="border border-black px-2 py-2 text-center">{entry.bglCode}</td>
+                        <td className="border border-black px-2 py-2 text-center">
+                          {new Date(entry.payDate).toLocaleDateString("en-GB")}
+                        </td>
+                        <td className="border border-black px-2 py-2 text-center">{entry.billNo}</td>
+                        <td className="border border-black px-2 py-2 text-center">
+                          {new Date(entry.billDate).toLocaleDateString("en-GB")}
+                        </td>
+                        <td className="border border-black px-2 py-2">{entry.payee}</td>
+                        <td className="border border-black px-2 py-2">{entry.purpose}</td>
+                        <td className="border border-black px-2 py-2 text-center">{entry.approver}</td>
+                        <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(entry.amount)}</td>
+                      </tr>
+                    );
+                  })}
+                  {/* BGL Subtotal Row */}
+                  <tr className="font-semibold bg-gray-100">
+                    <td colSpan={2} className="border border-black px-2 py-2 text-right">
+                      Sub-total for BGL {bglCode} {bglInfo ? `(${bglInfo.head} / ${bglInfo.subHead})` : ''}
+                    </td>
+                    <td colSpan={6} className="border border-black px-2 py-2"></td>
+                    <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(bglTotal)}</td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
+            {/* Category Total Row */}
             <tr className="font-bold bg-gray-50">
-              <td colSpan={7} className="border border-black px-2 py-2 text-right">
+              <td colSpan={8} className="border border-black px-2 py-2 text-right">
                 Total (Amount tallied with report ACM001)
               </td>
               <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(categoryTotal)}</td>
@@ -1729,11 +1757,11 @@ function ChargesReturnReportTab() {
         <div className="mt-12 flex justify-between items-end">
           <div>
             <p className="font-semibold">Place: {branchName.split(",")[0]}</p>
-            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-IN")}</p>
+            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-GB")}</p>
           </div>
           <div className="text-right">
             <div className="border-t border-black w-48 pt-2">
-              <p className="font-semibold">RM, RBO-1, {branchName.split(",")[0]}</p>
+              <p className="font-semibold">Chief/Branch Manager</p>
             </div>
           </div>
         </div>
@@ -1745,7 +1773,7 @@ function ChargesReturnReportTab() {
 
   return (
     <div className="space-y-4">
-      <Card className="p-6 bg-white/80 backdrop-blur-sm print:shadow-none print:border-0">
+      <Card className="p-6 bg-white/80 backdrop-blur-sm print:shadow-none print:border-0 print:p-0 print:bg-white">
         {/* Controls - Hidden when printing */}
         <div className="mb-6 print:hidden space-y-4">
           <div className="flex justify-between items-center">
