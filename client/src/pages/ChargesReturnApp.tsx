@@ -1672,7 +1672,7 @@ function ChargesReturnReportTab() {
     }, {} as Record<string, ChargeEntry[]>);
 
     return (
-      <div className="print:p-8 print:page-break-after">
+      <div className="print:p-8 print:page-break-after" style={{ page: 'category-sheet' }}>
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
@@ -1728,10 +1728,9 @@ function ChargesReturnReportTab() {
                   })}
                   {/* BGL Subtotal Row */}
                   <tr className="font-semibold bg-gray-100">
-                    <td colSpan={2} className="border border-black px-2 py-2 text-right">
+                    <td colSpan={8} className="border border-black px-2 py-2 text-right">
                       Sub-total for BGL {bglCode} {bglInfo ? `(${bglInfo.head} / ${bglInfo.subHead})` : ''}
                     </td>
-                    <td colSpan={6} className="border border-black px-2 py-2"></td>
                     <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(bglTotal)}</td>
                   </tr>
                 </React.Fragment>
@@ -1847,7 +1846,7 @@ function ChargesReturnReportTab() {
         {filteredEntries.length === 0 ? (
           <p className="text-center text-gray-500 py-8">No entries to display. Add charges in the "Charges Entry" tab.</p>
         ) : (
-          <div className="print:p-0" style={{ fontFamily: "'Times New Roman', serif", fontSize: "14px" }}>
+          <div className="print:p-0" style={{ fontFamily: "'Times New Roman', serif", fontSize: "12px" }}>
             {viewMode === "single" ? (
               // Single sheet view
               selectedView === "summary" ? renderSummary() : renderCategorySheet(selectedView)

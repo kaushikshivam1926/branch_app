@@ -182,6 +182,20 @@
     margin: 1.5cm 1cm;
   }
 
+  /* Portrait mode for Summary sheet */
+  @page :first {
+    size: A4 portrait;
+  }
+
+  /* Landscape mode for all other sheets */
+  .print\:page-break-after {
+    page-break-after: always;
+  }
+
+  @page category-sheet {
+    size: A4 landscape;
+  }
+
   body {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
