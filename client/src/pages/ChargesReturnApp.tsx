@@ -1529,6 +1529,7 @@ function ChargesReturnReportTab() {
   const [bglMaster, setBglMaster] = useState<BGLMaster[]>([]);
   const [selectedView, setSelectedView] = useState<string>("summary");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"single" | "all">("single");
   const { branchName, branchCode } = useBranch();
 
   useEffect(() => {
@@ -1803,28 +1804,64 @@ function ChargesReturnReportTab() {
             </select>
           </div>
 
-          {/* View Selector */}
+          {/* View Mode Toggle */}
           <div className="flex gap-4 items-center">
-            <Label>Select Sheet:</Label>
-            <select 
-              value={selectedView} 
-              onChange={(e) => setSelectedView(e.target.value)}
-              className="border rounded px-3 py-2 flex-1"
-            >
-              <option value="summary">Summary</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <Label>View Mode:</Label>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setViewMode("single")} 
+                variant={viewMode === "single" ? "default" : "outline"}
+                size="sm"
+              >
+                Single Sheet
+              </Button>
+              <Button 
+                onClick={() => setViewMode("all")} 
+                variant={viewMode === "all" ? "default" : "outline"}
+                size="sm"
+              >
+                All Sheets (Print View)
+              </Button>
+            </div>
           </div>
+
+          {/* View Selector - Only shown in single sheet mode */}
+          {viewMode === "single" && (
+            <div className="flex gap-4 items-center">
+              <Label>Select Sheet:</Label>
+              <select 
+                value={selectedView} 
+                onChange={(e) => setSelectedView(e.target.value)}
+                className="border rounded px-3 py-2 flex-1"
+              >
+                <option value="summary">Summary</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Report Content */}
         {filteredEntries.length === 0 ? (
           <p className="text-center text-gray-500 py-8">No entries to display. Add charges in the "Charges Entry" tab.</p>
         ) : (
-          <div className="print:p-0">
-            {selectedView === "summary" ? renderSummary() : renderCategorySheet(selectedView)}
+          <div className="print:p-0" style={{ fontFamily: "'Times New Roman', serif", fontSize: "14px" }}>
+            {viewMode === "single" ? (
+              // Single sheet view
+              selectedView === "summary" ? renderSummary() : renderCategorySheet(selectedView)
+            ) : (
+              // All sheets view with page breaks
+              <div className="max-h-[70vh] overflow-y-auto border rounded p-4 bg-white print:max-h-none print:overflow-visible print:border-0 print:p-0">
+                {renderSummary()}
+                {categories.map(cat => (
+                  <React.Fragment key={cat}>
+                    {renderCategorySheet(cat)}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </Card>

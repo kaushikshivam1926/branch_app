@@ -187,9 +187,17 @@
     -webkit-print-color-adjust: exact;
   }
 
-  /* Hide unnecessary elements */
+  /* Hide all page elements except report content */
+  header,
+  nav,
   .print\\:hidden {
     display: none !important;
+  }
+
+  /* Hide the main app container background and padding */
+  body > div {
+    background: white !important;
+    padding: 0 !important;
   }
 
   /* Remove shadows and backgrounds for print */
