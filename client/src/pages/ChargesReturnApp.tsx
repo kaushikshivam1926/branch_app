@@ -44,6 +44,7 @@ interface BGLMaster {
   bglCode: string;
   head: string;
   subHead: string;
+  acmCategory: string;  // Exact match to ACM HEAD field
   reportCategory: string;
 }
 
@@ -854,17 +855,19 @@ function ChargesEntryTab() {
         if (parts.length < 3) {
           parts = line.split(/\t/);
         }
-        if (parts.length >= 4) {
+        if (parts.length >= 5) {
           const bglCode = parts[0].trim();
           const head = parts[1].trim();
           const subHead = parts[2].trim();
-          const reportCategory = parts[3].trim();
+          const acmCategory = parts[3].trim();
+          const reportCategory = parts[4].trim();
           
-          if (bglCode && head && subHead && reportCategory) {
+          if (bglCode && head && subHead && acmCategory && reportCategory) {
             await tx.store.add({
               bglCode,
               head,
               subHead,
+              acmCategory,
               reportCategory,
             });
           }
@@ -1068,32 +1071,13 @@ function ChargesEntryTab() {
           const headUpper = row.head.toUpperCase();
           let category = "Uncategorized";
           
-          // Try to match HEAD with BGL master to find category
-          // Use bidirectional matching: check if either contains the other
-          for (const bgl of bglMaster) {
-            const bglHeadUpper = bgl.head.toUpperCase();
-            
-            // Extract significant keywords (ignore common words)
-            const extractKeywords = (text: string) => {
-              const commonWords = ['&', 'AND', 'THE', 'OF', 'TO', 'FOR', 'ON', 'IN', 'AT'];
-              return text.split(/[\s,]+/)
-                .filter(word => word.length > 2 && !commonWords.includes(word));
-            };
-            
-            const acmKeywords = extractKeywords(headUpper);
-            const bglKeywords = extractKeywords(bglHeadUpper);
-            
-            // Check if any significant keyword matches
-            const hasMatch = acmKeywords.some(acmWord => 
-              bglKeywords.some(bglWord => 
-                acmWord.includes(bglWord) || bglWord.includes(acmWord)
-              )
-            );
-            
-            if (hasMatch) {
-              category = bgl.reportCategory;
-              break;
-            }
+          // Exact match using ACM Category field from BGL master
+          const matchedBgl = bglMaster.find(bgl => 
+            bgl.acmCategory.toUpperCase() === headUpper
+          );
+          
+          if (matchedBgl) {
+            category = matchedBgl.reportCategory;
           }
           
           const amount = row.monthAmount || 0;
@@ -1151,10 +1135,10 @@ function ChargesEntryTab() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500">
-                Format: BGL Code, Payment Head, Sub-Head, Report Category (CSV or tab-separated)
+                Format: BGL Code, Payment Head, Sub-Head, ACM Category, Charges Return Report Category (CSV or tab-separated)
               </p>
               <p className="text-xs text-blue-600 mt-1">
-                This single file contains all BGL codes with their payment heads, sub-heads, and report categories.
+                <strong>ACM Category</strong> must exactly match the HEAD field from ACM reports (e.g., "ELECTRICITY & GAS CHARGES", "LAW CHARGES").
               </p>
             </div>
           </details>
