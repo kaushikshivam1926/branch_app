@@ -280,7 +280,7 @@ export default function ChargesReturnApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg print:hidden">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -302,7 +302,7 @@ export default function ChargesReturnApp() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-4 print:hidden">
         <div className="flex gap-2 bg-white rounded-lg p-1 shadow-sm">
           <button
             onClick={() => setActiveTab("extractor")}
