@@ -1047,7 +1047,19 @@ function ChargesEntryTab() {
         const report = savedACMReports.find(r => r.reportDateISO === selectedMonthFilter);
         if (!report) return;
 
-        const acmRows: ACMRow[] = await db.getAllFromIndex("acmRows", "byReportId", report.reportId);
+        const allAcmRows: ACMRow[] = await db.getAllFromIndex("acmRows", "byReportId", report.reportId);
+        
+        // Filter out the bottom three total rows
+        const totalKeywords = [
+          "TOTAL CHARGES FOR THE MONTH",
+          "TOTAL CHARGES UPTO PREVIOUS MONTH",
+          "BALANCE AS PER GENERAL LEDGER"
+        ];
+        
+        const acmRows = allAcmRows.filter(row => {
+          const headUpper = row.head.toUpperCase();
+          return !totalKeywords.some(keyword => headUpper.includes(keyword));
+        });
         
         // Calculate totals by category from ACM data
         const categoryTotals: Record<string, number> = {};
