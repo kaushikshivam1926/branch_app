@@ -759,7 +759,7 @@ function ChargesEntryTab() {
       
       const entry: any = {
         id: editingId || `charge_${Date.now()}`,
-        bgl: formData.bglCode,
+        bglCode: formData.bglCode,
         payDate: formData.payDate,
         billNo: formData.billNo.trim(),
         billDate: formData.billDate,
