@@ -897,14 +897,27 @@ function ChargesEntryTab() {
       }
 
       // Get ACM rows for this report
-      const acmRows: ACMRow[] = await db.getAllFromIndex("acmRows", "byReportId", report.reportId);
+      const allAcmRows: ACMRow[] = await db.getAllFromIndex("acmRows", "byReportId", report.reportId);
       
-      if (acmRows.length === 0) {
+      if (allAcmRows.length === 0) {
         toast.error("No data found in selected ACM report");
         return;
       }
 
-      toast.success(`Loaded ${acmRows.length} items from ACM report for ${report.reportDateLabel}`);
+      // Filter out the bottom three total rows
+      // These rows have specific keywords in their HEAD field
+      const totalKeywords = [
+        "TOTAL CHARGES FOR THE MONTH",
+        "TOTAL CHARGES UPTO PREVIOUS MONTH",
+        "BALANCE AS PER GENERAL LEDGER"
+      ];
+      
+      const acmRows = allAcmRows.filter(row => {
+        const headUpper = row.head.toUpperCase();
+        return !totalKeywords.some(keyword => headUpper.includes(keyword));
+      });
+
+      toast.success(`Loaded ${acmRows.length} items from ACM report for ${report.reportDateLabel} (excluded ${allAcmRows.length - acmRows.length} total rows)`);
       setSelectedMonthFilter(selectedACMMonth);
     } catch (error) {
       toast.error("Failed to import ACM data");
