@@ -1094,9 +1094,19 @@ function ChargesEntryTab() {
           let category = "Uncategorized";
           
           // Exact match using ACM Category field from BGL master
-          const matchedBgl = bglMaster.find(bgl => 
-            bgl.acmCategory.toUpperCase() === headUpper
-          );
+          const matchedBgl = bglMaster.find(bgl => {
+            const bglAcmUpper = bgl.acmCategory.toUpperCase().trim();
+            const headTrimmed = headUpper.trim();
+            
+            // Debug: log mismatches for entries with commas
+            if (headTrimmed.includes(',') && bglAcmUpper !== headTrimmed) {
+              console.log('ACM HEAD:', JSON.stringify(headTrimmed));
+              console.log('BGL ACM Category:', JSON.stringify(bglAcmUpper));
+              console.log('Match:', bglAcmUpper === headTrimmed);
+            }
+            
+            return bglAcmUpper === headTrimmed;
+          });
           
           if (matchedBgl) {
             category = matchedBgl.reportCategory;
@@ -1211,7 +1221,7 @@ function ChargesEntryTab() {
               />
               <datalist id="bgl-list">
                 {bglMaster.map(bgl => (
-                  <option key={bgl.bglCode} value={bgl.bglCode}>{bgl.head}</option>
+                  <option key={bgl.bglCode} value={bgl.bglCode}>{bgl.bglCode} - {bgl.subHead}</option>
                 ))}
               </datalist>
             </div>
