@@ -1069,8 +1069,28 @@ function ChargesEntryTab() {
           let category = "Uncategorized";
           
           // Try to match HEAD with BGL master to find category
+          // Use bidirectional matching: check if either contains the other
           for (const bgl of bglMaster) {
-            if (headUpper.includes(bgl.head.toUpperCase())) {
+            const bglHeadUpper = bgl.head.toUpperCase();
+            
+            // Extract significant keywords (ignore common words)
+            const extractKeywords = (text: string) => {
+              const commonWords = ['&', 'AND', 'THE', 'OF', 'TO', 'FOR', 'ON', 'IN', 'AT'];
+              return text.split(/[\s,]+/)
+                .filter(word => word.length > 2 && !commonWords.includes(word));
+            };
+            
+            const acmKeywords = extractKeywords(headUpper);
+            const bglKeywords = extractKeywords(bglHeadUpper);
+            
+            // Check if any significant keyword matches
+            const hasMatch = acmKeywords.some(acmWord => 
+              bglKeywords.some(bglWord => 
+                acmWord.includes(bglWord) || bglWord.includes(acmWord)
+              )
+            );
+            
+            if (hasMatch) {
               category = bgl.reportCategory;
               break;
             }
