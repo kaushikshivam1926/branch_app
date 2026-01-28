@@ -1221,7 +1221,7 @@ function ChargesEntryTab() {
               />
               <datalist id="bgl-list">
                 {bglMaster.map(bgl => (
-                  <option key={bgl.bglCode} value={bgl.bglCode}>{bgl.bglCode} - {bgl.subHead}</option>
+                  <option key={bgl.bglCode} value={bgl.bglCode}>{bgl.head} - {bgl.subHead}</option>
                 ))}
               </datalist>
             </div>
