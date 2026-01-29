@@ -197,8 +197,9 @@
   }
 
   body {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Hide all page elements except report content */
@@ -208,10 +209,19 @@
     display: none !important;
   }
 
-  /* Hide the main app container background and padding */
-  body > div {
+  /* Remove all backgrounds and gradients */
+  * {
     background: white !important;
-    padding: 0 !important;
+    background-image: none !important;
+    background-color: white !important;
+  }
+
+  /* Except for table headers and specific styled elements */
+  thead,
+  .bg-gray-100,
+  .bg-gray-50 {
+    background: #f3f4f6 !important;
+    background-color: #f3f4f6 !important;
   }
 
   /* Remove shadows and backgrounds for print */
@@ -260,6 +270,22 @@
 
   .print\\:mb-8 {
     margin-bottom: 2rem !important;
+  }
+
+  /* Full width for print */
+  .container,
+  .max-w-2xl,
+  .max-w-4xl,
+  .max-w-6xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure content fills page */
+  .print\\:bg-white {
+    background: white !important;
   }
 
   .print\\:mt-16 {

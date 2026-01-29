@@ -278,7 +278,7 @@ export default function ChargesReturnApp() {
   const [acmPreviewData, setAcmPreviewData] = useState<{ reportDate: { iso: string; label: string }; rows: ACMRow[] } | null>(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 print:bg-white">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg print:hidden">
         <div className="container mx-auto px-4 py-6">
@@ -1596,7 +1596,7 @@ function ChargesReturnReportTab() {
     const monthLabel = selectedMonth === "all" ? "All Months" : new Date(selectedMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
     
     return (
-      <div className="print:p-8">
+      <div className="print:p-8 print:page-break-after">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
@@ -1852,7 +1852,7 @@ function ChargesReturnReportTab() {
               selectedView === "summary" ? renderSummary() : renderCategorySheet(selectedView)
             ) : (
               // All sheets view with page breaks
-              <div className="max-h-[70vh] overflow-y-auto border rounded p-4 bg-white print:max-h-none print:overflow-visible print:border-0 print:p-0">
+              <div className="max-h-[70vh] overflow-y-auto border rounded p-4 bg-white print:max-h-none print:overflow-visible print:border-0 print:p-0 print:bg-white">
                 {renderSummary()}
                 {categories.map(cat => (
                   <React.Fragment key={cat}>
