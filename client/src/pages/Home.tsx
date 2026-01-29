@@ -162,9 +162,11 @@ export default function Home() {
     >
       {/* Header Banner */}
       <header 
-        className="w-full py-4 px-6"
+        className="w-full py-2 px-6"
         style={{ 
-          background: "linear-gradient(to right, #d4007f, #4e1a74)"
+          background: "linear-gradient(to right, #d4007f, #4e1a74)",
+          height: '101px',
+          paddingTop: '0px'
         }}
       >
         <div className="max-w-7xl mx-auto flex items-center gap-4">

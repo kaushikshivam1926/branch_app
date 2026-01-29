@@ -281,9 +281,11 @@ export default function ChargesReturnApp() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 print:bg-white">
       {/* Header */}
       <header 
-        className="py-6 px-6 print:hidden shadow-lg"
+        className="w-full py-2 px-6 print:hidden shadow-lg"
         style={{ 
-          background: "linear-gradient(to right, #d4007f, #4e1a74)"
+          background: "linear-gradient(to right, #d4007f, #4e1a74)",
+          height: '101px',
+          paddingTop: '0px'
         }}
       >
         <div className="max-w-7xl mx-auto flex items-center gap-4">

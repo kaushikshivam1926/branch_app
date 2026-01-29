@@ -282,9 +282,11 @@ export default function LeadManagementApp() {
     >
       {/* Header */}
       <header 
-        className="w-full py-4 px-6"
+        className="w-full py-2 px-6"
         style={{ 
-          background: "linear-gradient(to right, #d4007f, #4e1a74)"
+          background: "linear-gradient(to right, #d4007f, #4e1a74)",
+          height: '101px',
+          paddingTop: '0px'
         }}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -298,8 +300,18 @@ export default function LeadManagementApp() {
               />
             </div>
             <div className="flex flex-col justify-center">
-              <h1 className="text-white font-semibold text-xl">Lead Management System</h1>
-              <p className="text-white/90 text-sm">{branchName}</p>
+              <h1 
+                className="text-white font-semibold leading-tight"
+                style={{ fontSize: "1.3rem" }}
+              >
+                Lead Management System
+              </h1>
+              <p 
+                className="text-white/90"
+                style={{ fontSize: "0.85rem" }}
+              >
+                {branchName}
+              </p>
             </div>
           </div>
           
