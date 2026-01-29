@@ -30,11 +30,12 @@ import {
   GripVertical,
   Download,
   Upload,
-  Receipt
+  Receipt,
+  IndianRupee
 } from "lucide-react";
 import { db, exportAllData, importAllData, loadData, saveData } from "@/lib/db";
 
-type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt";
+type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee";
 
 interface AppCard {
   id: string;
@@ -101,7 +102,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     id: "charges-return",
     title: "Charges Return",
     description: "Prepare charges return report for controlling office",
-    iconName: "Receipt",
+    iconName: "IndianRupee",
     path: "/charges-return",
     color: "#673ab7"
   },
@@ -148,6 +149,8 @@ const IconComponent = ({ name, className }: { name: IconName; className?: string
       return <FileSpreadsheet className={iconClass} />;
     case "Receipt":
       return <Receipt className={iconClass} />;
+    case "IndianRupee":
+      return <IndianRupee className={iconClass} />;
     default:
       return <Globe className={iconClass} />;
   }
@@ -173,7 +176,7 @@ export default function Landing() {
         if (savedSettings) {
           // Check if the data has the new iconName field
           if (savedSettings.length > 0 && savedSettings[0].iconName) {
-            // Migrate security-docs to charges-return
+            // Migrate security-docs to charges-return and update icon
             const migratedSettings = savedSettings.map((card: AppCard) => {
               if (card.id === "security-docs") {
                 return {
@@ -181,8 +184,15 @@ export default function Landing() {
                   id: "charges-return",
                   title: "Charges Return",
                   description: "Prepare charges return report for controlling office",
-                  iconName: "Receipt" as IconName,
+                  iconName: "IndianRupee" as IconName,
                   path: "/charges-return"
+                };
+              }
+              // Update existing charges-return cards to use IndianRupee icon
+              if (card.id === "charges-return" && card.iconName === "Receipt") {
+                return {
+                  ...card,
+                  iconName: "IndianRupee" as IconName
                 };
               }
               return card;
