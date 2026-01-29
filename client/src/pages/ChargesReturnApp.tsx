@@ -280,26 +280,50 @@ export default function ChargesReturnApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 print:bg-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg print:hidden">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/")}
-                className="text-white hover:bg-white/20"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Charges Return</h1>
-                <p className="text-sm text-purple-100">{branchName}</p>
-              </div>
-            </div>
+      <header 
+        className="py-6 px-6 print:hidden shadow-lg"
+        style={{ 
+          background: "linear-gradient(to right, #d4007f, #4e1a74)"
+        }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center gap-4">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/")}
+            className="text-white hover:bg-white/20 flex-shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
+          {/* SBI Logo */}
+          <div className="flex-shrink-0">
+            <img 
+              src="/images/sbi-logo.png" 
+              alt="State Bank of India" 
+              className="h-16 w-auto"
+              style={{ filter: "brightness(0) invert(1)" }}
+            />
+          </div>
+          
+          {/* App Title and Branch Name */}
+          <div className="flex flex-col justify-center">
+            <h1 
+              className="text-white font-semibold leading-tight"
+              style={{ fontSize: "1.3rem" }}
+            >
+              Charges Return
+            </h1>
+            <p 
+              className="text-white/90"
+              style={{ fontSize: "0.85rem" }}
+            >
+              {branchName}
+            </p>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Tab Navigation */}
       <div className="container mx-auto px-4 py-4 print:hidden">
