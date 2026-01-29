@@ -799,9 +799,9 @@ function ChargesEntryTab() {
 
   function handleEdit(entry: any) {
     setFormData({
-      bglCode: entry.bgl,
-      head: bglMaster.find(b => b.bglCode === entry.bgl)?.head || "",
-      subHead: bglMaster.find(b => b.bglCode === entry.bgl)?.subHead || "",
+      bglCode: entry.bglCode,
+      head: bglMaster.find(b => b.bglCode === entry.bglCode)?.head || "",
+      subHead: bglMaster.find(b => b.bglCode === entry.bglCode)?.subHead || "",
       payDate: entry.payDate,
       billNo: entry.billNo,
       billDate: entry.billDate,
@@ -1406,7 +1406,7 @@ function ChargesEntryTab() {
                       <thead className="bg-purple-100">
                         <tr>
                           <th className="px-2 py-2 text-left">S.N.</th>
-                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("bgl")}>BGL Number</th>
+                          <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("bglCode")}>BGL Number</th>
                           <th className="px-2 py-2 text-left">Head</th>
                           <th className="px-2 py-2 text-left">Sub-Head</th>
                           <th className="px-2 py-2 text-left cursor-pointer hover:bg-purple-200" onClick={() => handleSort("payDate")}>Date of Payment</th>
@@ -1421,11 +1421,11 @@ function ChargesEntryTab() {
                       </thead>
                       <tbody>
                         {categoryEntries.map((entry: any, idx: number) => {
-                          const currentInfo = bglMaster.find(b => b.bglCode === entry.bgl) || { head: "", subHead: "" };
+                          const currentInfo = bglMaster.find(b => b.bglCode === entry.bglCode) || { head: "", subHead: "" };
                           return (
                             <tr key={entry.id} className="border-t hover:bg-purple-50">
                               <td className="px-2 py-2">{idx + 1}</td>
-                              <td className="px-2 py-2">{entry.bgl}</td>
+                              <td className="px-2 py-2">{entry.bglCode}</td>
                               <td className="px-2 py-2">{currentInfo.head}</td>
                               <td className="px-2 py-2">{currentInfo.subHead}</td>
                               <td className="px-2 py-2">{formatDateDDMMYYYY(entry.payDate)}</td>
