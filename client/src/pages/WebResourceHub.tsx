@@ -85,7 +85,7 @@ export default function WebResourceHub() {
   }, [resources]);
 
   const handleLogin = () => {
-    if (password === "sbi@13042") {
+    if (password === "Sbi@12345") {
       setIsAdmin(true);
       setShowLoginModal(false);
       setPassword("");
@@ -582,6 +582,17 @@ export default function WebResourceHub() {
             <h3 className="text-xl font-semibold mb-4" style={{ color: "#4e1a74" }}>
               Admin Login
             </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                value="Admin"
+                disabled
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 outline-none"
+              />
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password

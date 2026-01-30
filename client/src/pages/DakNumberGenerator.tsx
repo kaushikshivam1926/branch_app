@@ -16,7 +16,7 @@ import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, T
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 
-const ADMIN_PASSWORD = "sbi@13042";
+const ADMIN_PASSWORD = "Sbi@12345";
 const STORAGE_KEY = "sbi_letter_refs_13042";
 
 interface DakRecord {
@@ -761,6 +761,16 @@ export default function DakNumberGenerator() {
             <DialogTitle>Admin Login</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-username">Username</Label>
+              <Input
+                id="admin-username"
+                type="text"
+                value="Admin"
+                disabled
+                className="bg-gray-100 text-gray-600"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="admin-password">Password</Label>
               <Input

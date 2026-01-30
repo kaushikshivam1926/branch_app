@@ -50,7 +50,7 @@ interface Lead {
 }
 
 const ADMIN_USERNAME = "Admin";
-const ADMIN_PASSWORD = "sbi@13042";
+const ADMIN_PASSWORD = "Sbi@12345";
 
 export default function LeadManagementApp() {
   const { branchName } = useBranch();

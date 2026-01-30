@@ -381,7 +381,7 @@ export default function Landing() {
   }, [appCards]);
 
   const handleLogin = () => {
-    if (password === "sbi@13042") {
+    if (password === "Sbi@12345") {
       setIsAdmin(true);
       setShowLoginModal(false);
       setPassword("");
@@ -711,23 +711,17 @@ export default function Landing() {
               Admin Login
             </h3>
             
-            {/* Task Statistics */}
-            {(() => {
-              const reminderCard = appCards.find(card => card.id === "reminders");
-              if (reminderCard?.statistics) {
-                return (
-                  <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    <h4 className="text-sm font-semibold mb-2" style={{ color: "#4e1a74" }}>
-                      Reminder & To-Do Statistics
-                    </h4>
-                    <p className="text-xs font-medium text-gray-700">
-                      {reminderCard.statistics}
-                    </p>
-                  </div>
-                );
-              }
-              return null;
-            })()}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                value="Admin"
+                disabled
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 outline-none"
+              />
+            </div>
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
