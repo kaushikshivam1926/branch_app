@@ -14,19 +14,21 @@ import EMICalculator from "./pages/EMICalculator";
 import RemindersApp from "./pages/RemindersApp";
 import LeadManagementApp from "./pages/LeadManagementApp";
 import WebResourceHub from "./pages/WebResourceHub";
+import LetterGenerator from "./pages/LetterGenerator";
 
 
 function AppRouter() {
   return (
     <Switch>
       <Route path={"/"} component={Landing} />
-      <Route path={"/loan-recovery"} component={Home} />
+      <Route path={"/notice-generator"} component={Home} />
       <Route path={"/dak-number"} component={DakNumberGenerator} />
       <Route path={"/emi-calculator"} component={EMICalculator} />
       <Route path={"/reminders"} component={RemindersApp} />
       <Route path={"/lead-management"} component={LeadManagementApp} />
       <Route path={"/web-resource-hub"} component={WebResourceHub} />
       <Route path={"/charges-return"} component={ChargesReturnApp} />
+      <Route path={"/letter-generator"} component={LetterGenerator} />
       <Route path={"/branch-info"}>
         <PlaceholderApp title="Branch Information" />
       </Route>

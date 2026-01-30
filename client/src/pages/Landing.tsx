@@ -31,11 +31,12 @@ import {
   Download,
   Upload,
   Receipt,
-  IndianRupee
+  IndianRupee,
+  FileEdit
 } from "lucide-react";
 import { db, exportAllData, importAllData, loadData, saveData } from "@/lib/db";
 
-type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee";
+type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee" | "FileEdit";
 
 interface AppCard {
   id: string;
@@ -59,12 +60,20 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     color: "#d4007f"
   },
   {
-    id: "loan-recovery",
-    title: "Loan Recovery Notice Generator",
+    id: "notice-generator",
+    title: "Notice Generator",
     description: "Generate recovery notices for non-performing loan accounts",
     iconName: "FileText",
-    path: "/loan-recovery",
+    path: "/notice-generator",
     color: "#4e1a74"
+  },
+  {
+    id: "letter-generator",
+    title: "Letter & Notice Generator",
+    description: "Generate personalized letters from CSV data and templates with automatic Dak numbers",
+    iconName: "FileEdit",
+    path: "/letter-generator",
+    color: "#7c3aed"
   },
   {
     id: "emi-calculator",
@@ -151,6 +160,8 @@ const IconComponent = ({ name, className }: { name: IconName; className?: string
       return <Receipt className={iconClass} />;
     case "IndianRupee":
       return <IndianRupee className={iconClass} />;
+    case "FileEdit":
+      return <FileEdit className={iconClass} />;
     default:
       return <Globe className={iconClass} />;
   }
