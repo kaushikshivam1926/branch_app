@@ -196,7 +196,10 @@ export default function LetterGenerator() {
     toast.success(`${letters.length} letters generated successfully`);
   };
   
-  // Add field to template
+  // Editor ref for cursor position
+  const editorRef = useRef<HTMLDivElement>(null);
+  
+  // Add field to template at cursor position
   const handleAddField = (csvHeader: string) => {
     const placeholder = csvHeader.replace(/\s+/g, "_");
     const newField: TemplateField = {
@@ -208,9 +211,41 @@ export default function LetterGenerator() {
     };
     setTemplateFields([...templateFields, newField]);
     
-    // Insert placeholder into template
-    setTemplateHTML(prev => prev + `<p>{{${placeholder}}}</p>`);
+    // Insert placeholder at cursor position
+    const editor = editorRef.current;
+    if (editor) {
+      editor.focus();
+      const selection = window.getSelection();
+      const range = selection?.getRangeAt(0);
+      
+      if (range) {
+        const fieldSpan = document.createElement('span');
+        fieldSpan.className = 'inline-block px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-300 mx-1';
+        fieldSpan.contentEditable = 'false';
+        fieldSpan.textContent = `{{${placeholder}}}`;
+        
+        range.deleteContents();
+        range.insertNode(fieldSpan);
+        
+        // Move cursor after the inserted field
+        range.setStartAfter(fieldSpan);
+        range.setEndAfter(fieldSpan);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        
+        // Update template HTML
+        setTemplateHTML(editor.innerHTML);
+      }
+    }
+    
     toast.success(`Field "${csvHeader}" added to template`);
+  };
+  
+  // Handle template content change
+  const handleTemplateChange = () => {
+    if (editorRef.current) {
+      setTemplateHTML(editorRef.current.innerHTML);
+    }
   };
   
   // Save template
@@ -253,35 +288,48 @@ export default function LetterGenerator() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Header */}
       <header 
-        className="w-full py-2 px-6"
+        className="w-full py-2 px-6 shadow-lg"
         style={{ 
           background: "linear-gradient(to right, #d4007f, #4e1a74)",
           height: '101px',
           paddingTop: '0px'
         }}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => navigate("/")}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              aria-label="Back to home"
-            >
-              <ArrowLeft className="w-6 h-6 text-white" />
-            </button>
+        <div className="max-w-7xl mx-auto flex items-center gap-4">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/")}
+            className="text-white hover:bg-white/20 flex-shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
+          {/* SBI Logo */}
+          <div className="flex-shrink-0">
             <img 
-              src="/images/sbi-logo-white.png" 
-              alt="SBI Logo" 
-              className="h-28 w-auto object-contain"
+              src="/images/sbi-logo.png" 
+              alt="State Bank of India" 
+              className="h-28 w-auto"
+              style={{ filter: "brightness(0) invert(1)" }}
             />
-            <div className="text-white">
-              <h1 className="font-bold" style={{ fontSize: "1.3rem" }}>
-                State Bank of India
-              </h1>
-              <p className="opacity-90" style={{ fontSize: "0.85rem" }}>
-                {branchName}
-              </p>
-            </div>
+          </div>
+          
+          {/* App Title and Branch Name */}
+          <div className="flex flex-col justify-center">
+            <h1 
+              className="text-white font-semibold leading-tight"
+              style={{ fontSize: "1.3rem" }}
+            >
+              Letter & Notice Generator
+            </h1>
+            <p 
+              className="text-white/90 text-sm"
+              style={{ fontSize: "0.85rem" }}
+            >
+              {branchName}
+            </p>
           </div>
         </div>
       </header>
@@ -460,10 +508,15 @@ export default function LetterGenerator() {
             </Card>
             
             <Card className="md:col-span-2 p-6">
-              <h3 className="text-lg font-semibold mb-4">Template Preview</h3>
+              <h3 className="text-lg font-semibold mb-4">Template Editor</h3>
+              <p className="text-sm text-gray-600 mb-4">Click in the editor and then click a field button to insert it at cursor position. You can also type and format text directly.</p>
               <div 
-                className="p-4 bg-white border rounded min-h-96 prose max-w-none"
+                ref={editorRef}
+                contentEditable
+                className="p-4 bg-white border-2 border-purple-200 rounded min-h-96 prose max-w-none focus:outline-none focus:border-purple-400"
+                onInput={handleTemplateChange}
                 dangerouslySetInnerHTML={{ __html: templateHTML }}
+                suppressContentEditableWarning
               />
             </Card>
           </div>
