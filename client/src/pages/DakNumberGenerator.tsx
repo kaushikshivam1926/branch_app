@@ -310,10 +310,10 @@ export default function DakNumberGenerator() {
   };
 
   // Get unique FYs for filter
-  const uniqueFYs = Array.from(new Set(records.map(r => r.financialYear)));
+  const uniqueFYs = Array.from(new Set((records || []).map(r => r.financialYear)));
 
   // Filter records for admin table
-  const filteredRecords = records.filter(r => {
+  const filteredRecords = (records || []).filter(r => {
     if (filterFy && r.financialYear !== filterFy) return false;
     if (searchText) {
       const search = searchText.toLowerCase();
@@ -605,7 +605,7 @@ export default function DakNumberGenerator() {
                         style={{ borderColor: "#d0d7de" }}
                       >
                         <option value="">All</option>
-                        {Array.from(new Set(records.map(r => r.financialYear))).sort().reverse().map(fy => (
+                        {Array.from(new Set((records || []).map(r => r.financialYear))).sort().reverse().map(fy => (
                           <option key={fy} value={fy}>{fy}</option>
                         ))}
                       </select>
