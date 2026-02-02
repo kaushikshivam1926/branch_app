@@ -352,52 +352,48 @@ export default function LetterGenerator() {
       for (let i = 0; i < generatedLetters.length; i++) {
         const letter = generatedLetters[i];
         
-        // Create temporary container for letter
-        const container = document.createElement("div");
-        container.style.width = "210mm";
-        container.style.padding = "20mm";
-        container.style.backgroundColor = "white";
-        container.style.position = "absolute";
-        container.style.left = "-9999px";
-        container.innerHTML = `
-          <div style="font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.6;">
-            <div style="text-align: right; margin-bottom: 10px;">
-              <strong>Ref No:</strong> ${letter.refNo}<br>
-              <strong>Date:</strong> ${letter.date}
-            </div>
-            ${letter.content}
-          </div>
-        `;
-        document.body.appendChild(container);
-        
-        // Convert to canvas
-        const canvas = await html2canvas(container, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          ignoreElements: (element) => {
-            // Skip elements that might have OKLCH colors
-            const computedStyle = window.getComputedStyle(element);
-            const bgColor = computedStyle.backgroundColor;
-            const color = computedStyle.color;
-            return bgColor.includes('oklch') || color.includes('oklch');
-          }
-        });
-        
-        // Add to PDF
         if (i > 0) {
           pdf.addPage();
         }
         
-        const imgData = canvas.toDataURL("image/png");
-        const imgWidth = pageWidth - 20;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        // Add letter content directly using jsPDF text methods
+        const margin = 20;
+        let yPos = margin;
         
-        pdf.addImage(imgData, "PNG", 10, 10, imgWidth, Math.min(imgHeight, pageHeight - 20));
+        // Add Ref No and Date
+        pdf.setFontSize(11);
+        pdf.setFont("helvetica", "bold");
+        const refText = `Ref No: ${letter.refNo}`;
+        const dateText = `Date: ${letter.date}`;
+        const refWidth = pdf.getTextWidth(refText);
+        const dateWidth = pdf.getTextWidth(dateText);
+        pdf.text(refText, pageWidth - margin - refWidth, yPos);
+        yPos += 6;
+        pdf.text(dateText, pageWidth - margin - dateWidth, yPos);
+        yPos += 15;
         
-        // Clean up
-        document.body.removeChild(container);
+        // Add letter content
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(12);
+        
+        // Parse HTML content and convert to plain text with basic formatting
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = letter.content;
+        const textContent = tempDiv.innerText || tempDiv.textContent || '';
+        
+        // Split text into lines that fit the page width
+        const maxWidth = pageWidth - (2 * margin);
+        const lines = pdf.splitTextToSize(textContent, maxWidth);
+        
+        // Add lines to PDF
+        lines.forEach((line: string) => {
+          if (yPos > pageHeight - margin) {
+            pdf.addPage();
+            yPos = margin;
+          }
+          pdf.text(line, margin, yPos);
+          yPos += 7;
+        });
       }
       
       // Save PDF
