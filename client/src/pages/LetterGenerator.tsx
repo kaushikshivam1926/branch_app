@@ -195,6 +195,18 @@ export default function LetterGenerator() {
     const selection = window.getSelection();
     if (!selection || !editorRef.current) return;
     
+    // Check if there's a valid range
+    if (selection.rangeCount === 0) {
+      // No selection, append to end of editor
+      const badge = document.createElement("span");
+      badge.className = "inline-block px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm font-medium mx-1";
+      badge.contentEditable = "false";
+      badge.textContent = `{{${fieldName}}}`;
+      editorRef.current.appendChild(badge);
+      handleTemplateChange();
+      return;
+    }
+    
     const range = selection.getRangeAt(0);
     
     // Create field badge
