@@ -758,21 +758,21 @@ export default function DakNumberGenerator() {
       <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Admin Login</DialogTitle>
+            <DialogTitle className="text-xl font-semibold" style={{ color: "#4e1a74" }}>Admin Login</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="admin-username">Username</Label>
+              <Label htmlFor="admin-username" className="text-sm font-medium text-gray-700">Username</Label>
               <Input
                 id="admin-username"
                 type="text"
                 value="Admin"
                 disabled
-                className="bg-gray-100 text-gray-600"
+                className="bg-gray-100 text-gray-600 border-gray-300"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="admin-password">Password</Label>
+              <Label htmlFor="admin-password" className="text-sm font-medium text-gray-700">Password</Label>
               <Input
                 id="admin-password"
                 type="password"
@@ -780,13 +780,20 @@ export default function DakNumberGenerator() {
                 onChange={(e) => setAdminPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
                 placeholder="Enter admin password"
+                className="border-gray-300 focus:ring-2 focus:ring-purple-500"
                 autoFocus
               />
             </div>
             {adminLoginStatus && (
               <p className="text-sm text-destructive">{adminLoginStatus}</p>
             )}
-            <div className="flex justify-end gap-3">
+            <div className="flex gap-3">
+              <Button
+                onClick={handleAdminLogin}
+                className="flex-1 bg-gradient-to-r from-pink-600 to-purple-700 hover:opacity-90 text-white"
+              >
+                Login
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -794,12 +801,9 @@ export default function DakNumberGenerator() {
                   setAdminPassword("");
                   setAdminLoginStatus("");
                 }}
+                className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
               >
                 Cancel
-              </Button>
-              <Button onClick={handleAdminLogin}>
-                <LogIn className="w-4 h-4 mr-2" />
-                Login
               </Button>
             </div>
           </div>

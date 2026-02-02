@@ -590,41 +590,49 @@ export default function RemindersApp() {
 
       {/* Admin Login Dialog */}
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Admin Login</DialogTitle>
-            <DialogDescription>
-              Enter admin credentials to manage tasks
-            </DialogDescription>
+            <DialogTitle className="text-xl font-semibold" style={{ color: "#4e1a74" }}>Admin Login</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-medium text-gray-700">Username</Label>
               <Input
                 id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
+                value="Admin"
+                disabled
+                className="bg-gray-100 text-gray-600 border-gray-300"
               />
             </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700">Password</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder="Enter admin password"
+                className="border-gray-300 focus:ring-2 focus:ring-purple-500"
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                autoFocus
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLoginDialog(false)}>
+          <div className="flex gap-3">
+            <Button
+              onClick={handleLogin}
+              className="flex-1 bg-gradient-to-r from-pink-600 to-purple-700 hover:opacity-90 text-white"
+            >
+              Login
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowLoginDialog(false)}
+              className="flex-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
               Cancel
             </Button>
-            <Button onClick={handleLogin}>Login</Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

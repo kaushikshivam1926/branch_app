@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Upload, FileText, Save, CheckCircle, Download, Trash2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Upload, FileText, Save, CheckCircle, Download, Trash2, Home, Bold, Italic, Underline, Strikethrough, Undo, Redo } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import Papa from "papaparse";
 import mammoth from "mammoth";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface CSVData {
   headers: string[];
@@ -101,13 +103,11 @@ export default function LetterGenerator() {
   
   // CSV data
   const [csvData, setCSVData] = useState<CSVData | null>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
   
-  // Template data
+  // Template
   const [templateHTML, setTemplateHTML] = useState<string>("");
-  const docxInputRef = useRef<HTMLInputElement>(null);
   
-  // Dak Metadata
+  // Dak metadata
   const [dakMetadata, setDakMetadata] = useState<DakMetadata>({
     letterType: "",
     letterDestination: "",
@@ -119,35 +119,9 @@ export default function LetterGenerator() {
   // Generated letters
   const [generatedLetters, setGeneratedLetters] = useState<GeneratedLetter[]>([]);
   
-  // Load saved data
-  useEffect(() => {
-    const loadSavedData = async () => {
-      const saved = await loadData(STORAGE_KEY);
-      if (saved) {
-        if (saved.csvData) setCSVData(saved.csvData);
-        if (saved.templateHTML) setTemplateHTML(saved.templateHTML);
-        if (saved.dakMetadata) setDakMetadata(saved.dakMetadata);
-        if (saved.generatedLetters) setGeneratedLetters(saved.generatedLetters);
-      }
-    };
-    loadSavedData();
-  }, []);
-  
-  // Save data whenever it changes
-  useEffect(() => {
-    if (csvData || templateHTML || generatedLetters.length > 0) {
-      saveData(STORAGE_KEY, {
-        csvData,
-        templateHTML,
-        dakMetadata,
-        generatedLetters
-      });
-    }
-  }, [csvData, templateHTML, dakMetadata, generatedLetters]);
-  
   // Handle CSV upload
-  const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     
     Papa.parse(file, {
@@ -155,45 +129,99 @@ export default function LetterGenerator() {
       complete: (results) => {
         const headers = results.meta.fields || [];
         const rows = results.data as Record<string, string>[];
-        
-        setCSVData({ headers, rows: rows.filter(row => Object.values(row).some(v => v)) });
-        toast.success(`CSV uploaded: ${rows.length} records found`);
+        setCSVData({ headers, rows: rows.filter(r => Object.values(r).some(v => v)) });
+        toast.success(`CSV loaded: ${rows.length} rows`);
       },
-      error: (error) => {
-        toast.error(`CSV parsing error: ${error.message}`);
-      }
+      error: () => toast.error("Failed to parse CSV")
     });
   };
   
   // Handle DOCX upload
-  const handleDOCXUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleDOCXUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     
     try {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ arrayBuffer });
       setTemplateHTML(result.value);
-      toast.success("Template uploaded successfully");
+      toast.success("Template loaded successfully");
+      setCurrentStep("editor");
     } catch (error) {
-      toast.error("Failed to parse DOCX file");
+      toast.error("Failed to load template");
     }
   };
   
   // Editor ref for cursor position
   const editorRef = useRef<HTMLDivElement>(null);
   
-  // Handle template change
+  // Track undo/redo history
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // Handle template change with history tracking
   const handleTemplateChange = () => {
     if (editorRef.current) {
-      setTemplateHTML(editorRef.current.innerHTML);
+      const newHTML = editorRef.current.innerHTML;
+      setTemplateHTML(newHTML);
+      
+      // Add to history
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(newHTML);
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
     }
+  };
+  
+  // Initialize history when template loads
+  useEffect(() => {
+    if (templateHTML && history.length === 0) {
+      setHistory([templateHTML]);
+      setHistoryIndex(0);
+    }
+  }, [templateHTML]);
+  
+  // Undo
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const prevHTML = history[newIndex];
+      setTemplateHTML(prevHTML);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = prevHTML;
+      }
+    }
+  };
+  
+  // Redo
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const nextHTML = history[newIndex];
+      setTemplateHTML(nextHTML);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = nextHTML;
+      }
+    }
+  };
+  
+  // Rich text formatting
+  const applyFormat = (command: string) => {
+    document.execCommand(command, false);
+    handleTemplateChange();
   };
   
   // Add field at cursor position
   const handleAddField = (fieldName: string) => {
+    if (!editorRef.current) return;
+    
+    // Focus editor first
+    editorRef.current.focus();
+    
     const selection = window.getSelection();
-    if (!selection || !editorRef.current) return;
+    if (!selection) return;
     
     // Check if there's a valid range
     if (selection.rangeCount === 0) {
@@ -203,6 +231,11 @@ export default function LetterGenerator() {
       badge.contentEditable = "false";
       badge.textContent = `{{${fieldName}}}`;
       editorRef.current.appendChild(badge);
+      
+      // Add space after badge
+      const space = document.createTextNode(" ");
+      editorRef.current.appendChild(space);
+      
       handleTemplateChange();
       return;
     }
@@ -218,9 +251,14 @@ export default function LetterGenerator() {
     range.deleteContents();
     range.insertNode(badge);
     
-    // Move cursor after badge
+    // Add space after badge
+    const space = document.createTextNode(" ");
     range.setStartAfter(badge);
-    range.setEndAfter(badge);
+    range.insertNode(space);
+    
+    // Move cursor after space
+    range.setStartAfter(space);
+    range.setEndAfter(space);
     selection.removeAllRanges();
     selection.addRange(range);
     
@@ -252,46 +290,39 @@ export default function LetterGenerator() {
     
     try {
       // Load existing Dak records
-      const dakData = await loadData("sbi-dak-records");
-      const existingRecords: DakRecord[] = dakData || [];
-      
-      const today = getTodayInfo();
-      let currentSerial = parseInt(generateSerial(existingRecords, today.fyLabel));
+      const existingRecords = (await loadData("dak-records")) || [];
+      const { dateDisplay, monthNo, fyLabel } = getTodayInfo();
       
       const letters: GeneratedLetter[] = [];
+      let currentSerial = parseInt(generateSerial(existingRecords, fyLabel));
       
       for (const row of csvData.rows) {
-        const serialStr = String(currentSerial).padStart(4, "0");
-        const refNo = buildRef(today.fyLabel, today.monthNo, serialStr, branchCode);
+        const serial = String(currentSerial).padStart(4, "0");
+        const refNo = buildRef(fyLabel, monthNo, serial, branchCode);
         
-        // Replace placeholders in template
+        // Replace placeholders
         let content = templateHTML;
-        content = content.replace(/\{\{RefNo\}\}/g, refNo);
-        content = content.replace(/\{\{DakNumber\}\}/g, refNo);
-        content = content.replace(/\{\{Date\}\}/g, today.dateDisplay);
-        
-        // Replace CSV field placeholders
         csvData.headers.forEach(header => {
           const value = row[header] || "";
-          content = content.replace(new RegExp(`\\{\\{${header}\\}\\}`, "g"), value);
+          content = content.replace(new RegExp(`{{${header}}}`, "g"), value);
         });
         
-        // Process recipient details with CSV fields
-        let processedRecipient = dakMetadata.recipientDetails;
+        // Process recipient details placeholders
+        let recipientDetails = dakMetadata.recipientDetails;
         csvData.headers.forEach(header => {
           const value = row[header] || "";
-          processedRecipient = processedRecipient.replace(new RegExp(`\\{\\{${header}\\}\\}`, "g"), value);
+          recipientDetails = recipientDetails.replace(new RegExp(`{{${header}}}`, "g"), value);
         });
         
         letters.push({
-          id: `${Date.now()}-${currentSerial}`,
+          id: `letter-${currentSerial}`,
           refNo,
-          date: today.dateDisplay,
+          date: dateDisplay,
           content,
           data: row,
           dakMetadata: {
             ...dakMetadata,
-            recipientDetails: processedRecipient
+            recipientDetails
           }
         });
         
@@ -299,98 +330,98 @@ export default function LetterGenerator() {
       }
       
       setGeneratedLetters(letters);
-      toast.success(`${letters.length} letters generated successfully`);
+      toast.success(`Generated ${letters.length} letters`);
     } catch (error) {
       toast.error("Failed to generate letters");
-      console.error(error);
     }
   };
   
-  // Finalize and save to Dak Generator
+  // Finalize and download as PDF with Dak integration
   const handleFinalizeAndDownload = async () => {
-    if (generatedLetters.length === 0) return;
+    if (generatedLetters.length === 0) {
+      toast.error("No letters to download");
+      return;
+    }
     
     try {
-      // Load existing Dak records
-      const dakData = await loadData("sbi-dak-records");
-      const existingRecords: DakRecord[] = dakData || [];
+      // Create PDF
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
       
-      const today = getTodayInfo();
-      
-      // Create new Dak records for each letter
-      const newDakRecords: DakRecord[] = generatedLetters.map((letter, index) => {
-        const serialNo = letter.refNo.split("/").pop() || "0001";
+      for (let i = 0; i < generatedLetters.length; i++) {
+        const letter = generatedLetters[i];
         
-        return {
-          id: Date.now() + index,
-          refNo: letter.refNo,
-          serialNo,
-          financialYear: today.fyLabel,
-          monthNo: today.monthNo,
-          dateDisplay: letter.date,
-          letterType: letter.dakMetadata.letterType,
-          letterDestination: letter.dakMetadata.letterDestination,
-          recipientDetails: letter.dakMetadata.recipientDetails,
-          subject: letter.dakMetadata.subject,
-          remarks: letter.dakMetadata.remarks
-        };
-      });
+        // Create temporary container for letter
+        const container = document.createElement("div");
+        container.style.width = "210mm";
+        container.style.padding = "20mm";
+        container.style.backgroundColor = "white";
+        container.style.position = "absolute";
+        container.style.left = "-9999px";
+        container.innerHTML = `
+          <div style="font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.6;">
+            <div style="text-align: right; margin-bottom: 10px;">
+              <strong>Ref No:</strong> ${letter.refNo}<br>
+              <strong>Date:</strong> ${letter.date}
+            </div>
+            ${letter.content}
+          </div>
+        `;
+        document.body.appendChild(container);
+        
+        // Convert to canvas
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          logging: false
+        });
+        
+        // Add to PDF
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        const imgData = canvas.toDataURL("image/png");
+        const imgWidth = pageWidth - 20;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, "PNG", 10, 10, imgWidth, Math.min(imgHeight, pageHeight - 20));
+        
+        // Clean up
+        document.body.removeChild(container);
+      }
       
-      // Save to Dak Generator storage
-      const updatedRecords = [...existingRecords, ...newDakRecords];
-      await saveData("sbi-dak-records", updatedRecords);
+      // Save PDF
+      pdf.save(`Letters_${new Date().getTime()}.pdf`);
       
-      // Download all letters as single HTML file
-      const allLettersHTML = generatedLetters.map((letter, index) => `
-        <div style="page-break-after: always; padding: 20px;">
-          <h3>Letter ${index + 1}</h3>
-          <p><strong>Reference No:</strong> ${letter.refNo}</p>
-          <p><strong>Date:</strong> ${letter.date}</p>
-          <hr style="margin: 20px 0;">
-          ${letter.content}
-        </div>
-      `).join("");
+      // Update Dak records
+      const existingRecords = (await loadData("dak-records")) || [];
+      const newRecords: DakRecord[] = generatedLetters.map((letter, idx) => ({
+        id: Date.now() + idx,
+        refNo: letter.refNo,
+        serialNo: letter.refNo.split("/").pop() || "",
+        financialYear: letter.refNo.split("/")[2] || "",
+        monthNo: letter.refNo.split("/")[3] || "",
+        dateDisplay: letter.date,
+        letterType: letter.dakMetadata.letterType,
+        letterDestination: letter.dakMetadata.letterDestination,
+        recipientDetails: letter.dakMetadata.recipientDetails,
+        subject: letter.dakMetadata.subject,
+        remarks: letter.dakMetadata.remarks
+      }));
       
-      const fullHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Generated Letters</title>
-          <style>
-            body { font-family: Arial, sans-serif; }
-            @media print {
-              .page-break { page-break-after: always; }
-            }
-          </style>
-        </head>
-        <body>
-          ${allLettersHTML}
-        </body>
-        </html>
-      `;
+      await saveData("dak-records", [...existingRecords, ...newRecords]);
       
-      const blob = new Blob([fullHTML], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Letters_${today.dateDisplay}.html`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      toast.success(`${generatedLetters.length} letters downloaded and ${newDakRecords.length} Dak records updated!`);
-      
-      // Clear generated letters after finalization
-      setGeneratedLetters([]);
+      toast.success(`Downloaded ${generatedLetters.length} letters as PDF and updated Dak records`);
     } catch (error) {
-      toast.error("Failed to finalize and download");
       console.error(error);
+      toast.error("Failed to generate PDF");
     }
   };
   
-  // Clear all data
-  const handleClearAll = async () => {
-    if (!confirm("Clear all data? This cannot be undone.")) return;
-    
+  // Reset
+  const handleReset = () => {
     setCSVData(null);
     setTemplateHTML("");
     setDakMetadata({
@@ -401,164 +432,150 @@ export default function LetterGenerator() {
       remarks: ""
     });
     setGeneratedLetters([]);
+    setHistory([]);
+    setHistoryIndex(-1);
     setCurrentStep("upload");
-    
-    await saveData(STORAGE_KEY, {});
-    toast.success("All data cleared");
+    toast.success("Reset complete");
   };
-
+  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
       <header 
-        className="w-full px-6 flex items-center"
+        className="w-full px-6 flex items-center justify-between"
         style={{ 
           background: "linear-gradient(to right, #d4007f, #4e1a74)",
           height: '101px',
           paddingTop: '0px'
         }}
       >
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              className="text-white hover:bg-white/20"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <img 
-              src="/images/sbi-logo.png" 
-              alt="SBI Logo" 
-              className="h-28 invert"
-            />
-            <div className="text-white">
-              <h1 style={{ fontSize: "1.3rem", fontWeight: "600", marginBottom: "0.25rem" }}>
-                Letter & Notice Generator
-              </h1>
-              <p style={{ fontSize: "0.85rem", opacity: 0.95 }}>
-                {branchName}
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <img 
+            src="/images/sbi-logo.png" 
+            alt="SBI Logo" 
+            className="h-28 invert"
+          />
+          <div className="text-white">
+            <h1 className="font-bold" style={{ fontSize: '1.3rem' }}>Letter & Notice Generator</h1>
+            <p className="text-sm opacity-90" style={{ fontSize: '0.85rem' }}>{branchName}</p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/")}
+          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+        >
+          <Home className="mr-2 h-4 w-4" />
+          Back to Home
+        </Button>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center mb-8">
-          <div className={`flex items-center gap-2 ${currentStep === "upload" ? "text-purple-700 font-semibold" : "text-gray-400"}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === "upload" ? "bg-purple-700 text-white" : "bg-gray-300"}`}>1</div>
+      {/* Main Content */}
+      <div className="container mx-auto p-6">
+        {/* Step Indicator */}
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <div className={`flex items-center gap-2 ${currentStep === "upload" ? "text-purple-600 font-semibold" : "text-gray-400"}`}>
+            <Upload className="h-5 w-5" />
             <span>Upload Files</span>
           </div>
-          <div className="w-16 h-1 bg-gray-300"></div>
-          <div className={`flex items-center gap-2 ${currentStep === "editor" ? "text-purple-700 font-semibold" : "text-gray-400"}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === "editor" ? "bg-purple-700 text-white" : "bg-gray-300"}`}>2</div>
+          <div className="h-px w-16 bg-gray-300" />
+          <div className={`flex items-center gap-2 ${currentStep === "editor" ? "text-purple-600 font-semibold" : "text-gray-400"}`}>
+            <FileText className="h-5 w-5" />
             <span>Edit Template</span>
           </div>
-          <div className="w-16 h-1 bg-gray-300"></div>
-          <div className={`flex items-center gap-2 ${currentStep === "generate" ? "text-purple-700 font-semibold" : "text-gray-400"}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === "generate" ? "bg-purple-700 text-white" : "bg-gray-300"}`}>3</div>
+          <div className="h-px w-16 bg-gray-300" />
+          <div className={`flex items-center gap-2 ${currentStep === "generate" ? "text-purple-600 font-semibold" : "text-gray-400"}`}>
+            <CheckCircle className="h-5 w-5" />
             <span>Generate & Download</span>
           </div>
         </div>
 
         {/* Step 1: Upload Files */}
         {currentStep === "upload" && (
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="max-w-4xl mx-auto space-y-6">
             <Card className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Upload className="w-6 h-6 text-purple-700" />
-                <h2 className="text-xl font-semibold">Upload CSV Data</h2>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Upload a CSV file containing recipient data with headers (e.g., Name, Address, Amount)
-              </p>
-              <input
-                ref={csvInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleCSVUpload}
-                className="hidden"
-              />
-              <Button onClick={() => csvInputRef.current?.click()} className="w-full">
-                <Upload className="w-4 h-4 mr-2" />
-                Choose CSV File
-              </Button>
-              {csvData && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-                  <p className="text-sm text-green-800">
-                    ✓ {csvData.rows.length} records loaded
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">
-                    Fields: {csvData.headers.join(", ")}
+              <h2 className="text-xl font-semibold mb-4">Step 1: Upload CSV Data</h2>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="csv-upload">Upload CSV File</Label>
+                  <Input
+                    id="csv-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCSVUpload}
+                    className="mt-2"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Upload a CSV file containing data with headers
                   </p>
                 </div>
-              )}
+                {csvData && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded">
+                    <p className="text-green-700 font-medium">
+                      ✓ CSV loaded: {csvData.rows.length} rows, {csvData.headers.length} columns
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Headers: {csvData.headers.join(", ")}
+                    </p>
+                  </div>
+                )}
+              </div>
             </Card>
 
             <Card className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <FileText className="w-6 h-6 text-purple-700" />
-                <h2 className="text-xl font-semibold">Upload Letter Template</h2>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Upload a .doc/.docx file containing your letter template
-              </p>
-              <input
-                ref={docxInputRef}
-                type="file"
-                accept=".doc,.docx"
-                onChange={handleDOCXUpload}
-                className="hidden"
-              />
-              <Button onClick={() => docxInputRef.current?.click()} className="w-full">
-                <FileText className="w-4 h-4 mr-2" />
-                Choose DOCX File
-              </Button>
-              {templateHTML && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-                  <p className="text-sm text-green-800">
-                    ✓ Template uploaded successfully
+              <h2 className="text-xl font-semibold mb-4">Step 2: Upload Letter Template</h2>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="docx-upload">Upload DOCX Template</Label>
+                  <Input
+                    id="docx-upload"
+                    type="file"
+                    accept=".doc,.docx"
+                    onChange={handleDOCXUpload}
+                    className="mt-2"
+                    disabled={!csvData}
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Upload a Word document (.docx) template
                   </p>
                 </div>
-              )}
+              </div>
             </Card>
           </div>
         )}
 
-        {/* Action Buttons for Upload Step */}
-        <div className="flex items-center justify-between mt-6">
-          {currentStep === "upload" && (
-            <Button onClick={handleClearAll} variant="outline" className="gap-2">
-              <Trash2 className="w-4 h-4" />
-              Clear All
-            </Button>
-          )}
-          
-          {currentStep === "upload" && csvData && templateHTML && (
-            <Button onClick={() => setCurrentStep("editor")} size="lg">
-              Continue to Template Editor
-            </Button>
-          )}
-        </div>
-
-        {/* Step 2: Template Editor with Dak Metadata */}
-        {currentStep === "editor" && csvData && (
-          <>
-            {/* Dak Metadata Form */}
-            <Card className="p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">Letter Details (for Dak Number Generator)</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-semibold mb-1 block">Letter Type *</Label>
-                  <select
-                    value={dakMetadata.letterType}
-                    onChange={(e) => setDakMetadata({ ...dakMetadata, letterType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-md border text-sm bg-white"
+        {/* Step 2: Edit Template */}
+        {currentStep === "editor" && (
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Available Fields */}
+            <Card className="p-6 lg:col-span-1">
+              <h3 className="font-semibold mb-4">Available Fields</h3>
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {csvData?.headers.map(header => (
+                  <Button
+                    key={header}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddField(header)}
+                    className="w-full justify-start"
                   >
-                    <option value="">-- Select --</option>
+                    {header}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Dak Metadata Form */}
+              <div className="mt-6 space-y-4 border-t pt-4">
+                <h3 className="font-semibold">Letter Details</h3>
+                
+                <div>
+                  <Label>Letter Type *</Label>
+                  <select
+                    className="w-full mt-1 p-2 border rounded"
+                    value={dakMetadata.letterType}
+                    onChange={(e) => setDakMetadata({...dakMetadata, letterType: e.target.value})}
+                  >
+                    <option value="">Select Type</option>
                     {LETTER_TYPES.map(type => (
                       <option key={type} value={type}>{type}</option>
                     ))}
@@ -566,13 +583,13 @@ export default function LetterGenerator() {
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-semibold mb-1 block">Letter Destination *</Label>
+                  <Label>Letter Destination *</Label>
                   <select
+                    className="w-full mt-1 p-2 border rounded"
                     value={dakMetadata.letterDestination}
-                    onChange={(e) => setDakMetadata({ ...dakMetadata, letterDestination: e.target.value })}
-                    className="w-full px-3 py-2 rounded-md border text-sm bg-white"
+                    onChange={(e) => setDakMetadata({...dakMetadata, letterDestination: e.target.value})}
                   >
-                    <option value="">-- Select --</option>
+                    <option value="">Select Destination</option>
                     {LETTER_DESTINATIONS.map(dest => (
                       <option key={dest} value={dest}>{dest}</option>
                     ))}
@@ -580,165 +597,185 @@ export default function LetterGenerator() {
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-semibold mb-1 block">Recipient Details</Label>
+                  <Label>Recipient Details</Label>
                   <Input
+                    placeholder="Type or use {{field}} placeholders"
                     value={dakMetadata.recipientDetails}
-                    onChange={(e) => setDakMetadata({ ...dakMetadata, recipientDetails: e.target.value })}
-                    placeholder="Type or use {{FieldName}} from CSV"
-                    className="text-sm"
+                    onChange={(e) => setDakMetadata({...dakMetadata, recipientDetails: e.target.value})}
+                    className="mt-1"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    You can use CSV fields like: {csvData.headers.slice(0, 3).map(h => `{{${h}}}`).join(", ")}
-                  </p>
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-semibold mb-1 block">Subject *</Label>
+                  <Label>Subject *</Label>
                   <Input
-                    value={dakMetadata.subject}
-                    onChange={(e) => setDakMetadata({ ...dakMetadata, subject: e.target.value })}
                     placeholder="Enter subject"
-                    className="text-sm"
+                    value={dakMetadata.subject}
+                    onChange={(e) => setDakMetadata({...dakMetadata, subject: e.target.value})}
+                    className="mt-1"
                   />
                 </div>
                 
-                <div className="md:col-span-2">
-                  <Label className="text-sm font-semibold mb-1 block">Remarks (Optional)</Label>
+                <div>
+                  <Label>Remarks (Optional)</Label>
                   <Input
+                    placeholder="Enter remarks"
                     value={dakMetadata.remarks}
-                    onChange={(e) => setDakMetadata({ ...dakMetadata, remarks: e.target.value })}
-                    placeholder="Additional remarks"
-                    className="text-sm"
+                    onChange={(e) => setDakMetadata({...dakMetadata, remarks: e.target.value})}
+                    className="mt-1"
                   />
                 </div>
               </div>
             </Card>
 
             {/* Template Editor */}
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Available Fields</h3>
-                <p className="text-sm text-gray-600 mb-4">Click to add fields to your template:</p>
-                <div className="space-y-2">
-                  <Button 
-                    onClick={() => handleAddField("RefNo")}
-                    variant="outline"
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    + Reference Number
+            <Card className="p-6 lg:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Template Editor</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleReset}>
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Reset
                   </Button>
-                  <Button 
-                    onClick={() => handleAddField("Date")}
-                    variant="outline"
-                    className="w-full justify-start"
-                    size="sm"
-                  >
-                    + Date
+                  <Button onClick={handleSaveTemplate}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save & Continue
                   </Button>
-                  {csvData.headers.map(header => (
-                    <Button
-                      key={header}
-                      onClick={() => handleAddField(header)}
-                      variant="outline"
-                      className="w-full justify-start"
-                      size="sm"
-                    >
-                      + {header}
-                    </Button>
-                  ))}
                 </div>
-              </Card>
+              </div>
               
-              <Card className="md:col-span-2 p-6">
-                <h3 className="text-lg font-semibold mb-4">Template Editor</h3>
-                <p className="text-sm text-gray-600 mb-4">Click in the editor and then click a field button to insert it at cursor position. You can also type and format text directly.</p>
-                <div 
-                  ref={editorRef}
-                  contentEditable
-                  className="p-4 bg-white border-2 border-purple-200 rounded min-h-96 prose max-w-none focus:outline-none focus:border-purple-400"
-                  onInput={handleTemplateChange}
-                  dangerouslySetInnerHTML={{ __html: templateHTML }}
-                  suppressContentEditableWarning
-                />
-              </Card>
-            </div>
-          </>
-        )}
-
-        {/* Action Buttons for Editor Step */}
-        {currentStep === "editor" && (
-          <div className="flex items-center justify-between mt-6">
-            <Button onClick={() => setCurrentStep("upload")} variant="outline">
-              Back to Upload
-            </Button>
-            <Button onClick={handleSaveTemplate} className="gap-2">
-              <Save className="w-4 h-4" />
-              Save Template & Continue
-            </Button>
+              {/* Rich Text Toolbar */}
+              <div className="flex gap-2 mb-4 p-2 bg-gray-100 rounded border">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => applyFormat("bold")}
+                  title="Bold"
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => applyFormat("italic")}
+                  title="Italic"
+                >
+                  <Italic className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => applyFormat("underline")}
+                  title="Underline"
+                >
+                  <Underline className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => applyFormat("strikeThrough")}
+                  title="Strikethrough"
+                >
+                  <Strikethrough className="h-4 w-4" />
+                </Button>
+                <div className="w-px bg-gray-300 mx-2" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleUndo}
+                  disabled={historyIndex <= 0}
+                  title="Undo"
+                >
+                  <Undo className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRedo}
+                  disabled={historyIndex >= history.length - 1}
+                  title="Redo"
+                >
+                  <Redo className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div
+                ref={editorRef}
+                contentEditable
+                onInput={handleTemplateChange}
+                className="min-h-[600px] p-6 border rounded bg-white prose max-w-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                dangerouslySetInnerHTML={{ __html: templateHTML }}
+                suppressContentEditableWarning
+              />
+              
+              <p className="text-sm text-gray-500 mt-2">
+                Click inside the editor to place cursor, then click a field button to insert it at that position.
+              </p>
+            </Card>
           </div>
         )}
 
         {/* Step 3: Generate & Download */}
         {currentStep === "generate" && (
-          <div className="space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6">
             <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Generate Letters</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Ready to generate {csvData?.rows.length || 0} letters with automatic Dak number assignment
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Generate & Download Letters</h2>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep("editor")}
+                  >
+                    Back to Edit Template
+                  </Button>
+                  <Button
+                    onClick={handleGenerateLetters}
+                    disabled={generatedLetters.length > 0}
+                  >
+                    Generate Letters
+                  </Button>
+                </div>
+              </div>
               
-              {generatedLetters.length === 0 ? (
-                <Button onClick={handleGenerateLetters} size="lg" className="gap-2">
-                  <CheckCircle className="w-5 h-5" />
-                  Generate Letters
-                </Button>
-              ) : (
-                <div>
-                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
-                    <p className="text-green-800 font-semibold">
-                      ✓ {generatedLetters.length} letters generated successfully
+              {generatedLetters.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p>Click "Generate Letters" to create personalized letters</p>
+                </div>
+              )}
+              
+              {generatedLetters.length > 0 && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded">
+                    <p className="text-green-700 font-medium">
+                      ✓ Generated {generatedLetters.length} letters
                     </p>
+                    <Button onClick={handleFinalizeAndDownload}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Finalise and Download All (PDF)
+                    </Button>
                   </div>
                   
-                  {/* Preview All Letters */}
-                  <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                    {generatedLetters.map((letter, index) => (
-                      <div key={letter.id} className="border rounded-lg p-4 bg-white">
-                        <div className="flex items-center justify-between mb-2">
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                    {generatedLetters.map((letter, idx) => (
+                      <Card key={letter.id} className="p-4">
+                        <div className="flex items-start justify-between mb-2">
                           <div>
-                            <p className="font-semibold">Letter {index + 1}</p>
-                            <p className="text-sm text-gray-600">Ref: {letter.refNo}</p>
+                            <p className="font-semibold">Letter {idx + 1}</p>
+                            <p className="text-sm text-gray-600">Ref No: {letter.refNo}</p>
                             <p className="text-sm text-gray-600">Date: {letter.date}</p>
                           </div>
                         </div>
                         <div 
-                          className="mt-2 p-3 bg-gray-50 rounded text-sm max-h-40 overflow-auto prose prose-sm max-w-none"
+                          className="prose max-w-none text-sm border-t pt-4 mt-4"
                           dangerouslySetInnerHTML={{ __html: letter.content }}
                         />
-                      </div>
+                      </Card>
                     ))}
                   </div>
-                  
-                  <Button onClick={handleFinalizeAndDownload} size="lg" className="gap-2 bg-green-600 hover:bg-green-700">
-                    <Download className="w-5 h-5" />
-                    Finalise and Download All
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-2">
-                    This will download all letters and update {generatedLetters.length} records in Dak Number Generator
-                  </p>
                 </div>
               )}
             </Card>
-          </div>
-        )}
-
-        {/* Action Buttons for Generate Step */}
-        {currentStep === "generate" && generatedLetters.length === 0 && (
-          <div className="flex items-center justify-between mt-6">
-            <Button onClick={() => setCurrentStep("editor")} variant="outline">
-              Back to Editor
-            </Button>
           </div>
         )}
       </div>
