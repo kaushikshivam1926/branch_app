@@ -374,7 +374,15 @@ export default function LetterGenerator() {
         const canvas = await html2canvas(container, {
           scale: 2,
           useCORS: true,
-          logging: false
+          logging: false,
+          backgroundColor: '#ffffff',
+          ignoreElements: (element) => {
+            // Skip elements that might have OKLCH colors
+            const computedStyle = window.getComputedStyle(element);
+            const bgColor = computedStyle.backgroundColor;
+            const color = computedStyle.color;
+            return bgColor.includes('oklch') || color.includes('oklch');
+          }
         });
         
         // Add to PDF
