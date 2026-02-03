@@ -336,7 +336,7 @@ export default function LetterGenerator() {
     }
   };
   
-  // Finalize and download as PDF with Dak integration
+  // Finalize and print/download letters with Dak integration
   const handleFinalizeAndDownload = async () => {
     if (generatedLetters.length === 0) {
       toast.error("No letters to download");
@@ -344,62 +344,7 @@ export default function LetterGenerator() {
     }
     
     try {
-      // Create PDF
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      for (let i = 0; i < generatedLetters.length; i++) {
-        const letter = generatedLetters[i];
-        
-        if (i > 0) {
-          pdf.addPage();
-        }
-        
-        // Add letter content directly using jsPDF text methods
-        const margin = 20;
-        let yPos = margin;
-        
-        // Add Ref No and Date
-        pdf.setFontSize(11);
-        pdf.setFont("helvetica", "bold");
-        const refText = `Ref No: ${letter.refNo}`;
-        const dateText = `Date: ${letter.date}`;
-        const refWidth = pdf.getTextWidth(refText);
-        const dateWidth = pdf.getTextWidth(dateText);
-        pdf.text(refText, pageWidth - margin - refWidth, yPos);
-        yPos += 6;
-        pdf.text(dateText, pageWidth - margin - dateWidth, yPos);
-        yPos += 15;
-        
-        // Add letter content
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(12);
-        
-        // Parse HTML content and convert to plain text with basic formatting
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = letter.content;
-        const textContent = tempDiv.innerText || tempDiv.textContent || '';
-        
-        // Split text into lines that fit the page width
-        const maxWidth = pageWidth - (2 * margin);
-        const lines = pdf.splitTextToSize(textContent, maxWidth);
-        
-        // Add lines to PDF
-        lines.forEach((line: string) => {
-          if (yPos > pageHeight - margin) {
-            pdf.addPage();
-            yPos = margin;
-          }
-          pdf.text(line, margin, yPos);
-          yPos += 7;
-        });
-      }
-      
-      // Save PDF
-      pdf.save(`Letters_${new Date().getTime()}.pdf`);
-      
-      // Update Dak records
+      // Update Dak records first
       const existingRecords = (await loadData("dak-records")) || [];
       const newRecords: DakRecord[] = generatedLetters.map((letter, idx) => ({
         id: Date.now() + idx,
@@ -417,10 +362,68 @@ export default function LetterGenerator() {
       
       await saveData("dak-records", [...existingRecords, ...newRecords]);
       
-      toast.success(`Downloaded ${generatedLetters.length} letters as PDF and updated Dak records`);
+      // Open print window with formatted letters
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        toast.error("Please allow popups to print letters");
+        return;
+      }
+      
+      // Build HTML content for all letters
+      const lettersHTML = generatedLetters.map(letter => `
+        <div style="
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
+          padding: 20mm;
+          background: white;
+          font-family: Arial, sans-serif;
+          font-size: 12pt;
+          line-height: 1.6;
+          page-break-after: always;
+        ">
+          <div style="text-align: right; margin-bottom: 20px;">
+            <strong>Ref No:</strong> ${letter.refNo}<br>
+            <strong>Date:</strong> ${letter.date}
+          </div>
+          <div>
+            ${letter.content}
+          </div>
+        </div>
+      `).join("");
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Letters - ${new Date().toLocaleDateString()}</title>
+          <style>
+            @media print {
+              @page { margin: 0; }
+              body { margin: 0; }
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+          </style>
+        </head>
+        <body>
+          ${lettersHTML}
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      
+      // Trigger print dialog after a short delay
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+      
+      toast.success(`Updated ${generatedLetters.length} Dak records. Print dialog opened.`);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to generate PDF");
+      toast.error("Failed to process letters");
     }
   };
   
@@ -555,17 +558,44 @@ export default function LetterGenerator() {
             <Card className="p-6 lg:col-span-1">
               <h3 className="font-semibold mb-4">Available Fields</h3>
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {csvData?.headers.map(header => (
+                {/* System Fields */}
+                <div className="mb-3 pb-3 border-b">
+                  <p className="text-xs text-gray-500 mb-2">System Fields</p>
                   <Button
-                    key={header}
                     variant="outline"
                     size="sm"
-                    onClick={() => handleAddField(header)}
+                    onClick={() => handleAddField("ref_no")}
+                    className="w-full justify-start mb-2"
+                  >
+                    Reference Number
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddField("date")}
                     className="w-full justify-start"
                   >
-                    {header}
+                    Letter Date
                   </Button>
-                ))}
+                </div>
+                
+                {/* CSV Fields */}
+                {csvData && csvData.headers.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">CSV Fields</p>
+                    {csvData.headers.map(header => (
+                      <Button
+                        key={header}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddField(header)}
+                        className="w-full justify-start mb-2"
+                      >
+                        {header}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
               
               {/* Dak Metadata Form */}
@@ -756,7 +786,7 @@ export default function LetterGenerator() {
                     </p>
                     <Button onClick={handleFinalizeAndDownload}>
                       <Download className="h-4 w-4 mr-2" />
-                      Finalise and Download All (PDF)
+                      Finalise and Print/Download All
                     </Button>
                   </div>
                   
