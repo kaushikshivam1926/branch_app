@@ -302,6 +302,12 @@ export default function LetterGenerator() {
         
         // Replace placeholders
         let content = templateHTML;
+        
+        // Replace system fields first
+        content = content.replace(new RegExp(`{{ref_no}}`, "g"), refNo);
+        content = content.replace(new RegExp(`{{date}}`, "g"), dateDisplay);
+        
+        // Replace CSV fields
         csvData.headers.forEach(header => {
           const value = row[header] || "";
           content = content.replace(new RegExp(`{{${header}}}`, "g"), value);
