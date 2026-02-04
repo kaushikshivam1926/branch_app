@@ -1851,6 +1851,10 @@ function ChargesReturnReportTab() {
   const [selectedView, setSelectedView] = useState<string>("summary");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"single" | "all">("single");
+  const [reportDate, setReportDate] = useState<string>(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  });
   const { branchName, branchCode } = useBranch();
 
   useEffect(() => {
@@ -1923,6 +1927,7 @@ function ChargesReturnReportTab() {
           <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
           <h2 className="text-lg font-semibold mt-2">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
           <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
+          <p className="text-sm mt-1">Report Date: {new Date(reportDate).toLocaleDateString('en-GB')}</p>
           <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : SUMMARY</h4>
         </div>
 
@@ -1999,6 +2004,7 @@ function ChargesReturnReportTab() {
           <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
           <h2 className="text-lg font-semibold mt-2">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
           <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
+          <p className="text-sm mt-1">Report Date: {new Date(reportDate).toLocaleDateString('en-GB')}</p>
           <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : {category.toUpperCase()}</h4>
         </div>
 
@@ -2122,6 +2128,18 @@ function ChargesReturnReportTab() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Report Date Input */}
+          <div className="flex gap-4 items-center">
+            <Label>Report Date:</Label>
+            <input 
+              type="date" 
+              value={reportDate} 
+              onChange={(e) => setReportDate(e.target.value)}
+              className="border rounded px-3 py-2"
+            />
+            <span className="text-sm text-gray-600">(This date will be printed on the report)</span>
           </div>
 
           {/* View Mode Toggle */}

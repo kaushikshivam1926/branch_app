@@ -55,3 +55,12 @@
 - [ ] Update BGL_CONFIGURATION_GUIDE.md with new entry count
 - [ ] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Add Report Date Input Field to Charges Return Report
+- [x] Find ChargesReturnReportTab component in ChargesReturnApp.tsx
+- [x] Add state variable for report date (defaults to today)
+- [x] Add date input field in Report tab UI with helper text
+- [x] Update report generation to include custom date in DD/MM/YYYY format
+- [x] Added date to both Summary and Category report headers
+- [x] Rebuild standalone version
+- [ ] Create checkpoint
