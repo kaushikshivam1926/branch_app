@@ -19,7 +19,7 @@ Due to **Trellix DLP (Data Loss Prevention)** restrictions that block CSV file u
 
 ### Method 1: Load Pre-configured BGL Data (Recommended)
 
-The application includes **47 pre-configured BGL codes** covering common bank branch expenses. This is the fastest and easiest method.
+The application includes **65 pre-configured BGL codes** covering all major bank branch expenses as per your branch's actual BGL Master configuration. This is the fastest and easiest method.
 
 **How to Use:**
 
@@ -27,8 +27,8 @@ The application includes **47 pre-configured BGL codes** covering common bank br
 2. Navigate to the **Charges Entry** tab
 3. Expand the **BGL Master Configuration** section
 4. Click the **"Load Pre-configured BGL Data"** button (green button)
-5. The system will load all 47 pre-configured BGL codes into the database
-6. A success message will confirm the number of codes loaded
+5. The system will load all 65 BGL codes into the database
+6. A success message will confirm "Loaded 65 pre-configured BGL codes"
 
 **Pre-configured Categories Include:**
 
@@ -324,7 +324,7 @@ Below is the complete list of all 47 pre-configured BGL codes included in the ap
 | 21291 | Miscellaneous | Bank charges | SUNDRIES | Sundries |
 | 21292 | Miscellaneous | Other expenses | SUNDRIES | Sundries |
 
-**Total:** 47 pre-configured BGL codes covering all major branch expense categories.
+**Total:** 65 pre-configured BGL codes from your actual BGL Master configuration file.
 
 ---
 

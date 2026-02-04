@@ -52,61 +52,71 @@ interface BGLMaster {
 
 // ========== Pre-configured BGL Master Data ==========
 const PRECONFIGURED_BGL_DATA: BGLMaster[] = [
-  // Rent
-  { bglCode: "21111", head: "Rent", subHead: "Rent for office building", acmCategory: "RENT (OFFICE PREMISES)", reportCategory: "Rent Office" },
-  { bglCode: "21112", head: "Rent", subHead: "Rent for staff quarters", acmCategory: "RENT (OTHER PREMISES)", reportCategory: "Rent Other Premises" },
-  { bglCode: "21113", head: "Rent", subHead: "Rent for ATM premises", acmCategory: "RENT (OTHER PREMISES)", reportCategory: "Rent Other Premises" },
-  
-  // Communication
-  { bglCode: "21121", head: "Telephone", subHead: "Telephone charges", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
-  { bglCode: "21122", head: "Telephone", subHead: "Mobile charges", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
-  { bglCode: "21123", head: "Telephone", subHead: "Internet charges", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
-  
-  // Stationery & Printing
-  { bglCode: "21131", head: "Stationery", subHead: "Stationery & printing", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
-  { bglCode: "21132", head: "Stationery", subHead: "Computer stationery", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
-  { bglCode: "21133", head: "Stationery", subHead: "Forms & registers", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
-  
-  // Postage
-  { bglCode: "21141", head: "Postage", subHead: "Postage & courier", acmCategory: "POSTAGE, TELEGRAM, TELEX, STAMPS", reportCategory: "Postage" },
-  { bglCode: "21142", head: "Postage", subHead: "Speed post charges", acmCategory: "POSTAGE, TELEGRAM, TELEX, STAMPS", reportCategory: "Postage" },
-  
-  // Utilities
-  { bglCode: "21151", head: "Electricity", subHead: "Electricity charges", acmCategory: "ELECTRICITY & GAS CHARGES", reportCategory: "Electricity & Gas" },
-  { bglCode: "21152", head: "Electricity", subHead: "Generator fuel", acmCategory: "ELECTRICITY & GAS CHARGES", reportCategory: "Electricity & Gas" },
-  { bglCode: "21161", head: "Water", subHead: "Water charges", acmCategory: "WATER CHARGES", reportCategory: "Sundries" },
-  
-  // Repairs & Maintenance
-  { bglCode: "21171", head: "Repairs", subHead: "Repairs to building", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
-  { bglCode: "21172", head: "Repairs", subHead: "Repairs to furniture", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
-  { bglCode: "21173", head: "Repairs", subHead: "Repairs to computers", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
-  { bglCode: "21174", head: "Repairs", subHead: "AMC charges", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
-  
-  // Insurance
-  { bglCode: "21181", head: "Insurance", subHead: "Insurance premium", acmCategory: "INSURANCE", reportCategory: "Insurance" },
-  { bglCode: "21182", head: "Insurance", subHead: "Cash insurance", acmCategory: "INSURANCE", reportCategory: "Insurance" },
-  
-  // Security
-  { bglCode: "21191", head: "Security", subHead: "Security services", acmCategory: "SECURITY CHARGES", reportCategory: "Security Charges" },
-  { bglCode: "21192", head: "Security", subHead: "Armed guard charges", acmCategory: "SECURITY CHARGES", reportCategory: "Security Charges" },
-  
-  // Housekeeping
-  { bglCode: "21201", head: "Housekeeping", subHead: "Cleaning charges", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
-  { bglCode: "21202", head: "Housekeeping", subHead: "Sanitation charges", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
-  
-  // Legal & Professional
-  { bglCode: "21211", head: "Legal", subHead: "Legal charges", acmCategory: "LAW CHARGES", reportCategory: "Law Charges" },
-  { bglCode: "21212", head: "Legal", subHead: "Court fees", acmCategory: "LAW CHARGES", reportCategory: "Law Charges" },
-  { bglCode: "21221", head: "Professional", subHead: "Audit fees", acmCategory: "AUDITORS' FEES & EXPENSES", reportCategory: "Auditors Fees" },
-  { bglCode: "21222", head: "Professional", subHead: "Consultancy charges", acmCategory: "PROFESSIONAL CHARGES", reportCategory: "Sundries" },
-  
-  // Advertisement & Publicity
-  { bglCode: "21231", head: "Advertisement", subHead: "Advertisement expenses", acmCategory: "ADVERTISEMENT & PUBLICITY", reportCategory: "Advertisement" },
-  { bglCode: "21232", head: "Advertisement", subHead: "Publicity material", acmCategory: "ADVERTISEMENT & PUBLICITY", reportCategory: "Advertisement" },
-  
-  // Miscellaneous
-  { bglCode: "21291", head: "Miscellaneous", subHead: "Bank charges", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
-  { bglCode: "21292", head: "Miscellaneous", subHead: "Other expenses", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98057", head: "ADVERTISEMENT", subHead: "ADVERTISEMENT", acmCategory: "ADVERTISEMENT", reportCategory: "Advertisement" },
+  { bglCode: "98103", head: "BOOKS,PERIODICALS & NEWSPAPER", subHead: "BOOKS,PERIODICALS & NEWSPAPER", acmCategory: "BOOKS, PERIODICALS & NEWSPAPERS", reportCategory: "Books Periodicals" },
+  { bglCode: "98144", head: "BOOKS,PERIODICALS & NEWSPAPER", subHead: "NEWS PAPERS FOR SUP STAFF", acmCategory: "BOOKS, PERIODICALS & NEWSPAPERS", reportCategory: "Books Periodicals" },
+  { bglCode: "98145", head: "BOOKS,PERIODICALS & NEWSPAPER", subHead: "NEWS PAPERS FOR CLE STAFF", acmCategory: "BOOKS, PERIODICALS & NEWSPAPERS", reportCategory: "Books Periodicals" },
+  { bglCode: "98146", head: "BOOKS,PERIODICALS & NEWSPAPER", subHead: "NEWS PAPERS FOR SUB. STAFF", acmCategory: "BOOKS, PERIODICALS & NEWSPAPERS", reportCategory: "Books Periodicals" },
+  { bglCode: "98075", head: "ELECTRICITY/ GAS / FUEL", subHead: "ELECTRICITY & GAS", acmCategory: "ELECTRICITY & GAS CHARGES", reportCategory: "Electricity & Gas" },
+  { bglCode: "98076", head: "ELECTRICITY/ GAS / FUEL", subHead: "FUEL", acmCategory: "ELECTRICITY & GAS CHARGES", reportCategory: "Electricity & Gas" },
+  { bglCode: "98106", head: "ENTERTAINMENT", subHead: "ENTERTAINMENT EXP HRMS", acmCategory: "ENTERTAINMENT EXPENSES", reportCategory: "Entertainment" },
+  { bglCode: "98060", head: "HALTING", subHead: "HALTING ALLOWANCE", acmCategory: "HALTING ALLOWANCE & LODGING/", reportCategory: "Halting Allowance" },
+  { bglCode: "98045", head: "INSURANCE", subHead: "INSURANCE", acmCategory: "INSURANCE", reportCategory: "Insurance" },
+  { bglCode: "98077", head: "LFC HTC", subHead: "LFC SUP", acmCategory: "TRAVELLING EXPENSES (LEAVE &", reportCategory: "LFC HTC" },
+  { bglCode: "98078", head: "LFC HTC", subHead: "LFC CLK", acmCategory: "TRAVELLING EXPENSES (LEAVE &", reportCategory: "LFC HTC" },
+  { bglCode: "98080", head: "LFC HTC", subHead: "LFC SUB", acmCategory: "TRAVELLING EXPENSES (LEAVE &", reportCategory: "LFC HTC" },
+  { bglCode: "98047", head: "LAW CHARGES", subHead: "LAW CHARGES", acmCategory: "LAW CHARGES", reportCategory: "Law Charges" },
+  { bglCode: "98061", head: "MEDICAL EXPENSES", subHead: "MEDICAL FEES - SUP STAFF", acmCategory: "MEDICAL EXPENSES", reportCategory: "Medical" },
+  { bglCode: "98062", head: "MEDICAL EXPENSES", subHead: "MEDCAL FEE-CLERICAL STAFF", acmCategory: "MEDICAL EXPENSES", reportCategory: "Medical" },
+  { bglCode: "98064", head: "MEDICAL EXPENSES", subHead: "MEDICAL FEES-SUBORDNATE", acmCategory: "MEDICAL EXPENSES", reportCategory: "Medical" },
+  { bglCode: "98154", head: "MEDICAL EXPENSES", subHead: "IMP MED EXP - CLE STAFF", acmCategory: "MEDICAL EXPENSES", reportCategory: "Medical" },
+  { bglCode: "98155", head: "MEDICAL EXPENSES", subHead: "IMP MED EXP - SUB STAFF", acmCategory: "MEDICAL EXPENSES", reportCategory: "Medical" },
+  { bglCode: "98048", head: "POSTAGE", subHead: "P N T DEBIT ACCOUNT", acmCategory: "POSTAGE, TELEGRAM, TELEX, STAMPS", reportCategory: "Postage" },
+  { bglCode: "98042", head: "OFFICE PREMISES", subHead: "Office Rent", acmCategory: "RENT (OFFICE PREMISES)", reportCategory: "Rent Office" },
+  { bglCode: "98043", head: "OTHER PREMISES (LEASED HOUSE)", subHead: "House Rent", acmCategory: "RENT (OTHER PREMISES)", reportCategory: "Rent Other Premises" },
+  { bglCode: "98053", head: "REPAIR TO BANK PROPERTY", subHead: "REPAIRS- BANK PROPERTY", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair To Bank Property" },
+  { bglCode: "98024", head: "SALARY", subHead: "OTHER ALLOW. SUP.", acmCategory: "SALARIES & ALLOWANCES", reportCategory: "Salary" },
+  { bglCode: "98097", head: "SALARY", subHead: "LEAVE ENCAS. CLRK", acmCategory: "SALARIES & ALLOWANCES", reportCategory: "Salary" },
+  { bglCode: "99950", head: "SALARY", subHead: "SALARY & ALLOW.", acmCategory: "SALARIES & ALLOWANCES", reportCategory: "Salary" },
+  { bglCode: "98054", head: "STATIONERY", subHead: "STATIONERY", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
+  { bglCode: "98055", head: "STATIONERY", subHead: "LOCAL PTG. & PURCHASES", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
+  { bglCode: "98120", head: "STATIONERY", subHead: "STATIONARY PRINTING/ ADV", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
+  { bglCode: "98085", head: "SUBORDINATE CLOTHING", subHead: "SUBORDINATE CLOTHING", acmCategory: "SUBORDINATE CLOTHING", reportCategory: "Subordinate Clothing" },
+  { bglCode: "2399256", head: "SUNDRIES", subHead: "CASUAL LABOUR HRMS", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "2399953", head: "SUNDRIES", subHead: "PROF. FEES FOR CONSULTANTS", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "2399955", head: "SUNDRIES", subHead: "STAFF EXP NOT ENUMERATED", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "2399956", head: "SUNDRIES", subHead: "INCENTIVES & HONOURARIUM", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "3199371", head: "SUNDRIES", subHead: "FURNITURE MAINT ALLOW", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "3199864", head: "SUNDRIES", subHead: "CHGS CR BNKR CHQ REV AFTER 3YRs", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "4599105", head: "SUNDRIES", subHead: "IFAMS LOSS ON SALE OF FA", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "4599150", head: "SUNDRIES", subHead: "PAYMENT TO TPE VALUER", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "4599151", head: "SUNDRIES", subHead: "PAYMENT TO TPE ADVOCATE", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "4695051", head: "SUNDRIES", subHead: "Reimbursement of Cost of Spectacles", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "4898408", head: "SUNDRIES", subHead: "IT SOFTWARE AMC", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98071", head: "SUNDRIES", subHead: "CHARGES DEPN. FIXED ASSET GROUP 1", acmCategory: "DEPRECIATION ON BANK PROPERTY", reportCategory: "Sundries" },
+  { bglCode: "98072", head: "SUNDRIES", subHead: "CHARGES DEPN. FIXED ASSET GROUP 2", acmCategory: "DEPRECIATION ON BANK PROPERTY", reportCategory: "Sundries" },
+  { bglCode: "98073", head: "SUNDRIES", subHead: "CHARGES DEPN. FIXED ASSET GROUP 3", acmCategory: "DEPRECIATION ON BANK PROPERTY", reportCategory: "Sundries" },
+  { bglCode: "98104", head: "SUNDRIES", subHead: "MAINT. CHAR. OF LEASE PRIMISES", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98108", head: "SUNDRIES", subHead: "CANTEEN/CATERING EXPENSE", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98116", head: "SUNDRIES", subHead: "HIRING OF SERVICES", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98136", head: "SUNDRIES", subHead: "EXPENSES ON HOTEL/LODGING/BOARDING", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98137", head: "SUNDRIES", subHead: "GIFTS", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98139", head: "SUNDRIES", subHead: "FOOD & BEVERAGES OFFICE", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98140", head: "SUNDRIES", subHead: "CLEANSING MATERIAL - HRMS", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98141", head: "SUNDRIES", subHead: "FESTIVAL CELEBRATIONS", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98164", head: "SUNDRIES", subHead: "ENG COGT SEC AGENCY GUARDS", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98945", head: "SUNDRIES", subHead: "STAFF WELFARE", acmCategory: "B] SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "98044", head: "TAXES", subHead: "LOCAL TAXES", acmCategory: "TAXES", reportCategory: "Taxes" },
+  { bglCode: "4694569", head: "TELEPHONE", subHead: "STAFF TELEPHONE", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
+  { bglCode: "98046", head: "TELEPHONE", subHead: "TELEPHONE", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
+  { bglCode: "2399234", head: "TRAVELLING", subHead: "Conveyance Reimb SUP. STAFF", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
+  { bglCode: "2399235", head: "TRAVELLING", subHead: "Conveyance Reimb CLR.. STAFF", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
+  { bglCode: "2399237", head: "TRAVELLING", subHead: "Conveyance Reimb SUB. STAFF", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
+  { bglCode: "3197941", head: "TRAVELLING", subHead: "CHGS TRAV SUP. BY AIR OFFICER", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
+  { bglCode: "98058", head: "TRAVELLING", subHead: "TRAVELLING ALLOWANCES", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
+  { bglCode: "98059", head: "TRAVELLING", subHead: "HIRING OF VEHICLE", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
+  { bglCode: "98148", head: "TRAVELLING", subHead: "TRAVELLING EXP - SUP STAFF", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
+  { bglCode: "98149", head: "TRAVELLING", subHead: "TRAVELLING EXP - CLE STAF", acmCategory: "TRAVELLING EXPENSES (OTHER THAN LEAVE &", reportCategory: "Travelling" },
 ];
 
 // ========== Utility Functions ==========

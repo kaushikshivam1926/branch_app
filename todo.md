@@ -47,3 +47,11 @@
 - [x] Test pre-configured data loading
 - [x] Test manual entry interface
 - [x] Rebuild standalone version
+
+## Replace Pre-configured BGL Data with User's CSV
+- [ ] Read and parse BGLMasterconfiguration.csv
+- [ ] Extract all BGL entries from CSV
+- [ ] Replace PRECONFIGURED_BGL_DATA constant in ChargesReturnApp.tsx
+- [ ] Update BGL_CONFIGURATION_GUIDE.md with new entry count
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint
