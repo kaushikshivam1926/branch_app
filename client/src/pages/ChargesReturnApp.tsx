@@ -50,6 +50,65 @@ interface BGLMaster {
   reportCategory: string;
 }
 
+// ========== Pre-configured BGL Master Data ==========
+const PRECONFIGURED_BGL_DATA: BGLMaster[] = [
+  // Rent
+  { bglCode: "21111", head: "Rent", subHead: "Rent for office building", acmCategory: "RENT (OFFICE PREMISES)", reportCategory: "Rent Office" },
+  { bglCode: "21112", head: "Rent", subHead: "Rent for staff quarters", acmCategory: "RENT (OTHER PREMISES)", reportCategory: "Rent Other Premises" },
+  { bglCode: "21113", head: "Rent", subHead: "Rent for ATM premises", acmCategory: "RENT (OTHER PREMISES)", reportCategory: "Rent Other Premises" },
+  
+  // Communication
+  { bglCode: "21121", head: "Telephone", subHead: "Telephone charges", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
+  { bglCode: "21122", head: "Telephone", subHead: "Mobile charges", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
+  { bglCode: "21123", head: "Telephone", subHead: "Internet charges", acmCategory: "TELEPHONE", reportCategory: "Telephone" },
+  
+  // Stationery & Printing
+  { bglCode: "21131", head: "Stationery", subHead: "Stationery & printing", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
+  { bglCode: "21132", head: "Stationery", subHead: "Computer stationery", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
+  { bglCode: "21133", head: "Stationery", subHead: "Forms & registers", acmCategory: "STATIONERY & PRINTING", reportCategory: "Stationery" },
+  
+  // Postage
+  { bglCode: "21141", head: "Postage", subHead: "Postage & courier", acmCategory: "POSTAGE, TELEGRAM, TELEX, STAMPS", reportCategory: "Postage" },
+  { bglCode: "21142", head: "Postage", subHead: "Speed post charges", acmCategory: "POSTAGE, TELEGRAM, TELEX, STAMPS", reportCategory: "Postage" },
+  
+  // Utilities
+  { bglCode: "21151", head: "Electricity", subHead: "Electricity charges", acmCategory: "ELECTRICITY & GAS CHARGES", reportCategory: "Electricity & Gas" },
+  { bglCode: "21152", head: "Electricity", subHead: "Generator fuel", acmCategory: "ELECTRICITY & GAS CHARGES", reportCategory: "Electricity & Gas" },
+  { bglCode: "21161", head: "Water", subHead: "Water charges", acmCategory: "WATER CHARGES", reportCategory: "Sundries" },
+  
+  // Repairs & Maintenance
+  { bglCode: "21171", head: "Repairs", subHead: "Repairs to building", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
+  { bglCode: "21172", head: "Repairs", subHead: "Repairs to furniture", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
+  { bglCode: "21173", head: "Repairs", subHead: "Repairs to computers", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
+  { bglCode: "21174", head: "Repairs", subHead: "AMC charges", acmCategory: "REPAIRS TO BANK PROPERTY", reportCategory: "Repair to Bank Property" },
+  
+  // Insurance
+  { bglCode: "21181", head: "Insurance", subHead: "Insurance premium", acmCategory: "INSURANCE", reportCategory: "Insurance" },
+  { bglCode: "21182", head: "Insurance", subHead: "Cash insurance", acmCategory: "INSURANCE", reportCategory: "Insurance" },
+  
+  // Security
+  { bglCode: "21191", head: "Security", subHead: "Security services", acmCategory: "SECURITY CHARGES", reportCategory: "Security Charges" },
+  { bglCode: "21192", head: "Security", subHead: "Armed guard charges", acmCategory: "SECURITY CHARGES", reportCategory: "Security Charges" },
+  
+  // Housekeeping
+  { bglCode: "21201", head: "Housekeeping", subHead: "Cleaning charges", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "21202", head: "Housekeeping", subHead: "Sanitation charges", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
+  
+  // Legal & Professional
+  { bglCode: "21211", head: "Legal", subHead: "Legal charges", acmCategory: "LAW CHARGES", reportCategory: "Law Charges" },
+  { bglCode: "21212", head: "Legal", subHead: "Court fees", acmCategory: "LAW CHARGES", reportCategory: "Law Charges" },
+  { bglCode: "21221", head: "Professional", subHead: "Audit fees", acmCategory: "AUDITORS' FEES & EXPENSES", reportCategory: "Auditors Fees" },
+  { bglCode: "21222", head: "Professional", subHead: "Consultancy charges", acmCategory: "PROFESSIONAL CHARGES", reportCategory: "Sundries" },
+  
+  // Advertisement & Publicity
+  { bglCode: "21231", head: "Advertisement", subHead: "Advertisement expenses", acmCategory: "ADVERTISEMENT & PUBLICITY", reportCategory: "Advertisement" },
+  { bglCode: "21232", head: "Advertisement", subHead: "Publicity material", acmCategory: "ADVERTISEMENT & PUBLICITY", reportCategory: "Advertisement" },
+  
+  // Miscellaneous
+  { bglCode: "21291", head: "Miscellaneous", subHead: "Bank charges", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
+  { bglCode: "21292", head: "Miscellaneous", subHead: "Other expenses", acmCategory: "SUNDRIES", reportCategory: "Sundries" },
+];
+
 // ========== Utility Functions ==========
 // Indian currency formatting (1,23,456.00)
 const formatIndianCurrency = (amount: number | null): string => {
@@ -714,6 +773,14 @@ function ChargesEntryTab() {
   const [savedACMReports, setSavedACMReports] = useState<ACMReport[]>([]);
   const [selectedACMMonth, setSelectedACMMonth] = useState<string>("");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<string>("");
+  const [showManualBGLEntry, setShowManualBGLEntry] = useState(false);
+  const [manualBGLForm, setManualBGLForm] = useState<BGLMaster>({
+    bglCode: "",
+    head: "",
+    subHead: "",
+    acmCategory: "",
+    reportCategory: ""
+  });
   
   const today = new Date().toISOString().slice(0, 10);
   
@@ -850,6 +917,80 @@ function ChargesEntryTab() {
       await loadData();
     } catch (error) {
       toast.error("Failed to delete entry");
+      console.error(error);
+    }
+  }
+
+  async function handleLoadPreconfiguredBGL() {
+    try {
+      const db = await getDB();
+      const tx = db.transaction("bglMaster", "readwrite");
+      await tx.store.clear();
+      
+      // Load pre-configured BGL data
+      for (const bglItem of PRECONFIGURED_BGL_DATA) {
+        await tx.store.add(bglItem);
+      }
+      
+      await tx.done;
+      toast.success(`Loaded ${PRECONFIGURED_BGL_DATA.length} pre-configured BGL codes`);
+      await loadData();
+      setBglConfigOpen(false);
+    } catch (error) {
+      toast.error("Error loading pre-configured BGL data");
+      console.error(error);
+    }
+  }
+
+  async function handleAddManualBGL() {
+    if (!manualBGLForm.bglCode || !manualBGLForm.head || !manualBGLForm.subHead || !manualBGLForm.acmCategory || !manualBGLForm.reportCategory) {
+      toast.error("Please fill all fields");
+      return;
+    }
+
+    try {
+      const db = await getDB();
+      const tx = db.transaction("bglMaster", "readwrite");
+      
+      // Check if BGL code already exists
+      const existing = await tx.store.get(manualBGLForm.bglCode);
+      if (existing) {
+        // Update existing
+        await tx.store.put(manualBGLForm);
+        toast.success(`Updated BGL code ${manualBGLForm.bglCode}`);
+      } else {
+        // Add new
+        await tx.store.add(manualBGLForm);
+        toast.success(`Added BGL code ${manualBGLForm.bglCode}`);
+      }
+      
+      await tx.done;
+      await loadData();
+      
+      // Reset form
+      setManualBGLForm({
+        bglCode: "",
+        head: "",
+        subHead: "",
+        acmCategory: "",
+        reportCategory: ""
+      });
+    } catch (error) {
+      toast.error("Error adding BGL code");
+      console.error(error);
+    }
+  }
+
+  async function handleDeleteBGL(bglCode: string) {
+    if (!confirm(`Delete BGL code ${bglCode}?`)) return;
+    
+    try {
+      const db = await getDB();
+      await db.delete("bglMaster", bglCode);
+      toast.success(`Deleted BGL code ${bglCode}`);
+      await loadData();
+    } catch (error) {
+      toast.error("Error deleting BGL code");
       console.error(error);
     }
   }
@@ -1187,23 +1328,167 @@ function ChargesEntryTab() {
         <div className="mb-4">
           <details open={bglConfigOpen} onToggle={(e: any) => setBglConfigOpen(e.target.open)} className="border rounded-lg p-4">
             <summary className="cursor-pointer font-semibold text-purple-700 mb-3">BGL Master Configuration</summary>
-            <div className="mt-4 space-y-2">
-              <Label htmlFor="bgl-upload" className="text-sm font-medium">Upload BGL Master File (CSV)</Label>
-              <Input
-                id="bgl-upload"
-                type="file"
-                accept=".csv,.txt"
-                onChange={handleBGLUpload}
-                className="w-full"
-              />
-              <p className="text-xs text-gray-500">
-                Format: BGL Code, Payment Head, Sub-Head, ACM Category, Charges Return Report Category (CSV or tab-separated)
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                <strong>ACM Category</strong> must exactly match the HEAD field from ACM reports (e.g., "ELECTRICITY & GAS CHARGES", "LAW CHARGES").
-              </p>
+            <div className="mt-4 space-y-3">
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleLoadPreconfiguredBGL}
+                  className="bg-green-600 hover:bg-green-700 flex-1"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Load Pre-configured BGL Data
+                </Button>
+                <Button
+                  onClick={() => setShowManualBGLEntry(!showManualBGLEntry)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  {showManualBGLEntry ? "Hide" : "Show"} Manual Entry
+                </Button>
+              </div>
+              
+              <div className="border-t pt-3">
+                <Label htmlFor="bgl-upload" className="text-sm font-medium">Or Upload BGL Master File (CSV) - Optional</Label>
+                <Input
+                  id="bgl-upload"
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleBGLUpload}
+                  className="w-full mt-2"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Format: BGL Code, Payment Head, Sub-Head, ACM Category, Charges Return Report Category (CSV or tab-separated)
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  <strong>ACM Category</strong> must exactly match the HEAD field from ACM reports (e.g., "ELECTRICITY & GAS CHARGES", "LAW CHARGES").
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  <strong>Note:</strong> If CSV upload is blocked by security software, use "Load Pre-configured BGL Data" button above.
+                </p>
+              </div>
             </div>
           </details>
+          
+          {/* Manual BGL Entry Form */}
+          {showManualBGLEntry && (
+            <Card className="p-4 mt-3 bg-green-50/80 backdrop-blur-sm">
+              <h3 className="font-semibold text-green-700 mb-3 flex items-center">
+                <Edit2 className="w-4 h-4 mr-2" />
+                Manual BGL Entry / Edit
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
+                <div>
+                  <Label htmlFor="manual-bgl-code" className="text-sm">BGL Code*</Label>
+                  <Input
+                    id="manual-bgl-code"
+                    value={manualBGLForm.bglCode}
+                    onChange={(e) => setManualBGLForm({...manualBGLForm, bglCode: e.target.value})}
+                    placeholder="e.g. 21111"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="manual-head" className="text-sm">Payment Head*</Label>
+                  <Input
+                    id="manual-head"
+                    value={manualBGLForm.head}
+                    onChange={(e) => setManualBGLForm({...manualBGLForm, head: e.target.value})}
+                    placeholder="e.g. Rent"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="manual-subhead" className="text-sm">Sub-Head*</Label>
+                  <Input
+                    id="manual-subhead"
+                    value={manualBGLForm.subHead}
+                    onChange={(e) => setManualBGLForm({...manualBGLForm, subHead: e.target.value})}
+                    placeholder="e.g. Office rent"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="manual-acm" className="text-sm">ACM Category*</Label>
+                  <Input
+                    id="manual-acm"
+                    value={manualBGLForm.acmCategory}
+                    onChange={(e) => setManualBGLForm({...manualBGLForm, acmCategory: e.target.value})}
+                    placeholder="e.g. RENT (OFFICE PREMISES)"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="manual-report-cat" className="text-sm">Report Category*</Label>
+                  <Input
+                    id="manual-report-cat"
+                    value={manualBGLForm.reportCategory}
+                    onChange={(e) => setManualBGLForm({...manualBGLForm, reportCategory: e.target.value})}
+                    placeholder="e.g. Rent Office"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleAddManualBGL}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Add / Update BGL Code
+                </Button>
+              </div>
+              
+              {/* Display current BGL Master */}
+              {bglMaster.length > 0 && (
+                <div className="mt-4 border-t pt-3">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Current BGL Master ({bglMaster.length} codes)</h4>
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-100 sticky top-0">
+                        <tr>
+                          <th className="p-2 text-left">BGL Code</th>
+                          <th className="p-2 text-left">Head</th>
+                          <th className="p-2 text-left">Sub-Head</th>
+                          <th className="p-2 text-left">ACM Category</th>
+                          <th className="p-2 text-left">Report Category</th>
+                          <th className="p-2 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bglMaster.map((bgl) => (
+                          <tr key={bgl.bglCode} className="border-b hover:bg-gray-50">
+                            <td className="p-2">{bgl.bglCode}</td>
+                            <td className="p-2">{bgl.head}</td>
+                            <td className="p-2">{bgl.subHead}</td>
+                            <td className="p-2">{bgl.acmCategory}</td>
+                            <td className="p-2">{bgl.reportCategory}</td>
+                            <td className="p-2 text-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setManualBGLForm(bgl)}
+                                className="mr-1"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteBGL(bgl.bglCode)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
 
         {/* ACM Import Section */}

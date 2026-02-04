@@ -34,3 +34,16 @@
 - [ ] Lead Management System
 - [ ] Web Resource Hub
 - [ ] Landing Page (card settings + centralized backup/restore)
+
+## BGL Configuration Replacement (Trellix DLP Workaround)
+- [x] Read ChargesReturn.tsx to understand current CSV upload implementation
+- [x] Identify BGL data structure and format
+- [x] Create embedded BGL configuration data in code (47 pre-configured BGL codes)
+- [x] Remove CSV upload requirement (make it optional)
+- [x] Add "Load Pre-configured BGL Data" button
+- [x] Add manual entry interface for adding/editing individual BGL codes
+- [x] Implement save to IndexedDB functionality
+- [x] Write BGL_CONFIGURATION_GUIDE.md documentation
+- [x] Test pre-configured data loading
+- [x] Test manual entry interface
+- [x] Rebuild standalone version
