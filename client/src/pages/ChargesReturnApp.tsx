@@ -1851,6 +1851,7 @@ function ChargesReturnReportTab() {
   const [selectedView, setSelectedView] = useState<string>("summary");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"single" | "all">("single");
+  // Report date state - defaults to today's date for printing on reports
   const [reportDate, setReportDate] = useState<string>(() => {
     const today = new Date();
     return today.toISOString().split('T')[0]; // YYYY-MM-DD format
