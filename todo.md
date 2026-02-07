@@ -64,3 +64,11 @@
 - [x] Added date to both Summary and Category report headers
 - [x] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Fix Report Date Not Updating on Printed Reports
+- [x] Find where report date is rendered in report headers (lines 1974, 2088)
+- [x] Check if reportDate state variable is being used in rendering
+- [x] Fix date formatting to use reportDate instead of today's date
+- [ ] Test date change reflects in printed report
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint

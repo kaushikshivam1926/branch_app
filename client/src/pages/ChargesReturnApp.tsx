@@ -1971,7 +1971,7 @@ function ChargesReturnReportTab() {
         <div className="mt-16 flex justify-between items-end">
           <div>
             <p className="font-semibold">Place: {branchName.split(",")[0]}</p>
-            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-GB")}</p>
+            <p className="font-semibold mt-1">Date: {new Date(reportDate).toLocaleDateString("en-GB")}</p>
           </div>
           <div className="text-right">
             <div className="border-t border-black w-48 pt-2">
@@ -2085,7 +2085,7 @@ function ChargesReturnReportTab() {
         <div className="mt-12 flex justify-between items-end">
           <div>
             <p className="font-semibold">Place: {branchName.split(",")[0]}</p>
-            <p className="font-semibold mt-1">Date: {new Date().toLocaleDateString("en-GB")}</p>
+            <p className="font-semibold mt-1">Date: {new Date(reportDate).toLocaleDateString("en-GB")}</p>
           </div>
           <div className="text-right">
             <div className="border-t border-black w-48 pt-2">
