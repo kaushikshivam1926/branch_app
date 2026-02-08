@@ -72,3 +72,11 @@
 - [ ] Test date change reflects in printed report
 - [ ] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Remove Duplicate Title and Header Date from Reports
+- [x] Find and remove duplicate "CHARGES RETURN" title from report header
+- [x] Remove date from report header sections (lines 1931, 2008)
+- [x] Keep date only at bottom signature section
+- [x] Apply changes to both Summary and Category reports
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint

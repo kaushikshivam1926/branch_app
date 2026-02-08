@@ -1925,10 +1925,8 @@ function ChargesReturnReportTab() {
       <div className="print:p-8 print:page-break-after">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
-          <h2 className="text-lg font-semibold mt-2">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
+          <h2 className="text-lg font-semibold">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
           <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
-          <p className="text-sm mt-1">Report Date: {new Date(reportDate).toLocaleDateString('en-GB')}</p>
           <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : SUMMARY</h4>
         </div>
 
@@ -2002,10 +2000,8 @@ function ChargesReturnReportTab() {
       <div className="print:p-8 print:page-break-after" style={{ page: 'category-sheet' }}>
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold uppercase">CHARGES RETURN</h1>
-          <h2 className="text-lg font-semibold mt-2">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
+          <h2 className="text-lg font-semibold">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
           <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
-          <p className="text-sm mt-1">Report Date: {new Date(reportDate).toLocaleDateString('en-GB')}</p>
           <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : {category.toUpperCase()}</h4>
         </div>
 
