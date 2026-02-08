@@ -80,3 +80,11 @@
 - [x] Apply changes to both Summary and Category reports
 - [ ] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Reduce Line Spacing in Charges Return Report
+- [x] Reduce margin/padding in report header sections (mb-8 to mb-4, mt-4 to mt-2)
+- [x] Reduce padding in table cells (py-2 to py-1, px-4 to px-3/px-2)
+- [x] Add leading-tight class to all text elements
+- [x] Apply to both Summary and Category reports
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint

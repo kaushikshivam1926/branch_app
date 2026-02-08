@@ -1924,10 +1924,10 @@ function ChargesReturnReportTab() {
     return (
       <div className="print:p-8 print:page-break-after">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-lg font-semibold">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
-          <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
-          <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : SUMMARY</h4>
+        <div className="text-center mb-4 leading-tight">
+          <h2 className="text-lg font-semibold leading-tight">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
+          <h3 className="text-base mt-1 leading-tight">State Bank of India, {branchName}, ({branchCode})</h3>
+          <h4 className="text-lg font-bold mt-2 uppercase leading-tight">CHARGES RETURN : SUMMARY</h4>
         </div>
 
         {/* Summary Table - Portrait Mode with 2 Columns */}
@@ -1935,22 +1935,22 @@ function ChargesReturnReportTab() {
           <table className="w-full text-sm border-collapse border border-black">
             <thead>
               <tr className="bg-gray-100">
-                <th className="border border-black px-4 py-2 text-left font-semibold">Payment Head</th>
-                <th className="border border-black px-4 py-2 text-right font-semibold">Amount (Rs.)</th>
+                <th className="border border-black px-3 py-1 text-left font-semibold leading-tight">Payment Head</th>
+                <th className="border border-black px-3 py-1 text-right font-semibold leading-tight">Amount (Rs.)</th>
               </tr>
             </thead>
             <tbody>
               {categoryTotals.map(({category, total}) => (
                 <tr key={category}>
-                  <td className="border border-black px-4 py-2">{category}</td>
-                  <td className="border border-black px-4 py-2 text-right">
+                  <td className="border border-black px-3 py-1 leading-tight">{category}</td>
+                  <td className="border border-black px-3 py-1 text-right leading-tight">
                     {formatIndianCurrency(total)}
                   </td>
                 </tr>
               ))}
               <tr className="bg-gray-50 font-bold">
-                <td className="border border-black px-4 py-2">Grand Total</td>
-                <td className="border border-black px-4 py-2 text-right">
+                <td className="border border-black px-3 py-1 leading-tight">Grand Total</td>
+                <td className="border border-black px-3 py-1 text-right leading-tight">
                   {formatIndianCurrency(grandTotal)}
                 </td>
               </tr>
@@ -1999,10 +1999,10 @@ function ChargesReturnReportTab() {
     return (
       <div className="print:p-8 print:page-break-after" style={{ page: 'category-sheet' }}>
         {/* Header */}
-        <div className="text-center mb-6">
-          <h2 className="text-lg font-semibold">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
-          <h3 className="text-base mt-2">State Bank of India, {branchName}, ({branchCode})</h3>
-          <h4 className="text-lg font-bold mt-4 uppercase">CHARGES RETURN : {category.toUpperCase()}</h4>
+        <div className="text-center mb-3 leading-tight">
+          <h2 className="text-lg font-semibold leading-tight">CHARGES RETURN FOR THE MONTH OF {monthLabel.toUpperCase()}</h2>
+          <h3 className="text-base mt-1 leading-tight">State Bank of India, {branchName}, ({branchCode})</h3>
+          <h4 className="text-lg font-bold mt-2 uppercase leading-tight">CHARGES RETURN : {category.toUpperCase()}</h4>
         </div>
 
 
@@ -2011,15 +2011,15 @@ function ChargesReturnReportTab() {
         <table className="w-full text-sm border-collapse border border-black mb-6">
           <thead className="bg-gray-100">
             <tr>
-              <th className="border border-black px-2 py-2 text-center">Sr.</th>
-              <th className="border border-black px-2 py-2 text-center">BGL Code</th>
-              <th className="border border-black px-2 py-2 text-center">Date of Payment</th>
-              <th className="border border-black px-2 py-2 text-center">Bill No. / PF No.</th>
-              <th className="border border-black px-2 py-2 text-center">Date</th>
-              <th className="border border-black px-2 py-2 text-center">To whom paid</th>
-              <th className="border border-black px-2 py-2 text-center">Purpose</th>
-              <th className="border border-black px-2 py-2 text-center">Approved by BM/RM</th>
-              <th className="border border-black px-2 py-2 text-center">Amount Paid</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Sr.</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">BGL Code</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Date of Payment</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Bill No. / PF No.</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Date</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">To whom paid</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Purpose</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Approved by BM/RM</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Amount Paid</th>
             </tr>
           </thead>
           <tbody>
@@ -2034,38 +2034,38 @@ function ChargesReturnReportTab() {
                     serialCounter++;
                     return (
                       <tr key={entry.id}>
-                        <td className="border border-black px-2 py-2 text-center">{serialCounter}</td>
-                        <td className="border border-black px-2 py-2 text-center">{entry.bglCode}</td>
-                        <td className="border border-black px-2 py-2 text-center">
+                        <td className="border border-black px-2 py-1 text-center leading-tight">{serialCounter}</td>
+                        <td className="border border-black px-2 py-1 text-center leading-tight">{entry.bglCode}</td>
+                        <td className="border border-black px-2 py-1 text-center leading-tight">
                           {new Date(entry.payDate).toLocaleDateString("en-GB")}
                         </td>
-                        <td className="border border-black px-2 py-2 text-center">{entry.billNo}</td>
-                        <td className="border border-black px-2 py-2 text-center">
+                        <td className="border border-black px-2 py-1 text-center leading-tight">{entry.billNo}</td>
+                        <td className="border border-black px-2 py-1 text-center leading-tight">
                           {new Date(entry.billDate).toLocaleDateString("en-GB")}
                         </td>
-                        <td className="border border-black px-2 py-2">{entry.payee}</td>
-                        <td className="border border-black px-2 py-2">{entry.purpose}</td>
-                        <td className="border border-black px-2 py-2 text-center">{entry.approver}</td>
-                        <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(entry.amount)}</td>
+                        <td className="border border-black px-2 py-1 leading-tight">{entry.payee}</td>
+                        <td className="border border-black px-2 py-1 leading-tight">{entry.purpose}</td>
+                        <td className="border border-black px-2 py-1 text-center leading-tight">{entry.approver}</td>
+                        <td className="border border-black px-2 py-1 text-right leading-tight">{formatIndianCurrency(entry.amount)}</td>
                       </tr>
                     );
                   })}
                   {/* BGL Subtotal Row */}
                   <tr className="font-semibold bg-gray-100">
-                    <td colSpan={8} className="border border-black px-2 py-2 text-right">
+                    <td colSpan={8} className="border border-black px-2 py-1 text-right leading-tight">
                       Sub-total for BGL {bglCode} {bglInfo ? `(${bglInfo.head} / ${bglInfo.subHead})` : ''}
                     </td>
-                    <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(bglTotal)}</td>
+                    <td className="border border-black px-2 py-1 text-right leading-tight">{formatIndianCurrency(bglTotal)}</td>
                   </tr>
                 </React.Fragment>
               );
             })}
             {/* Category Total Row */}
             <tr className="font-bold bg-gray-50">
-              <td colSpan={8} className="border border-black px-2 py-2 text-right">
+              <td colSpan={8} className="border border-black px-2 py-1 text-right leading-tight">
                 Total (Amount tallied with report ACM001)
               </td>
-              <td className="border border-black px-2 py-2 text-right">{formatIndianCurrency(categoryTotal)}</td>
+              <td className="border border-black px-2 py-1 text-right leading-tight">{formatIndianCurrency(categoryTotal)}</td>
             </tr>
           </tbody>
         </table>
