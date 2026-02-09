@@ -224,8 +224,29 @@
   }
 
   /* Page break control */
-  .print\\:page-break-after {
+  .print\:page-break-after {
     page-break-after: always;
+  }
+
+  .print\:page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  .print\:page-break-after-avoid {
+    page-break-after: avoid;
+  }
+
+  /* Repeat table headers on each page */
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tbody {
+    display: table-row-group;
   }
 
   .print\\:page-break-before {

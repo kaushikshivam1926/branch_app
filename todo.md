@@ -88,3 +88,13 @@
 - [x] Apply to both Summary and Category reports
 - [ ] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Add Print Mode Selector and Smart Page Breaks
+- [x] Add state variable for print mode (compact/standard/large)
+- [x] Add print mode selector UI in Report tab
+- [x] Implement dynamic font sizing based on print mode (text-xs/text-sm/text-base)
+- [x] Add page-break-inside: avoid to BGL entry rows
+- [x] Add page-break-after: avoid to BGL subtotal rows
+- [x] Add thead display: table-header-group for repeat headers on print
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint

@@ -1856,6 +1856,8 @@ function ChargesReturnReportTab() {
     const today = new Date();
     return today.toISOString().split('T')[0]; // YYYY-MM-DD format
   });
+  // Print mode state - controls font size for printing
+  const [printMode, setPrintMode] = useState<'compact' | 'standard' | 'large'>('standard');
   const { branchName, branchCode } = useBranch();
 
   useEffect(() => {
@@ -1920,6 +1922,8 @@ function ChargesReturnReportTab() {
   // Render Summary Sheet
   function renderSummary() {
     const monthLabel = selectedMonth === "all" ? "All Months" : new Date(selectedMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    // Dynamic font size based on print mode
+    const fontSizeClass = printMode === 'compact' ? 'text-xs' : printMode === 'large' ? 'text-base' : 'text-sm';
     
     return (
       <div className="print:p-8 print:page-break-after">
@@ -1932,7 +1936,7 @@ function ChargesReturnReportTab() {
 
         {/* Summary Table - Portrait Mode with 2 Columns */}
         <div className="mb-8 max-w-2xl mx-auto">
-          <table className="w-full text-sm border-collapse border border-black">
+          <table className={`w-full ${fontSizeClass} border-collapse border border-black`}>
             <thead>
               <tr className="bg-gray-100">
                 <th className="border border-black px-3 py-1 text-left font-semibold leading-tight">Payment Head</th>
@@ -1987,6 +1991,8 @@ function ChargesReturnReportTab() {
     const categoryTotal = catEntries.reduce((sum, e) => sum + e.amount, 0);
     const uniqueBGLs = getUniqueBGLs(catEntries);
     const monthLabel = selectedMonth === "all" ? "All Months" : new Date(selectedMonth + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    // Dynamic font size based on print mode
+    const fontSizeClass = printMode === 'compact' ? 'text-xs' : printMode === 'large' ? 'text-base' : 'text-sm';
     
     // Group entries by BGL Code
     const entriesByBGL = catEntries.reduce((acc, entry) => {
@@ -2008,7 +2014,7 @@ function ChargesReturnReportTab() {
 
 
         {/* Entries Table - Grouped by BGL Code */}
-        <table className="w-full text-sm border-collapse border border-black mb-6">
+        <table className={`w-full ${fontSizeClass} border-collapse border border-black mb-6`}>
           <thead className="bg-gray-100">
             <tr>
               <th className="border border-black px-2 py-1 text-center leading-tight">Sr.</th>
@@ -2033,7 +2039,7 @@ function ChargesReturnReportTab() {
                   {bglEntries.map((entry, idx) => {
                     serialCounter++;
                     return (
-                      <tr key={entry.id}>
+                      <tr key={entry.id} className="print:page-break-inside-avoid">
                         <td className="border border-black px-2 py-1 text-center leading-tight">{serialCounter}</td>
                         <td className="border border-black px-2 py-1 text-center leading-tight">{entry.bglCode}</td>
                         <td className="border border-black px-2 py-1 text-center leading-tight">
@@ -2051,7 +2057,7 @@ function ChargesReturnReportTab() {
                     );
                   })}
                   {/* BGL Subtotal Row */}
-                  <tr className="font-semibold bg-gray-100">
+                  <tr className="font-semibold bg-gray-100 print:page-break-inside-avoid print:page-break-after-avoid">
                     <td colSpan={8} className="border border-black px-2 py-1 text-right leading-tight">
                       Sub-total for BGL {bglCode} {bglInfo ? `(${bglInfo.head} / ${bglInfo.subHead})` : ''}
                     </td>
@@ -2137,6 +2143,44 @@ function ChargesReturnReportTab() {
               className="border rounded px-3 py-2"
             />
             <span className="text-sm text-gray-600">(This date will be printed on the report)</span>
+          </div>
+
+          {/* Print Mode Selector */}
+          <div className="flex gap-4 items-center">
+            <Label>Print Mode:</Label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPrintMode('compact')}
+                className={`px-4 py-2 rounded font-medium transition-colors ${
+                  printMode === 'compact'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Compact
+              </button>
+              <button
+                onClick={() => setPrintMode('standard')}
+                className={`px-4 py-2 rounded font-medium transition-colors ${
+                  printMode === 'standard'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Standard
+              </button>
+              <button
+                onClick={() => setPrintMode('large')}
+                className={`px-4 py-2 rounded font-medium transition-colors ${
+                  printMode === 'large'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Large
+              </button>
+            </div>
+            <span className="text-sm text-gray-600">(Adjusts font size for printing)</span>
           </div>
 
           {/* View Mode Toggle */}
