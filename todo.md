@@ -98,3 +98,8 @@
 - [x] Add thead display: table-header-group for repeat headers on print
 - [ ] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Reduce Print Margins
+- [x] Update @page margin in index.css from 1.5cm 1cm to 1cm 1cm
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint
