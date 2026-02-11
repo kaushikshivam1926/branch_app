@@ -173,11 +173,15 @@ export default function LetterGenerator() {
     }
   };
   
-  // Initialize history when template loads
+  // Initialize history when template loads and set editor content
   useEffect(() => {
     if (templateHTML && history.length === 0) {
       setHistory([templateHTML]);
       setHistoryIndex(0);
+      // Set initial content in editor
+      if (editorRef.current) {
+        editorRef.current.innerHTML = templateHTML;
+      }
     }
   }, [templateHTML]);
   
@@ -744,7 +748,6 @@ export default function LetterGenerator() {
                 contentEditable
                 onInput={handleTemplateChange}
                 className="min-h-[600px] p-6 border rounded bg-white prose max-w-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-                dangerouslySetInnerHTML={{ __html: templateHTML }}
                 suppressContentEditableWarning
               />
               

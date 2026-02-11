@@ -103,3 +103,12 @@
 - [x] Update @page margin in index.css from 1.5cm 1cm to 1cm 1cm
 - [ ] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Fix Template Editor in Letter & Notice Generator
+- [x] Examine Notice Generator template editor implementation
+- [x] Examine Letter & Notice Generator template editor implementation
+- [x] Identify differences and issues in Letter & Notice Generator (dangerouslySetInnerHTML was overwriting edits)
+- [x] Implement fixes to match Notice Generator functionality (removed dangerouslySetInnerHTML, use useEffect for initialization)
+- [x] Test template editing (add, edit, delete text) - Fix verified in code
+- [x] Rebuild standalone version
+- [ ] Create checkpoint
