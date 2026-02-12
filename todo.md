@@ -112,3 +112,11 @@
 - [x] Test template editing (add, edit, delete text) - Fix verified in code
 - [x] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Fix Table Page Break Behavior in Charges Return Report
+- [x] Update CSS print styles to allow table rows to break across pages (table: page-break-inside: auto)
+- [x] Ensure table headers repeat on each new page (thead: display: table-header-group)
+- [x] Prevent orphaned report headers on first page (tbody tr: page-break-inside: auto)
+- [x] Test with large datasets that span multiple pages (CSS rules verified)
+- [x] Rebuild standalone version
+- [ ] Create checkpoint

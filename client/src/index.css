@@ -257,17 +257,32 @@
     page-break-inside: avoid;
   }
 
-  /* Ensure tables don't break awkwardly */
+  /* Allow tables to break across pages while keeping headers repeated */
   table {
-    page-break-inside: avoid;
+    page-break-inside: auto;
   }
 
   thead {
     display: table-header-group;
   }
 
+  tbody {
+    display: table-row-group;
+  }
+
   tr {
     page-break-inside: avoid;
+  }
+
+  /* Allow table rows to break across pages, but keep header rows together */
+  tbody tr {
+    page-break-inside: auto;
+  }
+
+  /* Keep BGL subtotal rows together with their data */
+  tbody tr.bgl-subtotal {
+    page-break-inside: avoid;
+    page-break-before: avoid;
   }
 
   /* Adjust spacing for print */
