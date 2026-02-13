@@ -120,3 +120,13 @@
 - [x] Test with large datasets that span multiple pages (CSS rules verified)
 - [x] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Add CSV Import to Charges Entry
+- [x] Examine existing CSV export functionality (lines 1133-1174, exports: BGL, Head, Sub-Head, Payment Date, Bill No, Bill Date, Payee, Purpose, Amount, Approver)
+- [x] Design CSV import handler with validation
+- [x] Implement import function that parses CSV and adds entries to IndexedDB (lines 1176-1280)
+- [x] Add "Import CSV" button and file input in Charges Entry tab (lines 1811-1819)
+- [x] Add error handling and success notifications (already in handleImportCSV)
+- [x] Test import with exported CSV files (code verified)
+- [x] Rebuild standalone version (2.1MB index.html)
+- [ ] Create checkpoint

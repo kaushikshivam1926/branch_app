@@ -1173,6 +1173,112 @@ function ChargesEntryTab() {
     toast.success("CSV exported");
   }
 
+  async function handleImportCSV(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.trim().split(/\r?\n/);
+      
+      if (lines.length < 2) {
+        toast.error("CSV file is empty");
+        return;
+      }
+
+      const db = await getDB();
+      let importedCount = 0;
+      const errors: string[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        try {
+          const fields: string[] = [];
+          let current = "";
+          let inQuotes = false;
+          
+          for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            if (char === '"') {
+              if (inQuotes && line[j + 1] === '"') {
+                current += '"';
+                j++;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === ',' && !inQuotes) {
+              fields.push(current.trim());
+              current = "";
+            } else {
+              current += char;
+            }
+          }
+          fields.push(current.trim());
+
+          const bglCode = fields[1]?.replace(/^\"|\"$/g, "").trim();
+          const payDate = fields[4]?.replace(/^\"|\"$/g, "").trim();
+          const billNo = fields[5]?.replace(/^\"|\"$/g, "").trim();
+          const billDate = fields[6]?.replace(/^\"|\"$/g, "").trim();
+          const payee = fields[7]?.replace(/^\"|\"$/g, "").trim();
+          const purpose = fields[8]?.replace(/^\"|\"$/g, "").trim();
+          let amount = fields[9]?.replace(/^\"|\"$/g, "").trim() || "0";
+          const approver = fields[10]?.replace(/^\"|\"$/g, "").trim();
+
+          amount = amount.replace(/[^0-9.]/g, "");
+          const parsedAmount = parseFloat(amount);
+
+          if (!bglCode) continue;
+
+          const bglEntry = bglMaster.find(b => b.bglCode === bglCode);
+          if (!bglEntry) {
+            errors.push(`Row ${i + 1}: BGL ${bglCode} not found`);
+            continue;
+          }
+
+          const entry: ChargeEntry = {
+            id: `${Date.now()}_${Math.random()}`,
+            bglCode: bglCode,
+            head: bglEntry.head,
+            subHead: bglEntry.subHead,
+            payDate: payDate || new Date().toISOString().split("T")[0],
+            billNo: billNo || "",
+            billDate: billDate || new Date().toISOString().split("T")[0],
+            payee: payee || "",
+            purpose: purpose || "",
+            amount: isNaN(parsedAmount) ? 0 : parsedAmount,
+            approver: approver || "",
+            reportCategory: bglEntry.reportCategory,
+            createdAt: new Date().toISOString()
+          };
+
+          await db.add("chargeEntries", entry);
+          importedCount++;
+        } catch (rowError) {
+          errors.push(`Row ${i + 1}: Parse error`);
+        }
+      }
+
+      const allEntries = await db.getAll("chargeEntries");
+      setEntries(allEntries);
+
+      if (importedCount > 0) {
+        toast.success(`Imported ${importedCount} entries`);
+      }
+      
+      if (errors.length > 0) {
+        console.warn("Import warnings:", errors);
+        toast.warning(`${importedCount} imported, ${errors.length} errors`);
+      }
+
+      event.target.value = "";
+    } catch (error) {
+      toast.error("Import failed");
+      console.error(error);
+    }
+  }
+
   async function handleClearAll() {
     if (!confirm("Clear all charges?")) return;
 
@@ -1702,6 +1808,15 @@ function ChargesEntryTab() {
               <Download className="w-4 h-4 mr-1" />
               Export CSV
             </Button>
+            <label>
+              <Button variant="outline" size="sm" asChild>
+                <span className="cursor-pointer">
+                  <Upload className="w-4 h-4 mr-1" />
+                  Import CSV
+                </span>
+              </Button>
+              <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+            </label>
             <Button onClick={handleClearAll} variant="outline" size="sm" className="text-red-600 hover:text-red-700">
               <Trash2 className="w-4 h-4 mr-1" />
               Clear Charges
