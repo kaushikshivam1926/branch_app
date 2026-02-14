@@ -130,3 +130,13 @@
 - [x] Test import with exported CSV files (code verified)
 - [x] Rebuild standalone version (2.1MB index.html)
 - [ ] Create checkpoint
+
+## Add Pre-configured Common Branch Tasks to Reminder & To-Do
+- [ ] Examine Reminder & To-Do app structure and task data model
+- [ ] Create list of common branch tasks (compliance, reporting, operations)
+- [ ] Implement pre-configured tasks constant in code
+- [ ] Add auto-load logic on first app launch
+- [ ] Add "Reset to Default Tasks" button in app settings
+- [ ] Test pre-configured tasks loading
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint

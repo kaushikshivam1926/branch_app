@@ -13,7 +13,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useBranch } from "@/contexts/BranchContext";
-import { ArrowLeft, Plus, Edit2, Trash2, Check, Calendar, Clock, List } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, Check, Calendar, Clock, List, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,203 @@ interface CompletionRecord {
 const ADMIN_USERNAME = "Admin";
 const ADMIN_PASSWORD = "Sbi@12345";
 
+// Pre-configured common branch tasks for Indian banking operations
+const PRECONFIGURED_TASKS: Task[] = [
+  // Daily Tasks
+  {
+    id: "task-daily-cash-reconciliation",
+    name: "Daily Cash Reconciliation",
+    frequency: "Daily",
+    dueDate: new Date().toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-daily-deposit-verification",
+    name: "Verify Daily Deposits & Withdrawals",
+    frequency: "Daily",
+    dueDate: new Date().toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-daily-cheque-clearance",
+    name: "Monitor Cheque Clearance Status",
+    frequency: "Daily",
+    dueDate: new Date().toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+
+  // Weekly Tasks
+  {
+    id: "task-weekly-npa-review",
+    name: "Weekly NPA Account Review",
+    frequency: "Weekly",
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-weekly-compliance-check",
+    name: "Weekly Compliance Check - KYC & AML",
+    frequency: "Weekly",
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-weekly-loan-documentation",
+    name: "Review Loan Documentation & Agreements",
+    frequency: "Weekly",
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-weekly-customer-follow-up",
+    name: "Customer Follow-up for Pending Applications",
+    frequency: "Weekly",
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+
+  // Monthly Tasks
+  {
+    id: "task-monthly-interest-accrual",
+    name: "Verify Monthly Interest Accrual & Posting",
+    frequency: "Monthly",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-monthly-charges-report",
+    name: "Generate Monthly Charges Return Report",
+    frequency: "Monthly",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-monthly-npa-classification",
+    name: "Monthly NPA Classification & Provisioning",
+    frequency: "Monthly",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-monthly-recovery-letters",
+    name: "Send Recovery Letters for Overdue Accounts",
+    frequency: "Monthly",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-monthly-reconciliation",
+    name: "Monthly Bank Reconciliation Statement",
+    frequency: "Monthly",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-monthly-audit-trail",
+    name: "Review Audit Trail & Transaction Logs",
+    frequency: "Monthly",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-monthly-staff-training",
+    name: "Conduct Monthly Staff Training/Updates",
+    frequency: "Monthly",
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+
+  // Quarterly Tasks
+  {
+    id: "task-quarterly-npa-review",
+    name: "Quarterly NPA Review & Board Report",
+    frequency: "Quarterly",
+    dueDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-quarterly-compliance-audit",
+    name: "Quarterly Compliance Audit Report",
+    frequency: "Quarterly",
+    dueDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-quarterly-asset-quality",
+    name: "Quarterly Asset Quality Review",
+    frequency: "Quarterly",
+    dueDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-quarterly-recovery-performance",
+    name: "Quarterly Recovery Performance Analysis",
+    frequency: "Quarterly",
+    dueDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+
+  // Annual Tasks
+  {
+    id: "task-annual-internal-audit",
+    name: "Annual Internal Audit & Inspection",
+    frequency: "Annual",
+    dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-annual-statutory-audit",
+    name: "Annual Statutory Audit",
+    frequency: "Annual",
+    dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-annual-compliance-certification",
+    name: "Annual Compliance Certification",
+    frequency: "Annual",
+    dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-annual-policy-review",
+    name: "Annual Policy Review & Updates",
+    frequency: "Annual",
+    dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "task-annual-risk-assessment",
+    name: "Annual Risk Assessment & Mitigation",
+    frequency: "Annual",
+    dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
+];
+
 export default function RemindersApp() {
   const { branchName } = useBranch();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -81,8 +278,15 @@ export default function RemindersApp() {
     const loadTasks = async () => {
       try {
         const savedTasks = await loadData("sbi-tasks");
-        if (savedTasks) {
+        const hasLoadedDefaultTasks = await loadData("sbi-default-tasks-loaded");
+        
+        if (savedTasks && savedTasks.length > 0) {
           setTasks(savedTasks);
+        } else if (!hasLoadedDefaultTasks) {
+          // First time loading the app - load pre-configured tasks
+          setTasks(PRECONFIGURED_TASKS);
+          await saveData("sbi-tasks", PRECONFIGURED_TASKS);
+          await saveData("sbi-default-tasks-loaded", true);
         }
         
         const savedHistory = await loadData("sbi-completion-history");
@@ -297,6 +501,21 @@ export default function RemindersApp() {
     setEditingTask(null);
   };
 
+  const handleResetToDefaultTasks = async () => {
+    if (!window.confirm("Are you sure you want to reset all tasks to default? This will remove all current tasks and load the pre-configured branch tasks.")) {
+      return;
+    }
+    
+    try {
+      setTasks(PRECONFIGURED_TASKS);
+      await saveData("sbi-tasks", PRECONFIGURED_TASKS);
+      toast.success("Tasks reset to default configuration");
+    } catch (error) {
+      console.error("Failed to reset tasks:", error);
+      toast.error("Failed to reset tasks");
+    }
+  };
+
   const categorizeTask = (task: Task) => {
     if (task.completed) return null;
     
@@ -446,14 +665,24 @@ export default function RemindersApp() {
           
           <div className="flex items-center gap-3">
             {isAdmin && (
-              <Button
-                variant="outline"
-                className="bg-white/20 hover:bg-white/30 text-white border-white/40"
-                onClick={() => setShowCompletionHistoryDialog(true)}
-              >
-                <List className="w-4 h-4 mr-2" />
-                View Completed Tasks
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/40"
+                  onClick={() => setShowCompletionHistoryDialog(true)}
+                >
+                  <List className="w-4 h-4 mr-2" />
+                  View Completed Tasks
+                </Button>
+                  <Button
+                    variant="outline"
+                    className="bg-blue-500 hover:bg-blue-600 text-white border-none"
+                    onClick={handleResetToDefaultTasks}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reset to Defaults
+                  </Button>
+              </>
             )}
             {isAdmin ? (
               <Button
