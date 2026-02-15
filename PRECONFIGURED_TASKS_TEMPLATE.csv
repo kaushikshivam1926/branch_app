@@ -1,0 +1,24 @@
+Task ID,Task Name,Frequency,Days From Today,Description
+task-daily-cash-reconciliation,Daily Cash Reconciliation,Daily,0,Reconcile cash balance with ledger entries
+task-daily-deposit-verification,Verify Daily Deposits & Withdrawals,Daily,0,Verify all deposits and withdrawals posted correctly
+task-daily-cheque-clearance,Monitor Cheque Clearance Status,Daily,0,Check status of cheques in clearing pipeline
+task-weekly-npa-review,Weekly NPA Account Review,Weekly,7,Review all non-performing accounts for status updates
+task-weekly-compliance-check,Weekly Compliance Check - KYC & AML,Weekly,7,Verify KYC and AML compliance for new accounts
+task-weekly-loan-documentation,Review Loan Documentation & Agreements,Weekly,7,Review loan agreements for completeness and accuracy
+task-weekly-customer-follow-up,Customer Follow-up for Pending Applications,Weekly,7,Follow up on pending loan applications and documents
+task-monthly-interest-accrual,Verify Monthly Interest Accrual & Posting,Monthly,30,Verify interest calculations and posting to accounts
+task-monthly-charges-report,Generate Monthly Charges Return Report,Monthly,30,Generate and review monthly charges return report
+task-monthly-npa-classification,Monthly NPA Classification & Provisioning,Monthly,30,Classify NPAs and calculate provisions as per RBI guidelines
+task-monthly-recovery-letters,Send Recovery Letters for Overdue Accounts,Monthly,30,Generate and send recovery letters to customers
+task-monthly-reconciliation,Monthly Bank Reconciliation Statement,Monthly,30,Reconcile bank statements with ledger entries
+task-monthly-audit-trail,Review Audit Trail & Transaction Logs,Monthly,30,Review transaction logs for audit and compliance
+task-monthly-staff-training,Conduct Monthly Staff Training/Updates,Monthly,30,Conduct training on policies and regulatory updates
+task-quarterly-npa-review,Quarterly NPA Review & Board Report,Quarterly,90,Prepare quarterly NPA review for board presentation
+task-quarterly-compliance-audit,Quarterly Compliance Audit Report,Quarterly,90,Conduct quarterly compliance audit and prepare report
+task-quarterly-asset-quality,Quarterly Asset Quality Review,Quarterly,90,Review asset quality and portfolio composition
+task-quarterly-recovery-performance,Quarterly Recovery Performance Analysis,Quarterly,90,Analyze recovery performance and trends
+task-annual-internal-audit,Annual Internal Audit & Inspection,Annual,365,Conduct annual internal audit and inspection
+task-annual-statutory-audit,Annual Statutory Audit,Annual,365,Conduct annual statutory audit as per RBI requirements
+task-annual-compliance-certification,Annual Compliance Certification,Annual,365,Prepare annual compliance certification
+task-annual-policy-review,Annual Policy Review & Updates,Annual,365,Review and update all branch policies
+task-annual-risk-assessment,Annual Risk Assessment & Mitigation,Annual,365,Conduct annual risk assessment and mitigation planning

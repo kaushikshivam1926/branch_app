@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { db, exportAllData, importAllData, loadData, saveData } from "@/lib/db";
 
-type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee" | "FileEdit";
+type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee" | "FileEdit" | "BarChart3";
 
 interface AppCard {
   id: string;
@@ -51,6 +51,14 @@ interface AppCard {
 }
 
 const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
+  {
+    id: "branch-portfolio",
+    title: "Branch Portfolio Dashboard",
+    description: "Comprehensive branch portfolio analytics with deposits, loans, customer 360 and asset quality",
+    iconName: "BarChart3",
+    path: "/branch-portfolio",
+    color: "#0d47a1"
+  },
   {
     id: "dak-number",
     title: "Dak Number Generator",
@@ -115,14 +123,7 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     path: "/charges-return",
     color: "#673ab7"
   },
-  {
-    id: "branch-info",
-    title: "Branch Information",
-    description: "View branch details and contact information",
-    iconName: "Building2",
-    path: "/branch-info",
-    color: "#009688"
-  },
+
   {
     id: "misc-reports",
     title: "Miscellaneous Reports",
@@ -162,6 +163,8 @@ const IconComponent = ({ name, className }: { name: IconName; className?: string
       return <IndianRupee className={iconClass} />;
     case "FileEdit":
       return <FileEdit className={iconClass} />;
+    case "BarChart3":
+      return <BarChart3 className={iconClass} />;
     default:
       return <Globe className={iconClass} />;
   }
@@ -187,8 +190,8 @@ export default function Landing() {
         if (savedSettings) {
           // Check if the data has the new iconName field
           if (savedSettings.length > 0 && savedSettings[0].iconName) {
-            // Migrate security-docs to charges-return and update icon
-            const migratedSettings = savedSettings.map((card: AppCard) => {
+            // Migrate old cards to new versions
+            let migratedSettings = savedSettings.map((card: AppCard) => {
               if (card.id === "security-docs") {
                 return {
                   ...card,
@@ -206,8 +209,35 @@ export default function Landing() {
                   iconName: "IndianRupee" as IconName
                 };
               }
+              // Migrate branch-info to branch-portfolio
+              if (card.id === "branch-info") {
+                return {
+                  ...card,
+                  id: "branch-portfolio",
+                  title: "Branch Portfolio Dashboard",
+                  description: "Comprehensive branch portfolio analytics with deposits, loans, customer 360 and asset quality",
+                  iconName: "BarChart3" as IconName,
+                  path: "/branch-portfolio",
+                  color: "#0d47a1"
+                };
+              }
               return card;
             });
+            // Ensure branch-portfolio exists and is first
+            const hasPortfolio = migratedSettings.some((c: AppCard) => c.id === "branch-portfolio");
+            if (!hasPortfolio) {
+              migratedSettings = [
+                { id: "branch-portfolio", title: "Branch Portfolio Dashboard", description: "Comprehensive branch portfolio analytics with deposits, loans, customer 360 and asset quality", iconName: "BarChart3" as IconName, path: "/branch-portfolio", color: "#0d47a1", visible: true, order: 0 },
+                ...migratedSettings.map((c: AppCard, i: number) => ({ ...c, order: i + 1 }))
+              ];
+            } else {
+              // Move branch-portfolio to first position
+              const portfolioCard = migratedSettings.find((c: AppCard) => c.id === "branch-portfolio");
+              migratedSettings = [
+                portfolioCard,
+                ...migratedSettings.filter((c: AppCard) => c.id !== "branch-portfolio")
+              ].map((c: AppCard, i: number) => ({ ...c, order: i }));
+            }
             setAppCards(migratedSettings);
             // Save migrated settings
             await saveData("sbi-app-settings", migratedSettings);

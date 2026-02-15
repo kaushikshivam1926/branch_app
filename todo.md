@@ -140,3 +140,24 @@
 - [ ] Test pre-configured tasks loading
 - [ ] Rebuild standalone version
 - [ ] Create checkpoint
+
+## Build Branch Portfolio Dashboard
+- [ ] Receive and analyze all CSV file structures (5 daily + 2 shadow files)
+- [ ] Receive and analyze M-code transformation logic (6 .txt files)
+- [ ] Design normalized database schema for deposits and loans
+- [ ] Design data transformation pipeline from raw CSV to normalized tables
+- [ ] Create sidebar navigation UI with 6 sections (Branch Overview, Customer 360, Deposits Overview, Loans Overview, Asset Quality, Data Upload)
+- [ ] Implement data upload interface for CSV files
+- [ ] Implement IndexedDB storage for offline capability
+- [ ] Build Branch Overview dashboard with key metrics
+- [ ] Build Deposits Overview with portfolio composition charts
+- [ ] Build Loans Overview with portfolio composition charts
+- [ ] Build Asset Quality dashboard with NPA classifications
+- [ ] Build Customer 360 view with drill-down capabilities
+- [ ] Implement NPA notice generation and printing
+- [ ] Implement Data Upload tab with file validation
+- [ ] Test all dashboards and views
+- [ ] Integrate into main app as first card in catalogue
+- [ ] Rename "Branch Information" to "Branch Portfolio Dashboard"
+- [ ] Rebuild standalone version
+- [ ] Create checkpoint

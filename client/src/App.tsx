@@ -15,6 +15,7 @@ import RemindersApp from "./pages/RemindersApp";
 import LeadManagementApp from "./pages/LeadManagementApp";
 import WebResourceHub from "./pages/WebResourceHub";
 import LetterGenerator from "./pages/LetterGenerator";
+import BranchPortfolioDashboard from "./pages/BranchPortfolioDashboard";
 
 
 function AppRouter() {
@@ -29,9 +30,7 @@ function AppRouter() {
       <Route path={"/web-resource-hub"} component={WebResourceHub} />
       <Route path={"/charges-return"} component={ChargesReturnApp} />
       <Route path={"/letter-generator"} component={LetterGenerator} />
-      <Route path={"/branch-info"}>
-        <PlaceholderApp title="Branch Information" />
-      </Route>
+      <Route path={"/branch-portfolio"} component={BranchPortfolioDashboard} />
       <Route path={"/misc-reports"}>
         <PlaceholderApp title="Miscellaneous Reports" />
       </Route>
