@@ -72,10 +72,10 @@ export default function Customer360() {
   }, [customers]);
 
   function exportCSV() {
-    const headers = ["CIF", "Customer Name", "Segment", "HNI Category", "Total Deposits", "Total Loans", "Total CC/OD", "Net Exposure", "Deposit Count", "Loan Count", "CC/OD Count", "Has NPA"];
+    const headers = ["CIF", "Customer Name", "Segment", "HNI Category", "Total Deposits", "Total Loans", "Total CC/OD", "Total Relationship Value", "Deposit Count", "Loan Count", "CC/OD Count", "Has NPA"];
     const csvContent = [
       headers.join(","),
-      ...filteredCustomers.map(c => [c.CIF, `"${c.CustName}"`, c.CustomerSegment, c.HNI_Category, c.TotalDeposits, c.TotalLoans, c.TotalCCOD, c.NetExposure, c.DepositCount, c.LoanCount, c.CCODCount, c.HasNPA].join(","))
+      ...filteredCustomers.map(c => [c.CIF, `"${c.CustName}"`, c.CustomerSegment, c.HNI_Category, c.TotalDeposits, c.TotalLoans, c.TotalCCOD, c.TotalRelationshipValue, c.DepositCount, c.LoanCount, c.CCODCount, c.HasNPA].join(","))
     ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -162,12 +162,11 @@ export default function Customer360() {
                 <p className="text-xl font-bold text-green-800">{formatINR(totalCCOD)}</p>
                 <p className="text-xs text-green-500">{ccod.length} accounts</p>
               </div>
-              <div className={`${totalDeposits - totalLoans - totalCCOD >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"} border rounded-xl p-4`}>
-                <p className={`text-xs font-medium ${totalDeposits - totalLoans - totalCCOD >= 0 ? "text-emerald-600" : "text-red-600"}`}>Net Exposure</p>
-                <p className={`text-xl font-bold ${totalDeposits - totalLoans - totalCCOD >= 0 ? "text-emerald-800" : "text-red-800"}`}>
-                  {formatINR(totalDeposits - totalLoans - totalCCOD)}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-xs font-medium text-blue-600">Total Relationship Value</p>
+                <p className="text-xl font-bold text-blue-800">
+                  {formatINR(Math.abs(totalDeposits) + Math.abs(totalLoans) + Math.abs(totalCCOD))}
                 </p>
-                <p className="text-xs text-gray-500">{totalDeposits - totalLoans - totalCCOD >= 0 ? "Net Depositor" : "Net Borrower"}</p>
               </div>
             </div>
 
@@ -349,7 +348,7 @@ export default function Customer360() {
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Deposits</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Loans</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">CC/OD</th>
-                <th className="text-right py-3 px-3 text-gray-500 font-medium">Net Exposure</th>
+                <th className="text-right py-3 px-3 text-gray-500 font-medium">Total Relationship Value</th>
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">A/c</th>
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">NPA</th>
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">Action</th>
@@ -366,7 +365,7 @@ export default function Customer360() {
                   <td className="py-2 px-3 text-right text-blue-700 font-medium">{formatINR(c.TotalDeposits)}</td>
                   <td className="py-2 px-3 text-right text-purple-700 font-medium">{c.TotalLoans > 0 ? formatINR(c.TotalLoans) : "-"}</td>
                   <td className="py-2 px-3 text-right text-green-700 font-medium">{c.TotalCCOD > 0 ? formatINR(c.TotalCCOD) : "-"}</td>
-                  <td className={`py-2 px-3 text-right font-medium ${c.NetExposure >= 0 ? "text-emerald-700" : "text-red-700"}`}>{formatINR(c.NetExposure)}</td>
+                  <td className="py-2 px-3 text-right font-medium text-blue-700">{formatINR(c.TotalRelationshipValue)}</td>
                   <td className="py-2 px-3 text-center text-xs text-gray-500">{c.DepositCount + c.LoanCount + c.CCODCount}</td>
                   <td className="py-2 px-3 text-center">
                     {c.HasNPA ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">Yes</span> : <span className="text-gray-400">-</span>}

@@ -697,7 +697,7 @@ export async function processNPAReport(csvText: string): Promise<number> {
 }
 
 // ============================================================
-// 7. Build Customer Dimension (after all uploads)
+// 7. Build Customer Dimension (Customer 360)
 // ============================================================
 export async function buildCustomerDimension(): Promise<number> {
   const deposits = await getAllRecords(STORES.DEPOSIT_DATA);
@@ -705,10 +705,20 @@ export async function buildCustomerDimension(): Promise<number> {
   const ccod = await getAllRecords(STORES.CCOD_DATA);
   const npa = await getAllRecords(STORES.NPA_DATA);
 
+  // Step 1: Find duplicate account numbers between deposits and CC/OD
+  const depositAccountNos = new Set(deposits.map(d => d.AcNo));
+  const ccodAccountNos = new Set(ccod.map(c => c.LoanKey));
+  const duplicateAccounts = new Set(
+    Array.from(depositAccountNos).filter(acNo => ccodAccountNos.has(acNo))
+  );
+
+  // Step 2: Remove duplicate accounts from deposits (keep in CC/OD as loans)
+  const filteredDeposits = deposits.filter(d => !duplicateAccounts.has(d.AcNo));
+
   const customerMap: Record<string, any> = {};
 
-  // Process deposits
-  for (const dep of deposits) {
+  // Process deposits (excluding duplicates)
+  for (const dep of filteredDeposits) {
     if (!dep.CIF) continue;
     if (!customerMap[dep.CIF]) {
       customerMap[dep.CIF] = {
@@ -722,6 +732,7 @@ export async function buildCustomerDimension(): Promise<number> {
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
+        TotalRelationshipValue: 0,
         NetExposure: 0,
         DepositCount: 0,
         LoanCount: 0,
@@ -736,8 +747,14 @@ export async function buildCustomerDimension(): Promise<number> {
       };
     }
     const c = customerMap[dep.CIF];
-    c.TotalDeposits += dep.CurrentBalance || 0;
-    c.DepositCount += 1;
+    const depBalance = dep.CurrentBalance || 0;
+    if (depBalance >= 0) {
+      c.TotalDeposits += depBalance;
+      c.DepositCount += 1;
+    } else {
+      c.TotalLoans += Math.abs(depBalance);
+      c.LoanCount += 1;
+    }
     if (dep.NRI_Client_Flag === "NRI") c.NRI_Client_Flag = "NRI";
     if (dep.Wealth_Client_Flag === "Wealth") c.Wealth_Client_Flag = "Wealth";
     if (dep.Salary_Account_Flag === "Salary") c.Salary_Account_Flag = "Salary";
@@ -760,6 +777,7 @@ export async function buildCustomerDimension(): Promise<number> {
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
+        TotalRelationshipValue: 0,
         NetExposure: 0,
         DepositCount: 0,
         LoanCount: 0,
@@ -774,8 +792,14 @@ export async function buildCustomerDimension(): Promise<number> {
       };
     }
     const c = customerMap[loan.CIF];
-    c.TotalLoans += Math.abs(loan.OUTSTAND || 0);
-    c.LoanCount += 1;
+    const loanBalance = loan.OUTSTAND || 0;
+    if (loanBalance > 0) {
+      c.TotalLoans += loanBalance;
+      c.LoanCount += 1;
+    } else if (loanBalance < 0) {
+      c.TotalDeposits += Math.abs(loanBalance);
+      c.DepositCount += 1;
+    }
     if (!c.CustName && loan.CUSTNAME) c.CustName = loan.CUSTNAME;
     // Check NPA
     if (loan.NEWIRAC && loan.NEWIRAC !== "00" && loan.NEWIRAC !== "01") {
@@ -799,6 +823,7 @@ export async function buildCustomerDimension(): Promise<number> {
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
+        TotalRelationshipValue: 0,
         NetExposure: 0,
         DepositCount: 0,
         LoanCount: 0,
@@ -813,8 +838,14 @@ export async function buildCustomerDimension(): Promise<number> {
       };
     }
     const c = customerMap[cc.CIF];
-    c.TotalCCOD += Math.abs(cc.CurrentBalance || 0);
-    c.CCODCount += 1;
+    const ccBalance = cc.CurrentBalance || 0;
+    if (ccBalance >= 0) {
+      c.TotalCCOD += ccBalance;
+      c.CCODCount += 1;
+    } else {
+      c.TotalDeposits += Math.abs(ccBalance);
+      c.DepositCount += 1;
+    }
     if (!c.CustName && cc.CUSTNAME) c.CustName = cc.CUSTNAME;
     // Check NPA
     if (cc.NEWIRAC && cc.NEWIRAC !== "00" && cc.NEWIRAC !== "01" && cc.NEWIRAC !== "0") {
@@ -828,6 +859,7 @@ export async function buildCustomerDimension(): Promise<number> {
 
   // Finalize customer records
   const customers = Object.values(customerMap).map((c: any) => {
+    c.TotalRelationshipValue = Math.abs(c.TotalDeposits) + Math.abs(c.TotalLoans) + Math.abs(c.TotalCCOD);
     c.NetExposure = c.TotalDeposits - c.TotalLoans - c.TotalCCOD;
 
     // HNI from deposits
