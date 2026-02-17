@@ -365,7 +365,7 @@ export default function Customer360() {
                   <td className="py-2 px-3 text-right text-blue-700 font-medium">{formatINR(c.TotalDeposits)}</td>
                   <td className="py-2 px-3 text-right text-purple-700 font-medium">{c.TotalLoans > 0 ? formatINR(c.TotalLoans) : "-"}</td>
                   <td className="py-2 px-3 text-right text-green-700 font-medium">{c.TotalCCOD > 0 ? formatINR(c.TotalCCOD) : "-"}</td>
-                  <td className="py-2 px-3 text-right font-medium text-blue-700">{formatINR(c.TotalRelationshipValue)}</td>
+                  <td className="py-2 px-3 text-right font-medium text-blue-700">{formatINR(c.TotalRelationshipValue || (Math.abs(c.TotalDeposits || 0) + Math.abs(c.TotalLoans || 0) + Math.abs(c.TotalCCOD || 0)))}</td>
                   <td className="py-2 px-3 text-center text-xs text-gray-500">{c.DepositCount + c.LoanCount + c.CCODCount}</td>
                   <td className="py-2 px-3 text-center">
                     {c.HasNPA ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">Yes</span> : <span className="text-gray-400">-</span>}
