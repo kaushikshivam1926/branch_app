@@ -142,6 +142,11 @@ export async function processProductMapping(csvText: string): Promise<number> {
 // ============================================================
 export async function processDepositShadow(csvText: string): Promise<number> {
   const rows = parseCSV(csvText);
+  
+  // Get CC/OD accounts to identify duplicates (accounts in both files)
+  const ccodRecords = await getAllRecords(STORES.CCOD_DATA);
+  const ccodAccountSet = new Set(ccodRecords.map((c: any) => c.LoanKey));
+  
   const productMapping = await getAllRecords(STORES.PRODUCT_MAPPING);
   const mappingLookup: Record<string, any> = {};
   for (const pm of productMapping) {
@@ -151,7 +156,13 @@ export async function processDepositShadow(csvText: string): Promise<number> {
   // First pass: build CIF aggregation for HNI
   const cifTotals: Record<string, number> = {};
 
-  const records = rows.map((r) => {
+  const records = rows
+    .filter((r) => {
+      // Exclude accounts that exist in CC/OD Balance file (deduplication)
+      const acNo = trimLeadingZeros(r.AcNo || "");
+      return !ccodAccountSet.has(acNo);
+    })
+    .map((r) => {
     const acNo = trimLeadingZeros(r.AcNo || "");
     const cif = trimLeadingZeros(r.CIFNo || "");
     const currentBalance = parseNum(r.Curr_Bal);
@@ -839,12 +850,15 @@ export async function buildCustomerDimension(): Promise<number> {
     }
     const c = customerMap[cc.CIF];
     const ccBalance = cc.CurrentBalance || 0;
-    if (ccBalance >= 0) {
-      c.TotalCCOD += ccBalance;
+    // Positive balance (credit) = deposits (CASA), Negative balance (debit) = loan exposure
+    if (ccBalance > 0) {
+      c.TotalDeposits += ccBalance; // Positive balance counted as deposits
+      c.CCODCount += 1;
+    } else if (ccBalance < 0) {
+      c.TotalCCOD += Math.abs(ccBalance); // Negative balance counted as loan exposure
       c.CCODCount += 1;
     } else {
-      c.TotalDeposits += Math.abs(ccBalance);
-      c.DepositCount += 1;
+      c.CCODCount += 1; // Zero balance
     }
     if (!c.CustName && cc.CUSTNAME) c.CustName = cc.CUSTNAME;
     // Check NPA

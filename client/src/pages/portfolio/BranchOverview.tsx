@@ -74,12 +74,20 @@ export default function BranchOverview() {
         getAllRecords(STORES.CUSTOMER_DIM),
       ]);
 
-      // Deposit metrics
+      // Deposit metrics (excluding duplicates with CC/OD)
       const activeDeposits = deposits.filter((d: any) => d.Dormancy_Flag !== "Closed");
-      const totalDepositBalance = activeDeposits.reduce((sum: number, d: any) => sum + (d.CurrentBalance || 0), 0);
+      let totalDepositBalance = activeDeposits.reduce((sum: number, d: any) => sum + (d.CurrentBalance || 0), 0);
+      
+      // Add positive balances from CC/OD accounts (cross-product logic)
+      const ccodPositiveBalance = ccod
+        .filter((c: any) => (c.CurrentBalance || 0) > 0)
+        .reduce((sum: number, c: any) => sum + c.CurrentBalance, 0);
+      totalDepositBalance += ccodPositiveBalance;
+      
       const casaCategories = ["Regular Savings", "Wealth Account", "Current", "Salary", "Savings Plus", "NRI Savings", "NRI Current", "Government Accounts"];
       const termCategories = ["Term Deposit", "Recurring Deposit", "Term Deposit (NRO)", "Term Deposit (NRE)", "Term Deposit (RFC/FCNB)", "Recurring Deposit (NRE)", "Recurring Deposit (NRO)", "MOD", "PPF", "Sukanya Samriddhi", "Mahila Samman"];
-      const casaBalance = activeDeposits.filter((d: any) => casaCategories.includes(d.Category)).reduce((sum: number, d: any) => sum + (d.CurrentBalance || 0), 0);
+      let casaBalance = activeDeposits.filter((d: any) => casaCategories.includes(d.Category)).reduce((sum: number, d: any) => sum + (d.CurrentBalance || 0), 0);
+      casaBalance += ccodPositiveBalance; // CC/OD positive balances counted in CASA
       const termDepositBalance = activeDeposits.filter((d: any) => termCategories.includes(d.Category)).reduce((sum: number, d: any) => sum + (d.CurrentBalance || 0), 0);
 
       // Deposit category breakdown
@@ -94,9 +102,12 @@ export default function BranchOverview() {
         .map(([name, v]) => ({ name, ...v }))
         .sort((a, b) => b.balance - a.balance);
 
-      // Loan metrics
+      // Loan metrics (excluding positive CC/OD balances)
       const totalLoanOutstanding = loans.reduce((sum: number, l: any) => sum + Math.abs(l.OUTSTAND || 0), 0);
-      const totalCCODBalance = ccod.reduce((sum: number, c: any) => sum + Math.abs(c.CurrentBalance || 0), 0);
+      // Only count negative balances (debit) in CC/OD as loan exposure
+      const totalCCODBalance = ccod
+        .filter((c: any) => (c.CurrentBalance || 0) < 0)
+        .reduce((sum: number, c: any) => sum + Math.abs(c.CurrentBalance), 0);
       const totalAdvances = totalLoanOutstanding + totalCCODBalance;
 
       // Loan category breakdown

@@ -39,7 +39,10 @@ export default function LoansPortfolio() {
     if (loans.length === 0 && ccod.length === 0) return null;
 
     const totalLoanOutstanding = loans.reduce((s, l) => s + Math.abs(l.OUTSTAND || 0), 0);
-    const totalCCODBalance = ccod.reduce((s, c) => s + Math.abs(c.CurrentBalance || 0), 0);
+    // Only count negative balances (debit) in CC/OD as loan exposure
+    const totalCCODBalance = ccod
+      .filter(c => (c.CurrentBalance || 0) < 0)
+      .reduce((s, c) => s + Math.abs(c.CurrentBalance), 0);
     const totalAdvances = totalLoanOutstanding + totalCCODBalance;
 
     // SMA distribution
@@ -70,7 +73,9 @@ export default function LoansPortfolio() {
       catMap[cat].count += 1;
     }
     if (ccod.length > 0) {
-      catMap["CC/OD"] = { balance: totalCCODBalance, count: ccod.length };
+      // Only count negative balance CC/OD accounts in loan categories
+      const negativeCCOD = ccod.filter(c => (c.CurrentBalance || 0) < 0);
+      catMap["CC/OD"] = { balance: totalCCODBalance, count: negativeCCOD.length };
     }
     const loanCategories = Object.entries(catMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.balance - a.balance);
 
