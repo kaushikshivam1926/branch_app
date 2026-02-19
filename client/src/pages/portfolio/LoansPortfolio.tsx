@@ -79,12 +79,30 @@ export default function LoansPortfolio() {
     }
     const loanCategories = Object.entries(catMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.balance - a.balance);
 
-    // EMI analysis (term loans only)
-    const emiLoans = loans.filter(l => l.INSTALAMT > 0);
-    const totalEMI = emiLoans.reduce((s, l) => s + (l.INSTALAMT || 0), 0);
-    const avgEMI = emiLoans.length > 0 ? totalEMI / emiLoans.length : 0;
-    const overdueLoans = loans.filter(l => l.EMISOvrdue > 0);
-    const totalOverdueEMIs = overdueLoans.reduce((s, l) => s + (l.EMISOvrdue || 0), 0);
+    // Gold Loans maturing in next 15 days
+    const today = new Date();
+    const next15Days = new Date(today.getTime() + 15 * 24 * 60 * 60 * 1000);
+    const goldLoansMaturing = loans.filter(l => {
+      const isGold = (l.Loan_Category || "").toLowerCase().includes("gold") || (l.ACCTDESC || "").toLowerCase().includes("gold");
+      if (!isGold || !l.Shadow_Maturity_Dt) return false;
+      const maturityDate = new Date(l.Shadow_Maturity_Dt);
+      return maturityDate >= today && maturityDate <= next15Days;
+    });
+    const goldMaturityCount = goldLoansMaturing.length;
+    const goldMaturityAmount = goldLoansMaturing.reduce((s, l) => s + Math.abs(l.OUTSTAND || 0), 0);
+
+    // Personal Loans repaid ≥50% of sanctioned limit
+    const personalLoansHalfRepaid = loans.filter(l => {
+      const isPersonal = (l.Loan_Category || "").toLowerCase().includes("personal") || (l.ACCTDESC || "").toLowerCase().includes("personal");
+      if (!isPersonal) return false;
+      const sanctioned = l.Shadow_App_Lmt || l.LIMIT || 0;
+      const outstanding = Math.abs(l.OUTSTAND || 0);
+      if (sanctioned === 0) return false;
+      const repaidPct = ((sanctioned - outstanding) / sanctioned) * 100;
+      return repaidPct >= 50;
+    });
+    const personalHalfRepaidCount = personalLoansHalfRepaid.length;
+    const personalHalfRepaidAmount = personalLoansHalfRepaid.reduce((s, l) => s + Math.abs(l.OUTSTAND || 0), 0);
 
     // Forecast buckets
     const fbMap: Record<string, { count: number; amount: number }> = {};
@@ -134,7 +152,8 @@ export default function LoansPortfolio() {
       totalLoanOutstanding, totalCCODBalance, totalAdvances,
       loanCount: loans.length, ccodCount: ccod.length,
       smaDistribution, loanCategories, forecastBuckets, irDistribution,
-      totalEMI, avgEMI, overdueLoans: overdueLoans.length, totalOverdueEMIs,
+      goldMaturityCount, goldMaturityAmount,
+      personalHalfRepaidCount, personalHalfRepaidAmount,
       totalWriteOff, writeOffCount: writeOffLoans.length + writeOffCCOD.length,
       raCount: raLoans.length + raCCOD.length,
       irregularCCOD: irregularCCOD.length, avgUtilization,
@@ -238,12 +257,23 @@ export default function LoansPortfolio() {
           {/* EMI & SMA Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h3 className="text-sm font-medium text-gray-500 mb-3">EMI Summary</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between"><span className="text-sm text-gray-600">Total Monthly EMI</span><span className="font-medium">{formatINR(analytics.totalEMI)}</span></div>
-                <div className="flex justify-between"><span className="text-sm text-gray-600">Avg EMI</span><span className="font-medium">{formatINR(analytics.avgEMI)}</span></div>
-                <div className="flex justify-between"><span className="text-sm text-red-600">Overdue Accounts</span><span className="font-medium text-red-600">{analytics.overdueLoans}</span></div>
-                <div className="flex justify-between"><span className="text-sm text-red-600">Total Overdue EMIs</span><span className="font-medium text-red-600">{analytics.totalOverdueEMIs}</span></div>
+              <h3 className="text-sm font-medium text-gray-500 mb-3">Key Loan Metrics</h3>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-amber-600 font-medium">Gold Loans Maturing (15 Days)</span>
+                    <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">{analytics.goldMaturityCount} a/c</span>
+                  </div>
+                  <p className="text-lg font-bold text-amber-700">{formatINR(analytics.goldMaturityAmount)}</p>
+                </div>
+                <div className="border-t border-gray-100 pt-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-green-600 font-medium">Personal Loans Repaid ≥50%</span>
+                    <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">{analytics.personalHalfRepaidCount} a/c</span>
+                  </div>
+                  <p className="text-lg font-bold text-green-700">{formatINR(analytics.personalHalfRepaidAmount)}</p>
+                  <p className="text-xs text-gray-500 mt-1">Outstanding amount of well-performing personal loans</p>
+                </div>
               </div>
             </div>
 
@@ -357,8 +387,10 @@ export default function LoansPortfolio() {
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">CIF</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Customer</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Type</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Product</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Category</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Outstanding</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Maturity Date</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Rate</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">SMA</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">IRAC</th>
@@ -372,8 +404,10 @@ export default function LoansPortfolio() {
                       <td className="py-2 px-3 text-gray-600 text-xs">{a._cif}</td>
                       <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[180px]">{a._name}</td>
                       <td className="py-2 px-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a._type === "CC/OD" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>{a._type}</span></td>
+                      <td className="py-2 px-3 text-gray-600 text-xs truncate max-w-[150px]" title={a.ACCTDESC || "-"}>{a.ACCTDESC || "-"}</td>
                       <td className="py-2 px-3 text-gray-600 text-xs">{a._category}</td>
                       <td className="py-2 px-3 text-right font-medium text-gray-800">{formatINRFull(a._outstanding)}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs">{a.Shadow_Maturity_Dt ? new Date(a.Shadow_Maturity_Dt).toLocaleDateString("en-IN") : "-"}</td>
                       <td className="py-2 px-3 text-right text-gray-600">{(a.INTRATE || 0) > 0 ? `${a.INTRATE.toFixed(2)}%` : "-"}</td>
                       <td className="py-2 px-3 text-center">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${smaColorMap[a._sma || "Unclassified"] || "bg-gray-100 text-gray-600"}`}>{a._sma || "-"}</span>

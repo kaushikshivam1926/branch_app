@@ -17,6 +17,7 @@ import {
 import {
   parseCSV,
   processProductMapping,
+  processLoanProductMapping,
   processDepositShadow,
   processLoanShadow,
   processLoanBalance,
@@ -105,6 +106,9 @@ export default function DataUpload() {
           case "product-mapping":
             count = await processProductMapping(text);
             break;
+          case "loan-product-mapping":
+            count = await processLoanProductMapping(text);
+            break;
           case "deposit-shadow":
             count = await processDepositShadow(text);
             break;
@@ -160,6 +164,7 @@ export default function DataUpload() {
     if (!confirm("Are you sure you want to clear ALL portfolio data? This action cannot be undone.")) return;
     try {
       await clearStore(STORES.PRODUCT_MAPPING);
+      await clearStore(STORES.LOAN_PRODUCT_MAPPING);
       await clearStore(STORES.DEPOSIT_DATA);
       await clearStore(STORES.LOAN_DATA);
       await clearStore(STORES.CCOD_DATA);
@@ -229,7 +234,8 @@ export default function DataUpload() {
           <div className="text-sm text-blue-800">
             <p className="font-semibold mb-2">Recommended Upload Order:</p>
             <ol className="list-decimal ml-4 space-y-1">
-              <li><strong>Product Category Mapping</strong> (one-time, at first use)</li>
+              <li><strong>Deposit Product Category Mapping</strong> (one-time, at first use)</li>
+              <li><strong>Loan Product Category Mapping</strong> (one-time, at first use)</li>
               <li><strong>Loan Shadow</strong> (month-end) — upload before Loan Balance for data merging</li>
               <li><strong>Deposit Shadow</strong> (month-end)</li>
               <li><strong>Loan Balance</strong> (daily T+2)</li>
@@ -305,7 +311,8 @@ export default function DataUpload() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Product Mapping", count: dataStatus.productMapping, icon: "📋" },
+              { label: "Deposit Product Mapping", count: dataStatus.productMapping, icon: "📋" },
+              { label: "Loan Product Mapping", count: dataStatus.loanProductMapping, icon: "📝" },
               { label: "Deposit Accounts", count: dataStatus.deposits, icon: "🏦" },
               { label: "Loan Accounts", count: dataStatus.loans, icon: "💳" },
               { label: "CC/OD Accounts", count: dataStatus.ccod, icon: "💰" },

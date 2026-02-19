@@ -9,6 +9,7 @@ const PORTFOLIO_DB_VERSION = 1;
 // Store names
 export const STORES = {
   PRODUCT_MAPPING: "product-category-mapping",
+  LOAN_PRODUCT_MAPPING: "loan-product-mapping",
   DEPOSIT_DATA: "deposit-data",
   LOAN_DATA: "loan-data",
   CCOD_DATA: "ccod-data",
@@ -37,9 +38,14 @@ function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
 
-      // Product Category Mapping
+      // Product Category Mapping (Deposits)
       if (!db.objectStoreNames.contains(STORES.PRODUCT_MAPPING)) {
         db.createObjectStore(STORES.PRODUCT_MAPPING, { keyPath: "ProductCode" });
+      }
+
+      // Loan Product Mapping
+      if (!db.objectStoreNames.contains(STORES.LOAN_PRODUCT_MAPPING)) {
+        db.createObjectStore(STORES.LOAN_PRODUCT_MAPPING, { keyPath: "ProductCode" });
       }
 
       // Deposit Data (processed from shadow)
@@ -228,6 +234,7 @@ export async function getUploadLogs(): Promise<any[]> {
 // Data status check
 export async function getDataStatus(): Promise<{
   productMapping: number;
+  loanProductMapping: number;
   deposits: number;
   loans: number;
   ccod: number;
@@ -237,8 +244,9 @@ export async function getDataStatus(): Promise<{
   customers: number;
   hasData: boolean;
 }> {
-  const [productMapping, deposits, loans, ccod, npa, loanShadow, depositShadow, customers] = await Promise.all([
+  const [productMapping, loanProductMapping, deposits, loans, ccod, npa, loanShadow, depositShadow, customers] = await Promise.all([
     getRecordCount(STORES.PRODUCT_MAPPING),
+    getRecordCount(STORES.LOAN_PRODUCT_MAPPING),
     getRecordCount(STORES.DEPOSIT_DATA),
     getRecordCount(STORES.LOAN_DATA),
     getRecordCount(STORES.CCOD_DATA),
@@ -250,6 +258,7 @@ export async function getDataStatus(): Promise<{
 
   return {
     productMapping,
+    loanProductMapping,
     deposits,
     loans,
     ccod,

@@ -138,6 +138,36 @@ export async function processProductMapping(csvText: string): Promise<number> {
 }
 
 // ============================================================
+// 1b. Process Loan Product Category Mapping
+// ============================================================
+export async function processLoanProductMapping(csvText: string): Promise<number> {
+  const rows = parseCSV(csvText);
+  const records = rows
+    .filter((r) => r.ProductCode && r.ProductCode.trim() !== "")
+    .map((r) => ({
+      ProductCode: r.ProductCode.trim(),
+      ProductName: r.ProductName || "",
+      Category: r.Category || "",
+      SubCategory: r.SubCategory || "",
+      Segment: r.Segment || "",
+      Priority: r.Priority || "No",
+      Secured: r.Secured || "",
+      Scheme: r.Scheme || "None",
+      RiskWeight: r.RiskWeight || "100",
+    }));
+
+  await clearStore(STORES.LOAN_PRODUCT_MAPPING);
+  await putRecords(STORES.LOAN_PRODUCT_MAPPING, records);
+  await addUploadLog({
+    fileType: "loan-product-mapping",
+    fileName: "Loan_Product_Category_Mapping.csv",
+    recordCount: records.length,
+    status: "success",
+  });
+  return records.length;
+}
+
+// ============================================================
 // 2. Process Deposit Shadow File
 // ============================================================
 export async function processDepositShadow(csvText: string): Promise<number> {
@@ -909,7 +939,8 @@ export function detectFileType(fileName: string, headers: string[]): string | nu
   if (fn.includes("npa") || fn.includes("listof_npa") || fn.includes("lond2572")) return "npa-report";
   if (fn.includes("dep_shadow") || fn.includes("weeklyreports_dep")) return "deposit-shadow";
   if (fn.includes("lon_shadow") || fn.includes("miscreports_lon_shadow")) return "loan-shadow";
-  if (fn.includes("product_category") || fn.includes("mapping")) return "product-mapping";
+  if (fn.includes("loan_product") || fn.includes("loan_mapping")) return "loan-product-mapping";
+  if (fn.includes("product_category") || fn.includes("deposit_product") || fn.includes("mapping")) return "product-mapping";
   if (fn.includes("cc_od") || fn.includes("depd")) return "ccod-balance";
   if (fn.includes("loansbalancefile") || fn.includes("lond")) return "loan-balance";
 
@@ -919,6 +950,7 @@ export function detectFileType(fileName: string, headers: string[]): string | nu
   if (headerStr.includes("account_no") && headerStr.includes("npa_date")) return "npa-report";
   if (headerStr.includes("bankcd") && headerStr.includes("curr_bal") && headerStr.includes("acttype")) return "deposit-shadow";
   if (headerStr.includes("bnkno") && headerStr.includes("loan_arrears") && headerStr.includes("emi_due")) return "loan-shadow";
+  if (headerStr.includes("productcode") && headerStr.includes("category") && headerStr.includes("secured")) return "loan-product-mapping";
   if (headerStr.includes("productcode") && headerStr.includes("category") && headerStr.includes("salaryflag")) return "product-mapping";
 
   return null;
@@ -930,5 +962,6 @@ export const FILE_TYPE_LABELS: Record<string, string> = {
   "loan-balance": "Loan Balance (Daily)",
   "ccod-balance": "CC/OD Balance (Daily)",
   "npa-report": "NPA Report (Daily)",
-  "product-mapping": "Product Category Mapping",
+  "product-mapping": "Deposit Product Category Mapping",
+  "loan-product-mapping": "Loan Product Category Mapping",
 };
