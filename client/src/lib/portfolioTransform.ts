@@ -431,6 +431,13 @@ export async function processLoanBalance(csvText: string): Promise<number> {
     shadowLookup[s.AcNo] = s;
   }
 
+  // Get loan product mapping for categorization
+  const loanProductMapping = await getAllRecords(STORES.LOAN_PRODUCT_MAPPING);
+  const productLookup: Record<string, any> = {};
+  for (const p of loanProductMapping) {
+    productLookup[p.ProductCode] = p;
+  }
+
   const today = todayISO();
 
   const records = rows.map((r) => {
@@ -509,17 +516,52 @@ export async function processLoanBalance(csvText: string): Promise<number> {
       else forecastBucket = "12+ Months";
     }
 
-    // Loan category from description
-    const desc = (r.ACCTDESC || "").toUpperCase();
+    // Construct product code from shadow data
+    const shadowAcctType = shadow.Acct_Type || "";
+    const shadowIntCat = shadow.Int_cat || "";
+    const shadowSegmentCd = shadow.Segment_Cd || "";
+    const productCode = shadowAcctType && shadowIntCat ? `${shadowAcctType}-${shadowIntCat}` : "";
+
+    // Get product mapping
+    const productMapping = productCode ? productLookup[productCode] : null;
+
+    // Staff override: Segment_Cd = 306 → Staff Loan
     let loanCategory = "Other";
-    if (desc.includes("HOME") || desc.includes("SURAKSHA") || desc.includes("HL")) loanCategory = "Home Loan";
-    else if (desc.includes("CAR") || desc.includes("VEHICLE") || desc.includes("AUTO")) loanCategory = "Vehicle Loan";
-    else if (desc.includes("PERSONAL") || desc.includes("XPRESS") || desc.includes("PAXC") || desc.includes("PENSION")) loanCategory = "Personal Loan";
-    else if (desc.includes("EDUCATION") || desc.includes("STU") || desc.includes("SCH LN")) loanCategory = "Education Loan";
-    else if (desc.includes("GOLD")) loanCategory = "Gold Loan";
-    else if (desc.includes("AGRI") || desc.includes("KCC") || desc.includes("CROP") || desc.includes("SGY")) loanCategory = "Agriculture";
-    else if (desc.includes("MSME") || desc.includes("MUDRA") || desc.includes("SME") || desc.includes("BUSINESS")) loanCategory = "MSME/Business";
-    else if (desc.includes("OD") || desc.includes("CC")) loanCategory = "CC/OD";
+    let loanSubCategory = "";
+    let loanSegment = "General";
+    let loanPriority = "Medium";
+    let loanSecured = "";
+    let loanScheme = "None";
+    let loanRiskWeight = "100";
+    let productName = (r.ACCTDESC || "").trim();
+
+    if (shadowSegmentCd === "306") {
+      // Staff loan override
+      loanCategory = "Staff Loan";
+      loanSegment = "Staff";
+      loanPriority = "High";
+    } else if (productMapping) {
+      // Use product mapping
+      loanCategory = productMapping.Category || "Other";
+      loanSubCategory = productMapping.SubCategory || "";
+      loanSegment = productMapping.Segment || "General";
+      loanPriority = productMapping.Priority || "Medium";
+      loanSecured = productMapping.Secured || "";
+      loanScheme = productMapping.Scheme || "None";
+      loanRiskWeight = productMapping.RiskWeight || "100";
+      productName = productMapping.ProductName || productName;
+    } else {
+      // Fallback: category from description
+      const desc = (r.ACCTDESC || "").toUpperCase();
+      if (desc.includes("HOME") || desc.includes("SURAKSHA") || desc.includes("HL")) loanCategory = "Home Loan";
+      else if (desc.includes("CAR") || desc.includes("VEHICLE") || desc.includes("AUTO")) loanCategory = "Vehicle Loan";
+      else if (desc.includes("PERSONAL") || desc.includes("XPRESS") || desc.includes("PAXC") || desc.includes("PENSION")) loanCategory = "Personal Loan";
+      else if (desc.includes("EDUCATION") || desc.includes("STU") || desc.includes("SCH LN")) loanCategory = "Education Loan";
+      else if (desc.includes("GOLD")) loanCategory = "Gold Loan";
+      else if (desc.includes("AGRI") || desc.includes("KCC") || desc.includes("CROP") || desc.includes("SGY")) loanCategory = "Agriculture";
+      else if (desc.includes("MSME") || desc.includes("MUDRA") || desc.includes("SME") || desc.includes("BUSINESS")) loanCategory = "MSME/Business";
+      else if (desc.includes("OD") || desc.includes("CC")) loanCategory = "CC/OD";
+    }
 
     return {
       LoanKey: loanKey,
@@ -585,6 +627,15 @@ export async function processLoanBalance(csvText: string): Promise<number> {
       Seasoning_Ratio: seasoningRatio,
       Forecast_Bucket: forecastBucket,
       Loan_Category: loanCategory,
+      Loan_SubCategory: loanSubCategory,
+      Loan_Segment: loanSegment,
+      Loan_Priority: loanPriority,
+      Loan_Secured: loanSecured,
+      Loan_Scheme: loanScheme,
+      Loan_RiskWeight: loanRiskWeight,
+      ProductCode: productCode,
+      ProductName: productName,
+      Maturity_Dt: shadowMaturityDt,
       Exposure_Type: "Term Loan",
     };
   });

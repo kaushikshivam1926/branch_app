@@ -404,10 +404,10 @@ export default function LoansPortfolio() {
                       <td className="py-2 px-3 text-gray-600 text-xs">{a._cif}</td>
                       <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[180px]">{a._name}</td>
                       <td className="py-2 px-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a._type === "CC/OD" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>{a._type}</span></td>
-                      <td className="py-2 px-3 text-gray-600 text-xs truncate max-w-[150px]" title={a.ACCTDESC || "-"}>{a.ACCTDESC || "-"}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs truncate max-w-[150px]" title={a.ProductName || a.ACCTDESC || "-"}>{a.ProductName || a.ACCTDESC || "-"}</td>
                       <td className="py-2 px-3 text-gray-600 text-xs">{a._category}</td>
                       <td className="py-2 px-3 text-right font-medium text-gray-800">{formatINRFull(a._outstanding)}</td>
-                      <td className="py-2 px-3 text-gray-600 text-xs">{a.Shadow_Maturity_Dt ? new Date(a.Shadow_Maturity_Dt).toLocaleDateString("en-IN") : "-"}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs">{a.Maturity_Dt ? new Date(a.Maturity_Dt).toLocaleDateString("en-IN") : "-"}</td>
                       <td className="py-2 px-3 text-right text-gray-600">{(a.INTRATE || 0) > 0 ? `${a.INTRATE.toFixed(2)}%` : "-"}</td>
                       <td className="py-2 px-3 text-center">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${smaColorMap[a._sma || "Unclassified"] || "bg-gray-100 text-gray-600"}`}>{a._sma || "-"}</span>

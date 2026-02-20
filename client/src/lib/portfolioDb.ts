@@ -4,7 +4,7 @@
  */
 
 const PORTFOLIO_DB_NAME = "BranchPortfolioDB";
-const PORTFOLIO_DB_VERSION = 1;
+const PORTFOLIO_DB_VERSION = 2;
 
 // Store names
 export const STORES = {
