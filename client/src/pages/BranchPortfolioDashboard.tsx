@@ -24,6 +24,9 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronLeft,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -56,6 +59,7 @@ export default function BranchPortfolioDashboard() {
   const { branchName } = useBranch();
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Check if data is loaded
@@ -131,23 +135,37 @@ export default function BranchPortfolioDashboard() {
         {/* Sidebar Navigation */}
         <aside
           className={`
-            ${sidebarOpen ? 'w-64' : 'w-0'}
-            transition-all duration-300 overflow-hidden
+            ${sidebarCollapsed ? 'w-16' : 'w-64'}
+            ${sidebarOpen ? '' : 'lg:w-0 w-0'}
+            transition-all duration-300
             bg-white border-r border-gray-200
             lg:relative absolute lg:translate-x-0
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            h-full z-10
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            h-full z-10 flex flex-col
           `}
         >
-          <nav className="p-4 space-y-2">
+          {/* Toggle Button */}
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            {!sidebarCollapsed && <span className="text-sm font-semibold text-gray-700">Navigation</span>}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 rounded-lg hover:bg-purple-50 text-gray-600 hover:text-purple-700 transition-colors"
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? <PanelLeft className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
+          </div>
+
+          <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
             {/* Back to Home */}
             <Link href="/">
               <Button 
                 variant="ghost" 
-                className="w-full justify-start mb-4 text-gray-600 hover:text-purple-700 hover:bg-purple-50"
+                className={`w-full ${sidebarCollapsed ? 'justify-center px-0' : 'justify-start'} mb-4 text-gray-600 hover:text-purple-700 hover:bg-purple-50`}
+                title="Back to Home"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
+                <ArrowLeft className="w-4 h-4" />
+                {!sidebarCollapsed && <span className="ml-2">Back to Home</span>}
               </Button>
             </Link>
 
@@ -161,19 +179,20 @@ export default function BranchPortfolioDashboard() {
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
                   className={`
-                    w-full flex items-center justify-between px-4 py-3 rounded-lg
+                    w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg
                     transition-all duration-200
                     ${isActive 
                       ? 'bg-gradient-to-r from-pink-600 to-purple-700 text-white shadow-md' 
                       : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
                     }
                   `}
+                  title={item.label}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className={`flex items-center ${sidebarCollapsed ? '' : 'gap-3'}`}>
                     <Icon className="w-5 h-5" />
-                    <span className="font-medium text-sm">{item.label}</span>
+                    {!sidebarCollapsed && <span className="font-medium text-sm ml-3">{item.label}</span>}
                   </div>
-                  {isActive && <ChevronRight className="w-4 h-4" />}
+                  {isActive && !sidebarCollapsed && <ChevronRight className="w-4 h-4" />}
                 </button>
               );
             })}
@@ -182,15 +201,17 @@ export default function BranchPortfolioDashboard() {
           {/* Data Status Indicator */}
           <div className="p-4 border-t border-gray-200">
             <div className={`
-              px-3 py-2 rounded-lg text-xs font-medium
+              ${sidebarCollapsed ? 'px-0 py-2 flex justify-center' : 'px-3 py-2'} rounded-lg text-xs font-medium
               ${dataLoaded 
                 ? 'bg-green-50 text-green-700 border border-green-200' 
                 : 'bg-orange-50 text-orange-700 border border-orange-200'
               }
-            `}>
-              <div className="flex items-center gap-2">
+            `}
+            title={dataLoaded ? 'Data Loaded' : 'No Data - Upload Required'}
+            >
+              <div className={`flex items-center ${sidebarCollapsed ? '' : 'gap-2'}`}>
                 <div className={`w-2 h-2 rounded-full ${dataLoaded ? 'bg-green-500' : 'bg-orange-500'}`} />
-                {dataLoaded ? 'Data Loaded' : 'No Data - Upload Required'}
+                {!sidebarCollapsed && <span className="ml-2">{dataLoaded ? 'Data Loaded' : 'No Data - Upload Required'}</span>}
               </div>
             </div>
           </div>
