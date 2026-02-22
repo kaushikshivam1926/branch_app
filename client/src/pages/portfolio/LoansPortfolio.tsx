@@ -16,6 +16,8 @@ export default function LoansPortfolio() {
   const [hasData, setHasData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [subCategoryFilter, setSubCategoryFilter] = useState("All");
+  const [segmentFilter, setSegmentFilter] = useState("All");
   const [smaFilter, setSmaFilter] = useState("All");
   const [exposureFilter, setExposureFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"summary" | "table">("summary");
@@ -79,14 +81,16 @@ export default function LoansPortfolio() {
     }
     const loanCategories = Object.entries(catMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.balance - a.balance);
 
-    // Gold Loans maturing in next 15 days
+    // Gold Loans matured or maturing in next 15 days
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day for accurate comparison
     const next15Days = new Date(today.getTime() + 15 * 24 * 60 * 60 * 1000);
     const goldLoansMaturing = loans.filter(l => {
       const isGold = (l.Loan_Category || "").toLowerCase().includes("gold") || (l.ACCTDESC || "").toLowerCase().includes("gold");
       if (!isGold || !l.Shadow_Maturity_Dt) return false;
       const maturityDate = new Date(l.Shadow_Maturity_Dt);
-      return maturityDate >= today && maturityDate <= next15Days;
+      maturityDate.setHours(0, 0, 0, 0); // Reset to start of day
+      return maturityDate <= next15Days; // Include already matured (≤ today) and maturing within 15 days
     });
     const goldMaturityCount = goldLoansMaturing.length;
     const goldMaturityAmount = goldLoansMaturing.reduce((s, l) => s + Math.abs(l.OUTSTAND || 0), 0);
@@ -172,10 +176,12 @@ export default function LoansPortfolio() {
       filtered = filtered.filter(a => (a._name || "").toLowerCase().includes(term) || (a._acNo || "").includes(term) || (a._cif || "").includes(term));
     }
     if (categoryFilter !== "All") filtered = filtered.filter(a => a._category === categoryFilter);
+    if (subCategoryFilter !== "All") filtered = filtered.filter(a => a._subCategory === subCategoryFilter);
+    if (segmentFilter !== "All") filtered = filtered.filter(a => (a._segment || "General") === segmentFilter);
     if (smaFilter !== "All") filtered = filtered.filter(a => (a._sma || "Unclassified") === smaFilter);
     if (exposureFilter !== "All") filtered = filtered.filter(a => a._type === exposureFilter);
     return filtered.sort((a, b) => b._outstanding - a._outstanding);
-  }, [loans, ccod, searchTerm, categoryFilter, smaFilter, exposureFilter]);
+  }, [loans, ccod, searchTerm, categoryFilter, subCategoryFilter, segmentFilter, smaFilter, exposureFilter]);
 
   const uniqueCategories = useMemo(() => {
     const cats = new Set<string>();
@@ -183,6 +189,13 @@ export default function LoansPortfolio() {
     if (ccod.length > 0) cats.add("CC/OD");
     return ["All", ...Array.from(cats)];
   }, [loans, ccod]);
+
+  const uniqueSubCategories = useMemo(() => {
+    const subCats = new Set<string>();
+    loans.forEach(l => { if (l.Loan_SubCategory) subCats.add(l.Loan_SubCategory); });
+    const sorted = Array.from(subCats).sort();
+    return ["All", ...sorted];
+  }, [loans]);
 
   function exportCSV() {
     const headers = ["Account No", "CIF", "Customer Name", "Type", "Category", "Sub-Category", "Segment", "Outstanding", "Int Rate", "SMA Class", "IRAC", "EMI", "EMIs Overdue"];
@@ -261,7 +274,7 @@ export default function LoansPortfolio() {
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-amber-600 font-medium">Gold Loans Maturing (15 Days)</span>
+                    <span className="text-sm text-amber-600 font-medium">Gold Loans Matured/Maturing (15 Days)</span>
                     <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">{analytics.goldMaturityCount} a/c</span>
                   </div>
                   <p className="text-lg font-bold text-amber-700">{formatINR(analytics.goldMaturityAmount)}</p>
@@ -369,10 +382,20 @@ export default function LoansPortfolio() {
               <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
                 {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              <select value={subCategoryFilter} onChange={e => setSubCategoryFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                {uniqueSubCategories.map(sc => <option key={sc} value={sc}>{sc === "All" ? "All Sub-Categories" : sc}</option>)}
+              </select>
               <select value={smaFilter} onChange={e => setSmaFilter(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
                 <option value="All">All SMA</option><option value="STD">STD</option><option value="SMA0">SMA0</option><option value="SMA1">SMA1</option><option value="SMA2">SMA2</option><option value="NPA">NPA</option>
               </select>
               <Button variant="outline" size="sm" onClick={exportCSV}><Download className="w-4 h-4 mr-1" /> Export</Button>
+            </div>
+            {/* Segment Filter Buttons */}
+            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+              <span className="text-xs text-gray-500 font-medium self-center mr-2">Segment:</span>
+              <button onClick={() => setSegmentFilter("All")} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${segmentFilter === "All" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>All</button>
+              <button onClick={() => setSegmentFilter("Staff")} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${segmentFilter === "Staff" ? "bg-purple-600 text-white" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}>Staff</button>
+              <button onClick={() => setSegmentFilter("General")} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${segmentFilter === "General" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>General</button>
             </div>
             <p className="text-xs text-gray-400 mt-2">{allAccounts.length.toLocaleString("en-IN")} accounts shown</p>
           </div>
