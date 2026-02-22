@@ -128,6 +128,7 @@ export async function processProductMapping(csvText: string): Promise<number> {
 
   await clearStore(STORES.PRODUCT_MAPPING);
   await putRecords(STORES.PRODUCT_MAPPING, records);
+  
   await addUploadLog({
     fileType: "product-mapping",
     fileName: "Deposit_Product_Category_Mapping.csv",

@@ -163,8 +163,8 @@ export default function LoansPortfolio() {
   // Combined data for table
   const allAccounts = useMemo(() => {
     const combined = [
-      ...loans.map(l => ({ ...l, _type: "Term Loan", _outstanding: Math.abs(l.OUTSTAND || 0), _name: l.CUSTNAME, _acNo: l.LoanKey, _cif: l.CIF, _sma: l.SMA_CLASS, _category: l.Loan_Category })),
-      ...ccod.map(c => ({ ...c, _type: "CC/OD", _outstanding: Math.abs(c.CurrentBalance || 0), _name: c.CUSTNAME, _acNo: c.LoanKey, _cif: c.CIF, _sma: c.SMA_CLASS, _category: "CC/OD" })),
+      ...loans.map(l => ({ ...l, _type: "Term Loan", _outstanding: Math.abs(l.OUTSTAND || 0), _name: l.CUSTNAME, _acNo: l.LoanKey, _cif: l.CIF, _sma: l.SMA_CLASS, _category: l.Loan_Category, _subCategory: l.Loan_SubCategory, _segment: l.Loan_Segment })),
+      ...ccod.map(c => ({ ...c, _type: "CC/OD", _outstanding: Math.abs(c.CurrentBalance || 0), _name: c.CUSTNAME, _acNo: c.LoanKey, _cif: c.CIF, _sma: c.SMA_CLASS, _category: "CC/OD", _subCategory: "-", _segment: c.Segment || "General" })),
     ];
     let filtered = combined;
     if (searchTerm) {
@@ -185,10 +185,10 @@ export default function LoansPortfolio() {
   }, [loans, ccod]);
 
   function exportCSV() {
-    const headers = ["Account No", "CIF", "Customer Name", "Type", "Category", "Outstanding", "Int Rate", "SMA Class", "IRAC", "EMI", "EMIs Overdue"];
+    const headers = ["Account No", "CIF", "Customer Name", "Type", "Category", "Sub-Category", "Segment", "Outstanding", "Int Rate", "SMA Class", "IRAC", "EMI", "EMIs Overdue"];
     const csvContent = [
       headers.join(","),
-      ...allAccounts.map(a => [a._acNo, a._cif, `"${a._name}"`, a._type, a._category, a._outstanding, a.INTRATE || 0, a._sma || "", a.NEWIRAC || "", a.INSTALAMT || "", a.EMISOvrdue || ""].join(","))
+      ...allAccounts.map(a => [a._acNo, a._cif, `"${a._name}"`, a._type, a._category || "-", a._subCategory || "-", a._segment || "General", a._outstanding, a.INTRATE || 0, a._sma || "", a.NEWIRAC || "", a.INSTALAMT || "", a.EMISOvrdue || ""].join(","))
     ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -389,6 +389,8 @@ export default function LoansPortfolio() {
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Type</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Product</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Category</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Sub-Category</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Segment</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Outstanding</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Maturity Date</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Rate</th>
@@ -405,7 +407,9 @@ export default function LoansPortfolio() {
                       <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[180px]">{a._name}</td>
                       <td className="py-2 px-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a._type === "CC/OD" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>{a._type}</span></td>
                       <td className="py-2 px-3 text-gray-600 text-xs truncate max-w-[150px]" title={a.ProductName || a.ACCTDESC || "-"}>{a.ProductName || a.ACCTDESC || "-"}</td>
-                      <td className="py-2 px-3 text-gray-600 text-xs">{a._category}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs">{a._category || "-"}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs">{a._subCategory || "-"}</td>
+                      <td className="py-2 px-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a._segment === "Staff" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}`}>{a._segment || "General"}</span></td>
                       <td className="py-2 px-3 text-right font-medium text-gray-800">{formatINRFull(a._outstanding)}</td>
                       <td className="py-2 px-3 text-gray-600 text-xs">{a.Maturity_Dt ? new Date(a.Maturity_Dt).toLocaleDateString("en-IN") : "-"}</td>
                       <td className="py-2 px-3 text-right text-gray-600">{(a.INTRATE || 0) > 0 ? `${a.INTRATE.toFixed(2)}%` : "-"}</td>
