@@ -12,6 +12,7 @@ import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { PDFDocument, rgb } from "pdf-lib";
 
 interface CSVData {
   headers: string[];
@@ -119,6 +120,18 @@ export default function LetterGenerator() {
   // Generated letters
   const [generatedLetters, setGeneratedLetters] = useState<GeneratedLetter[]>([]);
   
+  // Letterhead
+  const [letterheadPDF, setLetterheadPDF] = useState<string | null>(null);
+  
+  // Load letterhead from IndexedDB on mount
+  useEffect(() => {
+    loadData("letterhead").then((data: any) => {
+      if (data && data.pdfBase64) {
+        setLetterheadPDF(data.pdfBase64);
+      }
+    });
+  }, []);
+  
   // Handle CSV upload
   const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,6 +163,37 @@ export default function LetterGenerator() {
     } catch (error) {
       toast.error("Failed to load template");
     }
+  };
+  
+  // Handle Letterhead PDF upload
+  const handleLetterheadUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+    
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        setLetterheadPDF(base64);
+        await saveData("letterhead", { pdfBase64: base64 });
+        toast.success("Letterhead uploaded successfully");
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error("Failed to upload letterhead");
+    }
+  };
+  
+  // Remove letterhead
+  const handleRemoveLetterhead = async () => {
+    setLetterheadPDF(null);
+    await saveData("letterhead", null);
+    toast.success("Letterhead removed");
   };
   
   // Editor ref for cursor position
@@ -346,6 +390,84 @@ export default function LetterGenerator() {
     }
   };
   
+  // Generate PDF with embedded letterhead
+  const generatePDFWithLetterhead = async () => {
+    try {
+      // Load the letterhead PDF
+      const letterheadBytes = await fetch(letterheadPDF!).then(res => res.arrayBuffer());
+      
+      // Create a new PDF document
+      const finalPDF = await PDFDocument.create();
+      
+      // Load letterhead PDF
+      const letterheadDoc = await PDFDocument.load(letterheadBytes);
+      
+      // Generate PDF for each letter
+      for (const letter of generatedLetters) {
+        // Copy letterhead page
+        const [letterheadPage] = await finalPDF.copyPages(letterheadDoc, [0]);
+        const page = finalPDF.addPage(letterheadPage);
+        
+        // Create a temporary div to render the letter
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.width = '210mm';
+        tempDiv.style.padding = '25.4mm 20mm 20mm 20mm';
+        tempDiv.style.fontFamily = 'Arial, sans-serif';
+        tempDiv.style.fontSize = '12pt';
+        tempDiv.style.lineHeight = '1.6';
+        tempDiv.style.background = 'transparent';
+        
+        tempDiv.innerHTML = `
+          <div style="text-align: right; margin-bottom: 20px;">
+            <strong>Ref No:</strong> ${letter.refNo}<br>
+            <strong>Date:</strong> ${letter.date}
+          </div>
+          <div>${letter.content}</div>
+        `;
+        
+        document.body.appendChild(tempDiv);
+        
+        // Convert to canvas
+        const canvas = await html2canvas(tempDiv, {
+          scale: 2,
+          backgroundColor: null
+        });
+        
+        document.body.removeChild(tempDiv);
+        
+        // Convert canvas to image data
+        const imgData = canvas.toDataURL('image/png');
+        const imgBytes = await fetch(imgData).then(res => res.arrayBuffer());
+        
+        // Embed and draw the letter content on top of letterhead
+        const pngImage = await finalPDF.embedPng(imgBytes);
+        const pngDims = pngImage.scale(0.75); // Adjust scale as needed
+        
+        page.drawImage(pngImage, {
+          x: 0,
+          y: page.getHeight() - pngDims.height,
+          width: pngDims.width,
+          height: pngDims.height,
+        });
+      }
+      
+      // Save and download the PDF
+      const pdfBytes = await finalPDF.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Letters_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error("Failed to generate PDF with letterhead");
+    }
+  };
+  
   // Finalize and print/download letters with Dak integration
   const handleFinalizeAndDownload = async () => {
     if (generatedLetters.length === 0) {
@@ -372,7 +494,14 @@ export default function LetterGenerator() {
       
       await saveData("dak-records", [...existingRecords, ...newRecords]);
       
-      // Open print window with formatted letters
+      // If letterhead is available, generate PDF with embedded letterhead
+      if (letterheadPDF) {
+        await generatePDFWithLetterhead();
+        toast.success(`Updated ${generatedLetters.length} Dak records. PDF downloaded.`);
+        return;
+      }
+      
+      // Otherwise, open print window with formatted letters
       const printWindow = window.open("", "_blank");
       if (!printWindow) {
         toast.error("Please allow popups to print letters");
@@ -385,7 +514,7 @@ export default function LetterGenerator() {
           width: 210mm;
           min-height: 297mm;
           margin: 0 auto;
-          padding: 20mm;
+          padding: 25.4mm 20mm 20mm 20mm;
           background: white;
           font-family: Arial, sans-serif;
           font-size: 12pt;
@@ -556,6 +685,42 @@ export default function LetterGenerator() {
                     Upload a Word document (.docx) template
                   </p>
                 </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Step 3: Upload Branch Letterhead (Optional)</h2>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="letterhead-upload">Upload Letterhead PDF</Label>
+                  <Input
+                    id="letterhead-upload"
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleLetterheadUpload}
+                    className="mt-2"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Upload your branch letterhead as a PDF file. This will be embedded in all generated letters.
+                  </p>
+                </div>
+                {letterheadPDF && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <p className="text-green-700 font-medium">Letterhead uploaded</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveLetterhead}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                )}
               </div>
             </Card>
           </div>
