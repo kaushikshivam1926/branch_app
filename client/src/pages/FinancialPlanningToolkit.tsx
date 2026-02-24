@@ -52,9 +52,11 @@ export default function FinancialPlanningToolkit() {
   const [lumInflation, setLumInflation] = useState<string>("6");
 
   // EMI Calculator State
+  const [emiSolveFor, setEmiSolveFor] = useState<'loan' | 'rate' | 'tenure' | 'emi'>('emi');
   const [emiLoan, setEmiLoan] = useState<string>("2500000");
   const [emiRate, setEmiRate] = useState<string>("8.5");
   const [emiYears, setEmiYears] = useState<string>("20");
+  const [emiAmount, setEmiAmount] = useState<string>("21500");
   const [emiPrepayment, setEmiPrepayment] = useState<string>("0");
 
   // Insurance Calculator State
@@ -196,30 +198,69 @@ export default function FinancialPlanningToolkit() {
   };
 
   const calculateEMI = () => {
-    const loan = parseFloat(emiLoan);
-    const rate = parseFloat(emiRate) / 100 / 12;
-    const months = parseFloat(emiYears) * 12;
+    let loan = parseFloat(emiLoan);
+    let rate = parseFloat(emiRate) / 100 / 12;
+    let months = parseFloat(emiYears) * 12;
+    let emi = parseFloat(emiAmount);
     const prepayment = parseFloat(emiPrepayment);
 
-    const emi = (loan * rate * Math.pow(1 + rate, months)) / (Math.pow(1 + rate, months) - 1);
+    // 4-way solver logic
+    if (emiSolveFor === 'emi') {
+      // Solve for EMI
+      emi = (loan * rate * Math.pow(1 + rate, months)) / (Math.pow(1 + rate, months) - 1);
+    } else if (emiSolveFor === 'loan') {
+      // Solve for Loan Amount
+      loan = (emi * (Math.pow(1 + rate, months) - 1)) / (rate * Math.pow(1 + rate, months));
+    } else if (emiSolveFor === 'rate') {
+      // Solve for Interest Rate (using Newton-Raphson method)
+      let guess = 0.01 / 12; // Initial guess
+      for (let i = 0; i < 100; i++) {
+        const f = loan * guess * Math.pow(1 + guess, months) / (Math.pow(1 + guess, months) - 1) - emi;
+        const fPrime = (loan * Math.pow(1 + guess, months) * (guess * months + 1) - loan * guess * months * Math.pow(1 + guess, months - 1)) / Math.pow(Math.pow(1 + guess, months) - 1, 2);
+        const newGuess = guess - f / fPrime;
+        if (Math.abs(newGuess - guess) < 0.000001) break;
+        guess = newGuess;
+      }
+      rate = guess;
+    } else if (emiSolveFor === 'tenure') {
+      // Solve for Tenure
+      months = Math.log(emi / (emi - loan * rate)) / Math.log(1 + rate);
+    }
+
     const totalPayment = emi * months;
     const totalInterest = totalPayment - loan;
 
-    // With prepayment
+    // Generate amortization schedule
+    const schedule: Array<{month: number, emi: number, principal: number, interest: number, balance: number}> = [];
     let balance = loan;
+    for (let m = 1; m <= months && balance > 0; m++) {
+      const interest = balance * rate;
+      const principal = Math.min(emi - interest, balance);
+      balance -= principal;
+      schedule.push({
+        month: m,
+        emi: principal + interest,
+        principal,
+        interest,
+        balance: Math.max(0, balance)
+      });
+    }
+
+    // With prepayment
+    let balanceWithPrepay = loan;
     let totalPaid = 0;
     let monthsPaid = 0;
     const emiWithPrepay = emi + prepayment;
 
-    while (balance > 0 && monthsPaid < months) {
-      const interest = balance * rate;
+    while (balanceWithPrepay > 0 && monthsPaid < months) {
+      const interest = balanceWithPrepay * rate;
       const principal = emiWithPrepay - interest;
-      balance -= principal;
+      balanceWithPrepay -= principal;
       totalPaid += emiWithPrepay;
       monthsPaid++;
-      if (balance < 0) {
-        totalPaid += balance;
-        balance = 0;
+      if (balanceWithPrepay < 0) {
+        totalPaid += balanceWithPrepay;
+        balanceWithPrepay = 0;
       }
     }
 
@@ -227,12 +268,16 @@ export default function FinancialPlanningToolkit() {
     const savedMonths = months - monthsPaid;
 
     return {
+      loan,
+      rate: rate * 12 * 100, // Convert back to annual percentage
+      years: months / 12,
       emi,
       totalPayment,
       totalInterest,
       savedInterest,
       savedMonths,
-      monthsPaid
+      monthsPaid,
+      schedule
     };
   };
 
@@ -658,61 +703,171 @@ export default function FinancialPlanningToolkit() {
   const renderEMI = () => {
     const result = calculateEMI();
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => setCurrentView('dashboard')} className="mb-4">
             ← Back to Dashboard
           </Button>
-          <h2 className="text-2xl font-bold text-slate-900">EMI & Prepayment Calculator</h2>
-          <p className="text-slate-600 mt-1">Calculate EMI and prepayment impact</p>
+          <h2 className="text-2xl font-bold text-slate-900">EMI & Prepayment Calculator (4-Way Solver)</h2>
+          <p className="text-slate-600 mt-1">Select which variable to solve for, then enter the other three values</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <h3 className="font-semibold text-lg mb-4">Input Parameters</h3>
-            <div className="space-y-4">
-              <div>
-                <Label>Loan Amount (₹)</Label>
-                <Input type="number" value={emiLoan} onChange={(e) => setEmiLoan(e.target.value)} />
-              </div>
-              <div>
-                <Label>Interest Rate (% p.a.)</Label>
-                <Input type="number" value={emiRate} onChange={(e) => setEmiRate(e.target.value)} step="0.1" />
-              </div>
-              <div>
-                <Label>Loan Tenure (Years)</Label>
-                <Input type="number" value={emiYears} onChange={(e) => setEmiYears(e.target.value)} />
-              </div>
-              <div>
-                <Label>Monthly Prepayment (₹)</Label>
-                <Input type="number" value={emiPrepayment} onChange={(e) => setEmiPrepayment(e.target.value)} />
-              </div>
-            </div>
-          </Card>
+          {/* Left Panel - Inputs */}
+          <div className="space-y-6">
+            <Card className="p-6">
+              <h3 className="font-semibold text-lg mb-4">Input Parameters</h3>
+              <div className="space-y-4">
+                {/* Loan Amount */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    id="solve-loan"
+                    name="solve-for"
+                    checked={emiSolveFor === 'loan'}
+                    onChange={() => setEmiSolveFor('loan')}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="solve-loan">Loan Amount (₹)</Label>
+                    <Input
+                      type="number"
+                      value={emiSolveFor === 'loan' ? formatINR(result.loan) : emiLoan}
+                      onChange={(e) => setEmiLoan(e.target.value)}
+                      disabled={emiSolveFor === 'loan'}
+                      className={emiSolveFor === 'loan' ? 'bg-purple-50 text-purple-700 font-semibold' : ''}
+                    />
+                  </div>
+                </div>
 
-          <Card className="p-6 bg-gradient-to-br from-rose-50 to-pink-50">
-            <h3 className="font-semibold text-lg mb-4">Results</h3>
-            <div className="space-y-4">
-              <div className="bg-white p-4 rounded-lg">
-                <p className="text-sm text-slate-600">Monthly EMI</p>
-                <p className="text-2xl font-bold text-rose-600">{formatINR(result.emi)}</p>
-              </div>
-              <div className="bg-white p-4 rounded-lg">
-                <p className="text-sm text-slate-600">Total Interest (Without Prepayment)</p>
-                <p className="text-xl font-bold text-slate-800">{formatShort(result.totalInterest)}</p>
-              </div>
-              {parseFloat(emiPrepayment) > 0 && (
-                <>
-                  <div className="bg-white p-4 rounded-lg">
-                    <p className="text-sm text-slate-600">Interest Saved</p>
-                    <p className="text-xl font-bold text-green-600">{formatShort(result.savedInterest)}</p>
+                {/* Interest Rate */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    id="solve-rate"
+                    name="solve-for"
+                    checked={emiSolveFor === 'rate'}
+                    onChange={() => setEmiSolveFor('rate')}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="solve-rate">Interest Rate (% p.a.)</Label>
+                    <Input
+                      type="number"
+                      value={emiSolveFor === 'rate' ? result.rate.toFixed(2) : emiRate}
+                      onChange={(e) => setEmiRate(e.target.value)}
+                      disabled={emiSolveFor === 'rate'}
+                      step="0.1"
+                      className={emiSolveFor === 'rate' ? 'bg-purple-50 text-purple-700 font-semibold' : ''}
+                    />
                   </div>
-                  <div className="bg-white p-4 rounded-lg">
-                    <p className="text-sm text-slate-600">Time Saved</p>
-                    <p className="text-xl font-bold text-green-600">{Math.floor(result.savedMonths / 12)} years {Math.floor(result.savedMonths % 12)} months</p>
+                </div>
+
+                {/* Tenure */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    id="solve-tenure"
+                    name="solve-for"
+                    checked={emiSolveFor === 'tenure'}
+                    onChange={() => setEmiSolveFor('tenure')}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="solve-tenure">Loan Tenure (Years)</Label>
+                    <Input
+                      type="number"
+                      value={emiSolveFor === 'tenure' ? result.years.toFixed(1) : emiYears}
+                      onChange={(e) => setEmiYears(e.target.value)}
+                      disabled={emiSolveFor === 'tenure'}
+                      className={emiSolveFor === 'tenure' ? 'bg-purple-50 text-purple-700 font-semibold' : ''}
+                    />
                   </div>
-                </>
-              )}
+                </div>
+
+                {/* EMI Amount */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    id="solve-emi"
+                    name="solve-for"
+                    checked={emiSolveFor === 'emi'}
+                    onChange={() => setEmiSolveFor('emi')}
+                    className="w-4 h-4 text-purple-600"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="solve-emi">Monthly EMI (₹)</Label>
+                    <Input
+                      type="number"
+                      value={emiSolveFor === 'emi' ? formatINR(result.emi) : emiAmount}
+                      onChange={(e) => setEmiAmount(e.target.value)}
+                      disabled={emiSolveFor === 'emi'}
+                      className={emiSolveFor === 'emi' ? 'bg-purple-50 text-purple-700 font-semibold' : ''}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <Label>Monthly Prepayment (₹)</Label>
+                  <Input type="number" value={emiPrepayment} onChange={(e) => setEmiPrepayment(e.target.value)} />
+                </div>
+              </div>
+            </Card>
+
+            {/* Summary Card */}
+            <Card className="p-6 bg-gradient-to-br from-rose-50 to-pink-50">
+              <h3 className="font-semibold text-lg mb-4">Loan Summary</h3>
+              <div className="space-y-3">
+                <div className="bg-white p-3 rounded-lg flex justify-between">
+                  <span className="text-sm text-slate-600">Total Payment</span>
+                  <span className="font-bold text-slate-900">{formatShort(result.totalPayment)}</span>
+                </div>
+                <div className="bg-white p-3 rounded-lg flex justify-between">
+                  <span className="text-sm text-slate-600">Total Interest</span>
+                  <span className="font-bold text-rose-600">{formatShort(result.totalInterest)}</span>
+                </div>
+                {parseFloat(emiPrepayment) > 0 && (
+                  <>
+                    <div className="bg-white p-3 rounded-lg flex justify-between">
+                      <span className="text-sm text-slate-600">Interest Saved</span>
+                      <span className="font-bold text-green-600">{formatShort(result.savedInterest)}</span>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg flex justify-between">
+                      <span className="text-sm text-slate-600">Time Saved</span>
+                      <span className="font-bold text-green-600">{Math.floor(result.savedMonths / 12)}y {Math.floor(result.savedMonths % 12)}m</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Card>
+          </div>
+
+          {/* Right Panel - Repayment Schedule */}
+          <Card className="p-6">
+            <h3 className="font-semibold text-lg mb-4">Repayment Schedule</h3>
+            <div className="overflow-auto" style={{ maxHeight: '600px' }}>
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-100 border-b-2 border-slate-300">
+                  <tr>
+                    <th className="text-left p-2">Month</th>
+                    <th className="text-right p-2">EMI</th>
+                    <th className="text-right p-2">Principal</th>
+                    <th className="text-right p-2">Interest</th>
+                    <th className="text-right p-2">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.schedule.map((row) => (
+                    <tr key={row.month} className="border-b border-slate-200 hover:bg-slate-50">
+                      <td className="p-2">{row.month}</td>
+                      <td className="text-right p-2">{formatINR(row.emi)}</td>
+                      <td className="text-right p-2 text-green-600">{formatINR(row.principal)}</td>
+                      <td className="text-right p-2 text-rose-600">{formatINR(row.interest)}</td>
+                      <td className="text-right p-2 font-semibold">{formatINR(row.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </Card>
         </div>
