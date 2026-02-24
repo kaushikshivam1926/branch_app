@@ -84,11 +84,11 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
     color: "#7c3aed"
   },
   {
-    id: "emi-calculator",
-    title: "EMI Calculator",
-    description: "Calculate EMI for various loan products",
+    id: "financial-toolkit",
+    title: "Financial Planning Toolkit",
+    description: "Comprehensive suite of 9 financial calculators for retirement, SIP, EMI, insurance and more",
     iconName: "Calculator",
-    path: "/emi-calculator",
+    path: "/financial-toolkit",
     color: "#0066b3"
   },
   {

@@ -10,7 +10,7 @@ import Home from "./pages/Home";
 import PlaceholderApp from "./pages/PlaceholderApp";
 import ChargesReturnApp from "./pages/ChargesReturnApp";
 import DakNumberGenerator from "./pages/DakNumberGenerator";
-import EMICalculator from "./pages/EMICalculator";
+import FinancialPlanningToolkit from "./pages/FinancialPlanningToolkit";
 import RemindersApp from "./pages/RemindersApp";
 import LeadManagementApp from "./pages/LeadManagementApp";
 import WebResourceHub from "./pages/WebResourceHub";
@@ -24,7 +24,7 @@ function AppRouter() {
       <Route path={"/"} component={Landing} />
       <Route path={"/notice-generator"} component={Home} />
       <Route path={"/dak-number"} component={DakNumberGenerator} />
-      <Route path={"/emi-calculator"} component={EMICalculator} />
+      <Route path={"/financial-toolkit"} component={FinancialPlanningToolkit} />
       <Route path={"/reminders"} component={RemindersApp} />
       <Route path={"/lead-management"} component={LeadManagementApp} />
       <Route path={"/web-resource-hub"} component={WebResourceHub} />
