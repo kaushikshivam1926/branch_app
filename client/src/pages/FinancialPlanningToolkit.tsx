@@ -732,7 +732,7 @@ export default function FinancialPlanningToolkit() {
                     <Label htmlFor="solve-loan">Loan Amount (₹)</Label>
                     <Input
                       type="number"
-                      value={emiSolveFor === 'loan' ? formatINR(result.loan) : emiLoan}
+                      value={emiSolveFor === 'loan' ? Math.round(result.loan).toString() : emiLoan}
                       onChange={(e) => setEmiLoan(e.target.value)}
                       disabled={emiSolveFor === 'loan'}
                       className={emiSolveFor === 'loan' ? 'bg-purple-50 text-purple-700 font-semibold' : ''}
@@ -799,7 +799,7 @@ export default function FinancialPlanningToolkit() {
                     <Label htmlFor="solve-emi">Monthly EMI (₹)</Label>
                     <Input
                       type="number"
-                      value={emiSolveFor === 'emi' ? formatINR(result.emi) : emiAmount}
+                      value={emiSolveFor === 'emi' ? Math.round(result.emi).toString() : emiAmount}
                       onChange={(e) => setEmiAmount(e.target.value)}
                       disabled={emiSolveFor === 'emi'}
                       className={emiSolveFor === 'emi' ? 'bg-purple-50 text-purple-700 font-semibold' : ''}
