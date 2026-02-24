@@ -16,6 +16,7 @@ import LeadManagementApp from "./pages/LeadManagementApp";
 import WebResourceHub from "./pages/WebResourceHub";
 import LetterGenerator from "./pages/LetterGenerator";
 import BranchPortfolioDashboard from "./pages/BranchPortfolioDashboard";
+import FloatingCalculator from "./components/FloatingCalculator";
 
 
 function AppRouter() {
@@ -57,6 +58,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <AppRouter />
+            <FloatingCalculator />
           </TooltipProvider>
         </BranchProvider>
       </ThemeProvider>
