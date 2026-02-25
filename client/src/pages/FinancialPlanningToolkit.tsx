@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Home, Calculator, TrendingUp, PiggyBank, Shield, GraduationCap, Building, LayoutDashboard, MapPin } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
+import { calculateInsurancePremium } from "@/data/mortalityData";
+import MasterPlanView from "@/components/MasterPlanView";
 
 type ViewType = 'dashboard' | 'retirement' | 'sip' | 'lumpsum' | 'emi' | 'insurance' | 'emergency' | 'home' | 'education' | 'masterplan';
 
@@ -65,6 +67,7 @@ export default function FinancialPlanningToolkit() {
   const [insExistingLoans, setInsExistingLoans] = useState<string>("2000000");
   const [insDependents, setInsDependents] = useState<string>("2");
   const [insYearsToSupport, setInsYearsToSupport] = useState<string>("25");
+  const [insSmoker, setInsSmoker] = useState<boolean>(false);
 
   // Emergency Fund Calculator State
   const [emMonthlyExpense, setEmMonthlyExpense] = useState<string>("50000");
@@ -84,6 +87,20 @@ export default function FinancialPlanningToolkit() {
   const [eduInflation, setEduInflation] = useState<string>("8");
   const [eduReturnRate, setEduReturnRate] = useState<string>("12");
   const [eduExistingSavings, setEduExistingSavings] = useState<string>("200000");
+
+  // Master Plan State
+  const [mpAge, setMpAge] = useState<string>("30");
+  const [mpRetAge, setMpRetAge] = useState<string>("60");
+  const [mpDependents, setMpDependents] = useState<string>("2");
+  const [mpRisk, setMpRisk] = useState<string>("med");
+  const [mpSmoker, setMpSmoker] = useState<boolean>(false);
+  const [mpIncome, setMpIncome] = useState<string>("150000");
+  const [mpExpenses, setMpExpenses] = useState<string>("50000");
+  const [mpEmi, setMpEmi] = useState<string>("15000");
+  const [mpStepUp, setMpStepUp] = useState<string>("5");
+  const [mpSavings, setMpSavings] = useState<string>("300000");
+  const [mpInvestments, setMpInvestments] = useState<string>("1000000");
+  const [mpLoans, setMpLoans] = useState<string>("2500000");
 
   // Utility Functions
   const formatINR = (num: number): string => {
@@ -282,6 +299,7 @@ export default function FinancialPlanningToolkit() {
   };
 
   const calculateInsurance = () => {
+    const age = parseFloat(insAge);
     const annualIncome = parseFloat(insAnnualIncome);
     const existingLoans = parseFloat(insExistingLoans);
     const dependents = parseFloat(insDependents);
@@ -296,11 +314,16 @@ export default function FinancialPlanningToolkit() {
     // Total coverage needed
     const totalCoverage = incomeReplacement + existingLoans + futureExpenses;
 
+    // Calculate annual premium using IALM mortality tables
+    const annualPremium = calculateInsurancePremium(totalCoverage, age, insSmoker);
+
     return {
       totalCoverage,
       incomeReplacement,
       existingLoans,
-      futureExpenses
+      futureExpenses,
+      annualPremium,
+      monthlyPremium: annualPremium / 12
     };
   };
 
@@ -365,6 +388,106 @@ export default function FinancialPlanningToolkit() {
     };
   };
 
+  const calculateMasterPlan = () => {
+    const age = parseFloat(mpAge);
+    const retAge = parseFloat(mpRetAge);
+    const dependents = parseFloat(mpDependents);
+    const risk = mpRisk;
+    const income = parseFloat(mpIncome);
+    const expenses = parseFloat(mpExpenses);
+    const emi = parseFloat(mpEmi);
+    const stepUp = parseFloat(mpStepUp) / 100;
+    const savings = parseFloat(mpSavings);
+    const investments = parseFloat(mpInvestments);
+    const loans = parseFloat(mpLoans);
+
+    // Constants
+    const inflation = 0.06;
+    const preRetRate = 0.12;
+    const postRetRate = 0.08;
+    const lifeExpectancy = 85;
+
+    // 1. Calculate Surplus
+    const surplus = income - (expenses + emi);
+
+    // 2. Emergency Fund
+    const baseMonths = risk === 'high' ? 6 : risk === 'med' ? 4 : 3;
+    const totalEmgMonths = Math.min(12, baseMonths + dependents);
+    const targetEmgCorpus = totalEmgMonths * (expenses + emi);
+    const emgShortfall = Math.max(0, targetEmgCorpus - savings);
+    const emgStatus = savings >= targetEmgCorpus ? 'funded' : 'needed';
+
+    // 3. Term Insurance
+    const yearsToRetire = Math.max(0, retAge - age);
+    const incomeReplacement = (income * 12) * yearsToRetire * 0.5;
+    const requiredCover = Math.max(0, incomeReplacement + loans - (savings + investments));
+    const annualPremium = calculateInsurancePremium(requiredCover, age, mpSmoker);
+    const monthlyPremium = annualPremium / 12;
+
+    // 4. Retirement Corpus
+    const futureExpMonth = expenses * Math.pow(1 + inflation, yearsToRetire);
+    const annualFutureExp = futureExpMonth * 12;
+    const yearsInRet = Math.max(0, lifeExpectancy - retAge);
+    
+    let retCorpus = 0;
+    if (yearsInRet > 0) {
+      const realRate = (postRetRate - inflation) / (1 + inflation);
+      retCorpus = annualFutureExp * (1 - Math.pow(1 + realRate, -yearsInRet)) / realRate;
+    }
+
+    const fvInv = investments * Math.pow(1 + preRetRate, yearsToRetire);
+    const retShortfall = Math.max(0, retCorpus - fvInv);
+
+    // Calculate SIP with step-up
+    let retSip = 0;
+    if (yearsToRetire > 0 && retShortfall > 0) {
+      const monthlyRate = preRetRate / 12;
+      const totalMonths = yearsToRetire * 12;
+      
+      let multiplier = 0;
+      let currentSipUnit = 1;
+      for (let m = 1; m <= totalMonths; m++) {
+        multiplier += currentSipUnit;
+        multiplier *= (1 + monthlyRate);
+        if (m % 12 === 0) {
+          currentSipUnit *= (1 + stepUp);
+        }
+      }
+      retSip = retShortfall / (multiplier || 1);
+    }
+
+    // 5. Waterfall Analysis
+    let unallocated = surplus - monthlyPremium - retSip;
+    let status: 'critical' | 'warning' | 'excellent';
+    let statusMessage: string;
+
+    if (surplus <= 0) {
+      status = 'critical';
+      statusMessage = 'You have no investable surplus. Focus on increasing income or reducing expenses/EMIs.';
+    } else if (unallocated < 0) {
+      status = 'warning';
+      statusMessage = `Your surplus (${formatINR(surplus)}) is not enough to cover insurance and retirement needs. Consider adjusting your retirement age or increasing surplus.`;
+    } else {
+      status = 'excellent';
+      statusMessage = `You are on track! Unallocated surplus of ${formatINR(unallocated)} can be directed towards education, home loan prepayment, or early retirement.`;
+    }
+
+    return {
+      surplus,
+      emgMonths: totalEmgMonths,
+      targetEmgCorpus,
+      emgShortfall,
+      emgStatus,
+      requiredCover,
+      monthlyPremium,
+      retCorpus,
+      retSip,
+      unallocated,
+      status,
+      statusMessage
+    };
+  };
+
   // Render functions for each calculator view
   const renderDashboard = () => (
     <div className="max-w-6xl mx-auto">
@@ -374,6 +497,26 @@ export default function FinancialPlanningToolkit() {
       </div>
 
       <div className="space-y-8">
+        {/* Master Plan */}
+        <div className="mb-6">
+          <Card className="p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg transition cursor-pointer" onClick={() => setCurrentView('masterplan')}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
+                  <LayoutDashboard className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">Integrated Master Plan</h3>
+                  <p className="text-purple-100 mt-1">Comprehensive financial roadmap with cashflow-based sequencing</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-purple-100">Start Here →</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         {/* Foundational Core */}
         <div>
           <h3 className="text-lg font-semibold text-slate-700 mb-4 border-b pb-2">Foundational Core</h3>
@@ -911,6 +1054,16 @@ export default function FinancialPlanningToolkit() {
                 <Label>Years to Support Dependents</Label>
                 <Input type="number" value={insYearsToSupport} onChange={(e) => setInsYearsToSupport(e.target.value)} />
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="smoker"
+                  checked={insSmoker}
+                  onChange={(e) => setInsSmoker(e.target.checked)}
+                  className="w-4 h-4 text-cyan-600 rounded"
+                />
+                <Label htmlFor="smoker" className="cursor-pointer">Smoker (affects premium calculation)</Label>
+              </div>
             </div>
           </Card>
 
@@ -932,6 +1085,12 @@ export default function FinancialPlanningToolkit() {
               <div className="bg-white p-4 rounded-lg">
                 <p className="text-sm text-slate-600">Future Expenses</p>
                 <p className="text-lg font-bold text-slate-800">{formatShort(result.futureExpenses)}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border-2 border-cyan-200">
+                <p className="text-sm text-slate-600">Estimated Annual Premium</p>
+                <p className="text-xl font-bold text-cyan-700">{formatINR(result.annualPremium)}</p>
+                <p className="text-xs text-slate-500 mt-1">Monthly: {formatINR(result.monthlyPremium)}</p>
+                <p className="text-xs text-slate-500 mt-1">Based on IALM (2006-08) mortality tables</p>
               </div>
             </div>
           </Card>
@@ -1127,6 +1286,66 @@ export default function FinancialPlanningToolkit() {
     );
   };
 
+  const renderMasterPlan = () => {
+    const result = calculateMasterPlan();
+    
+    const handleExportPDF = async () => {
+      const { generateMasterPlanPDF } = await import('@/lib/masterPlanPDF');
+      
+      const data = {
+        age: parseFloat(mpAge),
+        retAge: parseFloat(mpRetAge),
+        dependents: parseFloat(mpDependents),
+        risk: mpRisk,
+        smoker: mpSmoker,
+        income: parseFloat(mpIncome),
+        expenses: parseFloat(mpExpenses),
+        emi: parseFloat(mpEmi),
+        stepUp: parseFloat(mpStepUp),
+        savings: parseFloat(mpSavings),
+        investments: parseFloat(mpInvestments),
+        loans: parseFloat(mpLoans),
+        ...result
+      };
+      
+      generateMasterPlanPDF(data, branchName || 'State Bank of India');
+    };
+    
+    return (
+      <MasterPlanView
+        mpAge={mpAge}
+        mpRetAge={mpRetAge}
+        mpDependents={mpDependents}
+        mpRisk={mpRisk}
+        mpSmoker={mpSmoker}
+        mpIncome={mpIncome}
+        mpExpenses={mpExpenses}
+        mpEmi={mpEmi}
+        mpStepUp={mpStepUp}
+        mpSavings={mpSavings}
+        mpInvestments={mpInvestments}
+        mpLoans={mpLoans}
+        setMpAge={setMpAge}
+        setMpRetAge={setMpRetAge}
+        setMpDependents={setMpDependents}
+        setMpRisk={setMpRisk}
+        setMpSmoker={setMpSmoker}
+        setMpIncome={setMpIncome}
+        setMpExpenses={setMpExpenses}
+        setMpEmi={setMpEmi}
+        setMpStepUp={setMpStepUp}
+        setMpSavings={setMpSavings}
+        setMpInvestments={setMpInvestments}
+        setMpLoans={setMpLoans}
+        result={result}
+        formatINR={formatINR}
+        formatShort={formatShort}
+        onBack={() => setCurrentView('dashboard')}
+        onExportPDF={handleExportPDF}
+      />
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
@@ -1170,6 +1389,7 @@ export default function FinancialPlanningToolkit() {
         {currentView === 'emergency' && renderEmergencyFund()}
         {currentView === 'home' && renderHomeAffordability()}
         {currentView === 'education' && renderEducation()}
+        {currentView === 'masterplan' && renderMasterPlan()}
       </div>
     </div>
   );
