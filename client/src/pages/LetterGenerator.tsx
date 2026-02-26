@@ -159,7 +159,6 @@ export default function LetterGenerator() {
       const result = await mammoth.convertToHtml({ arrayBuffer });
       setTemplateHTML(result.value);
       toast.success("Template loaded successfully");
-      setCurrentStep("editor");
     } catch (error) {
       toast.error("Failed to load template");
     }
@@ -736,6 +735,26 @@ export default function LetterGenerator() {
                 )}
               </div>
             </Card>
+
+            {/* Next Button */}
+            <div className="flex justify-end mt-6">
+              <Button
+                onClick={() => {
+                  if (!letterheadPDF) {
+                    if (window.confirm("You haven't uploaded a letterhead. Do you want to proceed without it? You can always add it later.")) {
+                      setCurrentStep("editor");
+                    }
+                  } else {
+                    setCurrentStep("editor");
+                  }
+                }}
+                disabled={!csvData || !templateHTML}
+                size="lg"
+                className="bg-gradient-to-r from-pink-600 to-purple-700 hover:opacity-90"
+              >
+                Next: Edit Template
+              </Button>
+            </div>
           </div>
         )}
 
