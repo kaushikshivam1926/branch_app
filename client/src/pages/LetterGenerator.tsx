@@ -416,7 +416,7 @@ export default function LetterGenerator() {
         tempDiv.style.padding = '25.4mm 20mm 20mm 20mm';
         tempDiv.style.fontFamily = 'Arial, sans-serif';
         tempDiv.style.fontSize = '12pt';
-        tempDiv.style.lineHeight = '1.6';
+        tempDiv.style.lineHeight = '1.2';
         tempDiv.style.background = 'transparent';
         
         tempDiv.innerHTML = `
@@ -518,10 +518,10 @@ export default function LetterGenerator() {
           background: white;
           font-family: Arial, sans-serif;
           font-size: 12pt;
-          line-height: 1.6;
+          line-height: 1.2;
           page-break-after: always;
         ">
-          <div style="text-align: right; margin-bottom: 20px;">
+          <div style="text-align: right; margin-bottom: 15px;">
             <strong>Ref No:</strong> ${letter.refNo}<br>
             <strong>Date:</strong> ${letter.date}
           </div>
@@ -542,6 +542,19 @@ export default function LetterGenerator() {
               body { margin: 0; }
             }
             body {
+              margin: 0;
+              padding: 0;
+            }
+            p {
+              margin: 0 0 8px 0;
+              line-height: 1.2;
+            }
+            div {
+              margin: 0;
+              padding: 0;
+            }
+            /* Remove spacing around input field placeholders */
+            strong, b {
               margin: 0;
               padding: 0;
             }
