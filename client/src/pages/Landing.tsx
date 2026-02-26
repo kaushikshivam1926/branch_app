@@ -34,7 +34,8 @@ import {
   IndianRupee,
   FileEdit
 } from "lucide-react";
-import { db, exportAllData, importAllData, loadData, saveData } from "@/lib/db";
+import { db, loadData, saveData } from "@/lib/db";
+import { exportAllData as exportAllIndexedDB, importAllData as importAllIndexedDB, downloadBackup } from "@/lib/dataBackup";
 
 type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee" | "FileEdit" | "BarChart3";
 
@@ -469,17 +470,9 @@ export default function Landing() {
 
   const handleExportAll = async () => {
     try {
-      const data = await exportAllData();
-      const blob = new Blob([data], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `SBI_Branch_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      alert("All data exported successfully!");
+      const jsonData = await exportAllIndexedDB();
+      downloadBackup(jsonData, `SBI_Branch_Backup_${new Date().toISOString().split('T')[0]}.json`);
+      alert("All IndexedDB data exported successfully!");
     } catch (error) {
       console.error("Export failed:", error);
       alert("Failed to export data. Please try again.");
@@ -496,9 +489,14 @@ export default function Landing() {
 
       try {
         const text = await file.text();
-        await importAllData(text);
-        alert("All data imported successfully! Please refresh the page.");
-        window.location.reload();
+        const result = await importAllIndexedDB(text);
+        
+        if (result.success) {
+          alert(result.message + " Please refresh the page.");
+          window.location.reload();
+        } else {
+          alert("Import failed: " + result.message);
+        }
       } catch (error) {
         console.error("Import failed:", error);
         alert("Failed to import data. Please check the file format.");
