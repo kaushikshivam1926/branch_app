@@ -603,32 +603,50 @@ export default function LetterGenerator() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
       <header 
-        className="w-full px-6 flex items-center justify-between"
+        className="w-full py-2 px-6"
         style={{ 
           background: "linear-gradient(to right, #d4007f, #4e1a74)",
           height: '101px',
           paddingTop: '0px'
         }}
       >
-        <div className="flex items-center gap-4">
-          <img 
-            src="/images/sbi-logo.png" 
-            alt="SBI Logo" 
-            className="h-28 invert"
-          />
-          <div className="text-white">
-            <h1 className="font-bold" style={{ fontSize: '1.3rem' }}>Letter & Notice Generator</h1>
-            <p className="text-sm opacity-90" style={{ fontSize: '0.85rem' }}>{branchName}</p>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0">
+              <img 
+                src="/images/sbi-logo.png" 
+                alt="State Bank of India" 
+                className="h-28 w-auto"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
+            </div>
+            <div className="flex flex-col justify-center">
+              <h1 
+                className="text-white font-semibold leading-tight"
+                style={{ fontSize: "1.3rem" }}
+              >
+                Letter & Notice Generator
+              </h1>
+              <p 
+                className="text-white/90"
+                style={{ fontSize: "0.85rem" }}
+              >
+                {branchName}
+              </p>
+            </div>
+          </div>
+          
+          <div>
+            <Button
+              variant="outline"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/40"
+              onClick={() => navigate("/")}
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => navigate("/")}
-          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-        >
-          <Home className="mr-2 h-4 w-4" />
-          Back to Home
-        </Button>
       </header>
 
       {/* Main Content */}
