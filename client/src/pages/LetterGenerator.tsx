@@ -216,17 +216,20 @@ export default function LetterGenerator() {
     }
   };
   
-  // Initialize history when template loads and set editor content
+  // Initialize history when template is loaded
   useEffect(() => {
     if (templateHTML && history.length === 0) {
       setHistory([templateHTML]);
       setHistoryIndex(0);
-      // Set initial content in editor
-      if (editorRef.current) {
-        editorRef.current.innerHTML = templateHTML;
-      }
     }
   }, [templateHTML]);
+  
+  // Sync editor content when switching to editor step
+  useEffect(() => {
+    if (currentStep === "editor" && editorRef.current && templateHTML) {
+      editorRef.current.innerHTML = templateHTML;
+    }
+  }, [currentStep, templateHTML]);
   
   // Undo
   const handleUndo = () => {
