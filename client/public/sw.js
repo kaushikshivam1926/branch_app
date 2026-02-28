@@ -1,74 +1,89 @@
-// Service Worker for Branch Application Catalogue
-// Provides offline functionality and PWA capabilities
+// SBI Branch Application Catalogue — Service Worker
+// Cache-first strategy for complete offline functionality
+// Version: 2.0
 
-const CACHE_NAME = 'sbi-branch-app-v1';
-const urlsToCache = [
+const CACHE_NAME = 'sbi-branch-app-v2';
+const OFFLINE_FALLBACK = '/index.html';
+
+// Core assets to pre-cache on install
+const PRECACHE_ASSETS = [
   '/',
   '/index.html',
-  '/images/sbi-logo.png'
+  '/manifest.json',
+  '/images/sbi-logo.png',
+  '/sample-accounts.csv'
 ];
 
-// Install event - cache essential resources
+// ── Install: pre-cache critical assets ──────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-  );
-  self.skipWaiting();
-});
-
-// Fetch event - serve from cache when offline
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-
-        // Clone the request
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then((response) => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
-          return response;
-        }).catch(() => {
-          // Return offline page if available
-          return caches.match('/index.html');
-        });
-      })
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(PRECACHE_ASSETS);
+    }).then(() => {
+      // Activate immediately without waiting for old SW to die
+      return self.skipWaiting();
+    })
   );
 });
 
-// Activate event - clean up old caches
+// ── Activate: purge stale caches ─────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
       );
+    }).then(() => self.clients.claim())
+  );
+});
+
+// ── Fetch: cache-first with network fallback ─────────────────────────────────
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Skip non-GET requests and cross-origin analytics/tracking
+  if (request.method !== 'GET') return;
+  if (url.hostname !== self.location.hostname && url.pathname.includes('umami')) return;
+
+  // For navigation requests (HTML pages) — serve from cache or fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      caches.match(OFFLINE_FALLBACK).then((cached) => cached || fetch(request))
+    );
+    return;
+  }
+
+  // For all other requests — cache-first strategy
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+
+      // Not in cache — fetch from network and cache the response
+      return fetch(request.clone()).then((response) => {
+        // Only cache valid same-origin responses
+        if (
+          !response ||
+          response.status !== 200 ||
+          (response.type !== 'basic' && response.type !== 'cors')
+        ) {
+          return response;
+        }
+
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(request, responseToCache);
+        });
+
+        return response;
+      }).catch(() => {
+        // Network failed — return offline fallback for HTML
+        if (request.headers.get('accept')?.includes('text/html')) {
+          return caches.match(OFFLINE_FALLBACK);
+        }
+      });
     })
   );
-  self.clients.claim();
 });

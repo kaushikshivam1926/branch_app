@@ -1,26 +1,58 @@
 {
   "name": "SBI Branch Application Catalogue",
   "short_name": "SBI Branch Apps",
-  "description": "Comprehensive suite of branch management applications for State Bank of India",
+  "description": "Comprehensive suite of branch management applications for State Bank of India — works completely offline",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#f8f5ff",
   "theme_color": "#d4007f",
   "orientation": "any",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "finance", "productivity"],
   "icons": [
     {
       "src": "/images/sbi-logo.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/images/sbi-logo.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/images/sbi-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["business", "finance", "productivity"],
-  "screenshots": []
+  "shortcuts": [
+    {
+      "name": "Portfolio Dashboard",
+      "short_name": "Portfolio",
+      "description": "Branch Portfolio Analytics",
+      "url": "/#/portfolio",
+      "icons": [{ "src": "/images/sbi-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Letter Generator",
+      "short_name": "Letters",
+      "description": "Generate personalized letters from CSV",
+      "url": "/#/letter-generator",
+      "icons": [{ "src": "/images/sbi-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Financial Planner",
+      "short_name": "Planner",
+      "description": "Comprehensive financial planning toolkit",
+      "url": "/#/financial-planning",
+      "icons": [{ "src": "/images/sbi-logo.png", "sizes": "192x192" }]
+    }
+  ]
 }

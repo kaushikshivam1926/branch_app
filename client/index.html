@@ -3,28 +3,59 @@
 
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+
+    <!-- PWA & Standalone Meta Tags -->
     <meta name="description" content="Comprehensive suite of branch management applications for State Bank of India" />
     <meta name="theme-color" content="#d4007f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SBI Branch Apps" />
+    <meta name="application-name" content="SBI Branch Application Catalogue" />
+    <meta name="msapplication-TileColor" content="#d4007f" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
+
+    <!-- App Icons -->
+    <link rel="icon" type="image/png" href="/images/sbi-logo.png" />
+    <link rel="apple-touch-icon" href="/images/sbi-logo.png" />
+
     <title>Branch Application Catalogue - SBI</title>
+
     <style>
-      /* Use system fonts for offline functionality */
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      /* Critical inline styles for immediate render — no external font dependencies */
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                     "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+                     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      #root {
+        height: 100%;
+      }
+      /* Prevent flash of unstyled content */
+      #root:empty::before {
+        content: "";
+        display: block;
+        width: 100%;
+        height: 100vh;
+        background: #f8f5ff;
       }
     </style>
   </head>
 
   <body>
     <div id="root"></div>
+    <!-- All JS/CSS is inlined by vite-plugin-singlefile at build time for true standalone use -->
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
   </body>
 
 </html>
