@@ -10,6 +10,7 @@
  * - Edit and Delete actions
  */
 
+import { sbiLogoUrl } from '@/lib/assets';
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useBranch } from "@/contexts/BranchContext";
@@ -293,7 +294,7 @@ export default function LeadManagementApp() {
           <div className="flex items-center gap-4">
             <div className="flex-shrink-0">
               <img 
-                src="/images/sbi-logo.png" 
+                src={sbiLogoUrl} 
                 alt="State Bank of India" 
                 className="h-28 w-auto"
                 style={{ filter: "brightness(0) invert(1)" }}

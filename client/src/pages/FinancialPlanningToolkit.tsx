@@ -13,6 +13,7 @@
  * 9. Integrated Master Plan
  */
 
+import { sbiLogoUrl } from '@/lib/assets';
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -1361,7 +1362,7 @@ export default function FinancialPlanningToolkit() {
           <div className="flex items-center gap-4">
             <div className="flex-shrink-0">
               <img 
-                src="/images/sbi-logo.png" 
+                src={sbiLogoUrl} 
                 alt="State Bank of India" 
                 className="h-28 w-auto"
                 style={{ filter: "brightness(0) invert(1)" }}

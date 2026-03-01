@@ -1,3 +1,4 @@
+import { sbiLogoUrl } from '@/lib/assets';
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, Upload, FileText, FileSpreadsheet, Download, Trash2, Edit2, Plus, Save, X } from "lucide-react";
@@ -371,7 +372,7 @@ export default function ChargesReturnApp() {
           {/* SBI Logo */}
           <div className="flex-shrink-0">
             <img 
-              src="/images/sbi-logo.png" 
+              src={sbiLogoUrl} 
               alt="State Bank of India" 
               className="h-28 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}

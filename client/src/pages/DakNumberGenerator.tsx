@@ -5,6 +5,7 @@
  * Maintains SBI branding and offline localStorage functionality
  */
 
+import { sbiLogoUrl } from '@/lib/assets';
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -345,7 +346,7 @@ export default function DakNumberGenerator() {
           {/* SBI Logo */}
           <div className="flex-shrink-0">
             <img 
-              src="/images/sbi-logo.png" 
+              src={sbiLogoUrl} 
               alt="State Bank of India" 
               className="h-28 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}

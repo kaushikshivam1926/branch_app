@@ -7,6 +7,7 @@
  * - Amortization schedule with loan summary
  */
 
+import { sbiLogoUrl } from '@/lib/assets';
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -300,7 +301,7 @@ export default function EMICalculator() {
         <div className="max-w-7xl mx-auto flex items-center gap-4">
           <div className="flex-shrink-0">
             <img 
-              src="/images/sbi-logo.png" 
+              src={sbiLogoUrl} 
               alt="State Bank of India" 
               className="h-28 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}

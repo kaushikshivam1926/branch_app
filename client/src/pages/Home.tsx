@@ -5,6 +5,7 @@
  * Allows CSV upload, displays accounts, and generates print notices
  */
 
+import { sbiLogoUrl } from '@/lib/assets';
 import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { useBranch } from "@/contexts/BranchContext";
@@ -173,7 +174,7 @@ export default function Home() {
           {/* SBI Logo */}
           <div className="flex-shrink-0">
             <img 
-              src="/images/sbi-logo.png" 
+              src={sbiLogoUrl} 
               alt="State Bank of India" 
               className="h-28 w-auto"
               style={{ filter: "brightness(0) invert(1)" }}

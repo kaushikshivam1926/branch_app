@@ -12,6 +12,7 @@
  * - Settings stored in localStorage
  */
 
+import { sbiLogoUrl } from '@/lib/assets';
 import { Link } from "wouter";
 import { useState, useEffect } from "react";
 import { 
@@ -529,7 +530,7 @@ export default function Landing() {
             {/* SBI Logo */}
             <div className="flex-shrink-0">
               <img 
-                src="/images/sbi-logo.png" 
+                src={sbiLogoUrl} 
                 alt="State Bank of India" 
                 className="h-28 w-auto"
                 style={{ filter: "brightness(0) invert(1)" }}

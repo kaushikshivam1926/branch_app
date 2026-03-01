@@ -24,6 +24,7 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     cssCodeSplit: false,
+    assetsInlineLimit: 1048576, // Inline all assets ≤1MB as Base64 for standalone offline mode
     rollupOptions: {
       output: {
         inlineDynamicImports: true,
