@@ -1,7 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { BranchProvider } from "./contexts/BranchContext";
@@ -57,7 +58,12 @@ function App() {
         <BranchProvider>
           <TooltipProvider>
             <Toaster />
-            <AppRouter />
+            {/* Hash-based routing ensures the app works when opened as a standalone
+                file:// URL without any web server (e.g., index.html on desktop).
+                Routes become /#/path instead of /path. */}
+            <Router hook={useHashLocation}>
+              <AppRouter />
+            </Router>
             <FloatingCalculator />
           </TooltipProvider>
         </BranchProvider>
