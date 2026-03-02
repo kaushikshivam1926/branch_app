@@ -635,36 +635,51 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Favourites Bar */}
-      {favouriteResources.length > 0 && (
-        <div
-          className="w-full border-b"
-          style={{ backgroundColor: "#f0eaf8", borderColor: "#d8c8f0" }}
-        >
-          <div className="max-w-7xl mx-auto px-6">
-            {/* Favourites Header Row */}
-            <button
-              onClick={() => setFavouritesExpanded(prev => !prev)}
-              className="w-full flex items-center gap-2 py-2 text-left group"
-            >
-              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
-              <span className="text-xs font-semibold tracking-wide" style={{ color: "#4e1a74" }}>
-                FAVOURITES
-              </span>
+      {/* Favourites Bar - always visible */}
+      <div
+        className="w-full border-b"
+        style={{ backgroundColor: "#f0eaf8", borderColor: "#d8c8f0" }}
+      >
+        <div className="max-w-7xl mx-auto px-6">
+          {/* Favourites Header Row */}
+          <button
+            onClick={() => setFavouritesExpanded(prev => !prev)}
+            className="w-full flex items-center gap-2 py-2 text-left group"
+          >
+            <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+            <span className="text-xs font-semibold tracking-wide" style={{ color: "#4e1a74" }}>
+              FAVOURITES
+            </span>
+            {favouriteResources.length > 0 && (
               <span className="text-xs text-gray-400 ml-1">({favouriteResources.length})</span>
-              <div className="ml-auto text-gray-400 group-hover:text-purple-600 transition-colors">
-                {favouritesExpanded
-                  ? <ChevronUp className="w-4 h-4" />
-                  : <ChevronDown className="w-4 h-4" />}
-              </div>
-            </button>
+            )}
+            <div className="ml-auto text-gray-400 group-hover:text-purple-600 transition-colors">
+              {favouritesExpanded
+                ? <ChevronUp className="w-4 h-4" />
+                : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </button>
 
-            {/* Favourites Icons Row */}
-            {favouritesExpanded && (
-              <div className="flex flex-wrap gap-3 pb-3">
-                {favouriteResources.map((resource) => {
+          {/* Favourites Icons Row */}
+          {favouritesExpanded && (
+            <div className="flex flex-wrap items-center gap-3 pb-3">
+              {favouriteResources.length === 0 ? (
+                <div className="flex items-center gap-2 py-1">
+                  <span className="text-xs text-gray-400 italic">
+                    No favourites yet. Open
+                  </span>
+                  <Link href="/web-resource-hub">
+                    <span className="text-xs font-medium underline cursor-pointer" style={{ color: "#4e1a74" }}>
+                      Web Resource Hub
+                    </span>
+                  </Link>
+                  <span className="text-xs text-gray-400 italic">
+                    and click the ★ on any website to add it here.
+                  </span>
+                </div>
+              ) : (
+                favouriteResources.map((resource) => {
                   const firstLetter = resource.name.trim().charAt(0).toUpperCase();
-                  // Generate a consistent pastel color from the name
                   const hue = resource.name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
                   const bgColor = `hsl(${hue}, 55%, 88%)`;
                   const textColor = `hsl(${hue}, 55%, 30%)`;
@@ -716,12 +731,12 @@ export default function Landing() {
                       </span>
                     </a>
                   );
-                })}
-              </div>
-            )}
-          </div>
+                })
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 py-10 px-6">

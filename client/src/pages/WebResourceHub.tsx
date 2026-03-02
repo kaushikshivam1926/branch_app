@@ -550,7 +550,7 @@ export default function WebResourceHub() {
                               </p>
                             </a>
 
-                            {/* Favourite Button - always visible on hover */}
+                            {/* Favourite Button - always visible */}
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
@@ -560,7 +560,7 @@ export default function WebResourceHub() {
                               className={`absolute top-1 left-1 p-1 rounded-full transition-all duration-200 ${
                                 favourites.has(resource.id)
                                   ? 'opacity-100 bg-yellow-400/20'
-                                  : 'opacity-0 group-hover:opacity-100 bg-white/80'
+                                  : 'opacity-100 bg-white/70 hover:bg-yellow-50'
                               }`}
                               title={favourites.has(resource.id) ? 'Remove from favourites' : 'Add to favourites'}
                             >
@@ -568,7 +568,7 @@ export default function WebResourceHub() {
                                 className={`w-3 h-3 transition-colors ${
                                   favourites.has(resource.id)
                                     ? 'fill-yellow-400 text-yellow-400'
-                                    : 'text-gray-400'
+                                    : 'text-gray-300 hover:text-yellow-400'
                                 }`}
                               />
                             </button>
