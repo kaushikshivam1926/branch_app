@@ -28,7 +28,8 @@ import {
   ArrowLeft,
   Download,
   Upload,
-  GripVertical
+  GripVertical,
+  Star
 } from "lucide-react";
 import { saveData, loadData } from "@/lib/db";
 
@@ -48,6 +49,7 @@ export default function WebResourceHub() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [password, setPassword] = useState("");
   const [resources, setResources] = useState<WebResource[]>([]);
+  const [favourites, setFavourites] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   
@@ -56,6 +58,15 @@ export default function WebResourceHub() {
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Load favourites from IndexedDB
+  useEffect(() => {
+    loadData("sbi-web-favourites").then(data => {
+      if (data && Array.isArray(data)) {
+        setFavourites(new Set(data));
+      }
+    });
+  }, []);
 
   // Load resources from IndexedDB
   useEffect(() => {
@@ -159,6 +170,20 @@ export default function WebResourceHub() {
     setFormUrl(resource.url);
     setFormName(resource.name);
     setFormCategory(resource.category);
+  };
+
+  const toggleFavourite = (id: string) => {
+    setFavourites(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      // Persist to IndexedDB
+      saveData("sbi-web-favourites", Array.from(newSet));
+      return newSet;
+    });
   };
 
   const clearForm = () => {
@@ -524,6 +549,29 @@ export default function WebResourceHub() {
                                 {resource.name}
                               </p>
                             </a>
+
+                            {/* Favourite Button - always visible on hover */}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleFavourite(resource.id);
+                              }}
+                              className={`absolute top-1 left-1 p-1 rounded-full transition-all duration-200 ${
+                                favourites.has(resource.id)
+                                  ? 'opacity-100 bg-yellow-400/20'
+                                  : 'opacity-0 group-hover:opacity-100 bg-white/80'
+                              }`}
+                              title={favourites.has(resource.id) ? 'Remove from favourites' : 'Add to favourites'}
+                            >
+                              <Star
+                                className={`w-3 h-3 transition-colors ${
+                                  favourites.has(resource.id)
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-400'
+                                }`}
+                              />
+                            </button>
 
                             {/* Admin Actions */}
                             {isAdmin && (
