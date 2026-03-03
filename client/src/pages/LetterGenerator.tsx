@@ -12,8 +12,8 @@ import mammoth from "mammoth";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
-import { PDFDocument, rgb } from "pdf-lib";
+// html2canvas and pdf-lib removed: letterhead now uses print window with CSS background-image
+// to avoid OKLCH color parsing error from Tailwind CSS 4
 
 interface CSVData {
   headers: string[];
@@ -393,81 +393,97 @@ export default function LetterGenerator() {
     }
   };
   
-  // Generate PDF with embedded letterhead
+  // Generate PDF with embedded letterhead using print window approach
+  // (avoids html2canvas OKLCH color parsing error from Tailwind CSS 4)
   const generatePDFWithLetterhead = async () => {
     try {
-      // Load the letterhead PDF
+      // Convert letterhead PDF to a data URL for use as background image
       const letterheadBytes = await fetch(letterheadPDF!).then(res => res.arrayBuffer());
-      
-      // Create a new PDF document
-      const finalPDF = await PDFDocument.create();
-      
-      // Load letterhead PDF
-      const letterheadDoc = await PDFDocument.load(letterheadBytes);
-      
-      // Generate PDF for each letter
-      for (const letter of generatedLetters) {
-        // Copy letterhead page
-        const [letterheadPage] = await finalPDF.copyPages(letterheadDoc, [0]);
-        const page = finalPDF.addPage(letterheadPage);
-        
-        // Create a temporary div to render the letter
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.width = '210mm';
-        tempDiv.style.padding = '25.4mm 20mm 20mm 20mm';
-        tempDiv.style.fontFamily = 'Arial, sans-serif';
-        tempDiv.style.fontSize = '12pt';
-        tempDiv.style.lineHeight = '1.2';
-        tempDiv.style.background = 'transparent';
-        
-        tempDiv.innerHTML = `
-          <div style="text-align: right; margin-bottom: 20px;">
+      const letterheadBlob = new Blob([letterheadBytes], { type: 'application/pdf' });
+      const letterheadUrl = URL.createObjectURL(letterheadBlob);
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error("Popup blocked. Please allow popups and try again.");
+        return;
+      }
+
+      const lettersHTML = generatedLetters.map(letter => `
+        <div class="letter-page">
+          <div style="text-align: right; margin-bottom: 15px;">
             <strong>Ref No:</strong> ${letter.refNo}<br>
             <strong>Date:</strong> ${letter.date}
           </div>
           <div>${letter.content}</div>
-        `;
-        
-        document.body.appendChild(tempDiv);
-        
-        // Convert to canvas
-        const canvas = await html2canvas(tempDiv, {
-          scale: 2,
-          backgroundColor: null
-        });
-        
-        document.body.removeChild(tempDiv);
-        
-        // Convert canvas to image data
-        const imgData = canvas.toDataURL('image/png');
-        const imgBytes = await fetch(imgData).then(res => res.arrayBuffer());
-        
-        // Embed and draw the letter content on top of letterhead
-        const pngImage = await finalPDF.embedPng(imgBytes);
-        const pngDims = pngImage.scale(0.75); // Adjust scale as needed
-        
-        page.drawImage(pngImage, {
-          x: 0,
-          y: page.getHeight() - pngDims.height,
-          width: pngDims.width,
-          height: pngDims.height,
-        });
-      }
-      
-      // Save and download the PDF
-      const pdfBytes = await finalPDF.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Letters_${new Date().toISOString().split('T')[0]}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
+        </div>
+      `).join("");
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Letters with Letterhead - ${new Date().toLocaleDateString()}</title>
+          <style>
+            * { box-sizing: border-box; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: white;
+            }
+            .letter-page {
+              width: 210mm;
+              min-height: 297mm;
+              margin: 0 auto;
+              padding: 25.4mm 20mm 20mm 20mm;
+              background-image: url('${letterheadUrl}');
+              background-size: 210mm 297mm;
+              background-repeat: no-repeat;
+              background-position: top left;
+              font-family: Arial, 'Segoe UI', sans-serif;
+              font-size: 12pt;
+              line-height: 1.2;
+              color: #000;
+              page-break-after: always;
+              position: relative;
+            }
+            p { margin: 0 0 8px 0; line-height: 1.2; }
+            div { margin: 0; padding: 0; }
+            strong, b { margin: 0; padding: 0; }
+            @media print {
+              @page {
+                size: A4;
+                margin: 0;
+              }
+              body { margin: 0; }
+              .letter-page {
+                page-break-after: always;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${lettersHTML}
+          <script>
+            // Wait for background image to load then print
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 800);
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+
+      // Clean up object URL after a delay
+      setTimeout(() => URL.revokeObjectURL(letterheadUrl), 10000);
+
     } catch (error) {
       console.error('PDF generation error:', error);
-      toast.error("Failed to generate PDF with letterhead");
+      toast.error(`PDF generation error: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
   
