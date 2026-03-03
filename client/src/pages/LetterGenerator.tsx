@@ -12,8 +12,13 @@ import mammoth from "mammoth";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 import jsPDF from "jspdf";
-// html2canvas and pdf-lib removed: letterhead now uses print window with CSS background-image
-// to avoid OKLCH color parsing error from Tailwind CSS 4
+import * as pdfjsLib from "pdfjs-dist";
+
+// Configure PDF.js worker - use bundled worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).toString();
 
 interface CSVData {
   headers: string[];
@@ -393,14 +398,28 @@ export default function LetterGenerator() {
     }
   };
   
-  // Generate PDF with embedded letterhead using print window approach
-  // (avoids html2canvas OKLCH color parsing error from Tailwind CSS 4)
+  // Convert letterhead PDF page to a PNG data URL using PDF.js
+  const letterheadPDFToImage = async (pdfDataUrl: string): Promise<string> => {
+    const loadingTask = pdfjsLib.getDocument({ url: pdfDataUrl });
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(1);
+    // Render at 2x scale for high resolution (A4 at 150dpi)
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d')!;
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    return canvas.toDataURL('image/png');
+  };
+
+  // Generate PDF with letterhead: render letterhead as PNG canvas, overlay letter text on top
   const generatePDFWithLetterhead = async () => {
     try {
-      // Convert letterhead PDF to a data URL for use as background image
-      const letterheadBytes = await fetch(letterheadPDF!).then(res => res.arrayBuffer());
-      const letterheadBlob = new Blob([letterheadBytes], { type: 'application/pdf' });
-      const letterheadUrl = URL.createObjectURL(letterheadBlob);
+      toast.info("Preparing letterhead...");
+
+      // Convert letterhead PDF to PNG image via PDF.js
+      const letterheadImgDataUrl = await letterheadPDFToImage(letterheadPDF!);
 
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
@@ -410,11 +429,14 @@ export default function LetterGenerator() {
 
       const lettersHTML = generatedLetters.map(letter => `
         <div class="letter-page">
-          <div style="text-align: right; margin-bottom: 15px;">
-            <strong>Ref No:</strong> ${letter.refNo}<br>
-            <strong>Date:</strong> ${letter.date}
+          <img class="letterhead-bg" src="${letterheadImgDataUrl}" alt="letterhead" />
+          <div class="letter-content">
+            <div style="text-align: right; margin-bottom: 15px;">
+              <strong>Ref No:</strong> ${letter.refNo}<br>
+              <strong>Date:</strong> ${letter.date}
+            </div>
+            <div>${letter.content}</div>
           </div>
-          <div>${letter.content}</div>
         </div>
       `).join("");
 
@@ -424,38 +446,51 @@ export default function LetterGenerator() {
         <head>
           <title>Letters with Letterhead - ${new Date().toLocaleDateString()}</title>
           <style>
-            * { box-sizing: border-box; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
             html, body {
-              margin: 0;
-              padding: 0;
-              background: white;
+              background: #ccc;
             }
             .letter-page {
+              position: relative;
               width: 210mm;
-              min-height: 297mm;
-              margin: 0 auto;
-              padding: 25.4mm 20mm 20mm 20mm;
-              background-image: url('${letterheadUrl}');
-              background-size: 210mm 297mm;
-              background-repeat: no-repeat;
-              background-position: top left;
+              height: 297mm;
+              margin: 0 auto 20px auto;
+              overflow: hidden;
+              background: white;
+              page-break-after: always;
+            }
+            .letterhead-bg {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 210mm;
+              height: 297mm;
+              display: block;
+              z-index: 0;
+            }
+            .letter-content {
+              position: absolute;
+              top: 25.4mm;
+              left: 20mm;
+              right: 20mm;
+              bottom: 20mm;
+              z-index: 1;
               font-family: Arial, 'Segoe UI', sans-serif;
               font-size: 12pt;
               line-height: 1.2;
               color: #000;
-              page-break-after: always;
-              position: relative;
+              overflow: hidden;
             }
             p { margin: 0 0 8px 0; line-height: 1.2; }
-            div { margin: 0; padding: 0; }
             strong, b { margin: 0; padding: 0; }
             @media print {
+              html, body { background: white; }
               @page {
                 size: A4;
                 margin: 0;
               }
-              body { margin: 0; }
               .letter-page {
+                margin: 0;
                 page-break-after: always;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
@@ -466,20 +501,14 @@ export default function LetterGenerator() {
         <body>
           ${lettersHTML}
           <script>
-            // Wait for background image to load then print
             window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 800);
+              setTimeout(function() { window.print(); }, 500);
             };
           <\/script>
         </body>
         </html>
       `);
       printWindow.document.close();
-
-      // Clean up object URL after a delay
-      setTimeout(() => URL.revokeObjectURL(letterheadUrl), 10000);
 
     } catch (error) {
       console.error('PDF generation error:', error);
