@@ -11,14 +11,8 @@ import Papa from "papaparse";
 import mammoth from "mammoth";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
-import jsPDF from "jspdf";
-import * as pdfjsLib from "pdfjs-dist";
-
-// Configure PDF.js worker - use bundled worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
+import { PDFDocument } from "pdf-lib";
+import html2canvas from "html2canvas";
 
 interface CSVData {
   headers: string[];
@@ -398,117 +392,145 @@ export default function LetterGenerator() {
     }
   };
   
-  // Convert letterhead PDF page to a PNG data URL using PDF.js
-  const letterheadPDFToImage = async (pdfDataUrl: string): Promise<string> => {
-    const loadingTask = pdfjsLib.getDocument({ url: pdfDataUrl });
-    const pdf = await loadingTask.promise;
-    const page = await pdf.getPage(1);
-    // Render at 2x scale for high resolution (A4 at 150dpi)
-    const viewport = page.getViewport({ scale: 2.0 });
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d')!;
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-    return canvas.toDataURL('image/png');
+  // Helper: convert base64 data URL to Uint8Array
+  const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
+    const base64 = dataUrl.split(',')[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
   };
 
-  // Generate PDF with letterhead: render letterhead as PNG canvas, overlay letter text on top
+  // Render a letter HTML to a canvas PNG using html2canvas
+  const renderLetterToCanvas = async (letter: GeneratedLetter): Promise<HTMLCanvasElement> => {
+    // Create an off-screen container with A4 content area dimensions
+    // A4 at 96dpi: 794px wide, 1123px tall
+    // Content area (minus 2.54cm top, 2cm sides, 2cm bottom):
+    //   width = 794 - 2*(2cm * 37.8px/cm) = 794 - 151 = 643px
+    //   height = 1123 - (2.54cm * 37.8) - (2cm * 37.8) = 1123 - 96 - 75.6 = 951px
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      width: 643px;
+      background: transparent;
+      font-family: Arial, 'Noto Sans Devanagari', sans-serif;
+      font-size: 12pt;
+      line-height: 1.4;
+      color: #000;
+      padding: 0;
+      margin: 0;
+    `;
+    container.innerHTML = `
+      <div style="text-align: right; margin-bottom: 15px; font-family: Arial, sans-serif; font-size: 12pt;">
+        <strong>Ref No:</strong> ${letter.refNo}<br>
+        <strong>Date:</strong> ${letter.date}
+      </div>
+      <div style="font-family: Arial, 'Noto Sans Devanagari', sans-serif; font-size: 12pt; line-height: 1.4;">${letter.content}</div>
+    `;
+    document.body.appendChild(container);
+
+    try {
+      const canvas = await html2canvas(container, {
+        backgroundColor: null, // transparent background
+        scale: 2,
+        useCORS: false,
+        logging: false,
+        width: 643,
+      });
+      return canvas;
+    } finally {
+      document.body.removeChild(container);
+    }
+  };
+
+  // Generate PDF with letterhead using pdf-lib:
+  // - Embed letterhead PDF page directly (no rasterization needed)
+  // - Render letter HTML to canvas via html2canvas
+  // - Embed canvas as PNG image on top of letterhead
   const generatePDFWithLetterhead = async () => {
     try {
-      toast.info("Preparing letterhead...");
+      toast.info("Generating PDF with letterhead...");
 
-      // Convert letterhead PDF to PNG image via PDF.js
-      const letterheadImgDataUrl = await letterheadPDFToImage(letterheadPDF!);
+      // Convert letterhead base64 data URL to bytes
+      const letterheadBytes = dataUrlToUint8Array(letterheadPDF!);
 
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        toast.error("Popup blocked. Please allow popups and try again.");
-        return;
+      // Create the output PDF document
+      const outputDoc = await PDFDocument.create();
+
+      // Embed the letterhead PDF (page 0)
+      const [letterheadEmbedded] = await outputDoc.embedPdf(letterheadBytes, [0]);
+      const pageWidth = letterheadEmbedded.width;   // in pts
+      const pageHeight = letterheadEmbedded.height; // in pts
+
+      // Content area margins in pts (1cm = 28.35pts)
+      const topMarginPts = 2.54 * 28.35;   // 2.54cm = 72pts
+      const sideMarginPts = 2.0 * 28.35;   // 2cm = 56.7pts
+      const bottomMarginPts = 2.0 * 28.35; // 2cm = 56.7pts
+      const contentWidthPts = pageWidth - 2 * sideMarginPts;
+      const contentHeightPts = pageHeight - topMarginPts - bottomMarginPts;
+
+      // Process each letter
+      for (let i = 0; i < generatedLetters.length; i++) {
+        const letter = generatedLetters[i];
+        toast.info(`Rendering letter ${i + 1} of ${generatedLetters.length}...`);
+
+        // Render letter HTML to canvas
+        const canvas = await renderLetterToCanvas(letter);
+        const contentImgDataUrl = canvas.toDataURL('image/png');
+        const contentImgBytes = dataUrlToUint8Array(contentImgDataUrl);
+
+        // Embed the content PNG
+        const contentImg = await outputDoc.embedPng(contentImgBytes);
+
+        // Add a new page with letterhead dimensions
+        const page = outputDoc.addPage([pageWidth, pageHeight]);
+
+        // Draw letterhead as full-page background
+        page.drawPage(letterheadEmbedded, {
+          x: 0,
+          y: 0,
+          width: pageWidth,
+          height: pageHeight,
+        });
+
+        // Calculate image placement
+        // The canvas was rendered at 643px wide at 2x scale = 1286px actual
+        // We need to scale it to fit contentWidthPts
+        const imgAspect = canvas.height / canvas.width;
+        const imgWidthPts = contentWidthPts;
+        const imgHeightPts = Math.min(imgWidthPts * imgAspect, contentHeightPts);
+
+        // In PDF coordinates: y=0 is bottom, so content starts from top:
+        // y position = pageHeight - topMarginPts - imgHeightPts
+        const imgY = pageHeight - topMarginPts - imgHeightPts;
+
+        page.drawImage(contentImg, {
+          x: sideMarginPts,
+          y: imgY,
+          width: imgWidthPts,
+          height: imgHeightPts,
+        });
       }
 
-      const lettersHTML = generatedLetters.map(letter => `
-        <div class="letter-page">
-          <img class="letterhead-bg" src="${letterheadImgDataUrl}" alt="letterhead" />
-          <div class="letter-content">
-            <div style="text-align: right; margin-bottom: 15px;">
-              <strong>Ref No:</strong> ${letter.refNo}<br>
-              <strong>Date:</strong> ${letter.date}
-            </div>
-            <div>${letter.content}</div>
-          </div>
-        </div>
-      `).join("");
+      // Save and download the PDF
+      const pdfBytes = await outputDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const today = new Date();
+      const dateStr = `${today.getDate()}${today.getMonth()+1}${today.getFullYear()}`;
+      a.download = `LetterswithLetterhead-${dateStr}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Letters with Letterhead - ${new Date().toLocaleDateString()}</title>
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            html, body {
-              background: #ccc;
-            }
-            .letter-page {
-              position: relative;
-              width: 210mm;
-              height: 297mm;
-              margin: 0 auto 20px auto;
-              overflow: hidden;
-              background: white;
-              page-break-after: always;
-            }
-            .letterhead-bg {
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 210mm;
-              height: 297mm;
-              display: block;
-              z-index: 0;
-            }
-            .letter-content {
-              position: absolute;
-              top: 25.4mm;
-              left: 20mm;
-              right: 20mm;
-              bottom: 20mm;
-              z-index: 1;
-              font-family: Arial, 'Segoe UI', sans-serif;
-              font-size: 12pt;
-              line-height: 1.2;
-              color: #000;
-              overflow: hidden;
-            }
-            p { margin: 0 0 8px 0; line-height: 1.2; }
-            strong, b { margin: 0; padding: 0; }
-            @media print {
-              html, body { background: white; }
-              @page {
-                size: A4;
-                margin: 0;
-              }
-              .letter-page {
-                margin: 0;
-                page-break-after: always;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          ${lettersHTML}
-          <script>
-            window.onload = function() {
-              setTimeout(function() { window.print(); }, 500);
-            };
-          <\/script>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
+      toast.success(`PDF downloaded with letterhead on all ${generatedLetters.length} pages!`);
 
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -545,7 +567,6 @@ export default function LetterGenerator() {
       // If letterhead is available, generate PDF with embedded letterhead
       if (letterheadPDF) {
         await generatePDFWithLetterhead();
-        toast.success(`Updated ${generatedLetters.length} Dak records. PDF downloaded.`);
         return;
       }
       
