@@ -16,6 +16,7 @@ import RemindersApp from "./pages/RemindersApp";
 import LeadManagementApp from "./pages/LeadManagementApp";
 import WebResourceHub from "./pages/WebResourceHub";
 import LetterGenerator from "./pages/LetterGenerator";
+import RLMSSupplementer from "./pages/RLMSSupplementer";
 import BranchPortfolioDashboard from "./pages/BranchPortfolioDashboard";
 import FloatingCalculator from "./components/FloatingCalculator";
 
@@ -33,9 +34,7 @@ function AppRouter() {
       <Route path={"/charges-return"} component={ChargesReturnApp} />
       <Route path={"/letter-generator"} component={LetterGenerator} />
       <Route path={"/branch-portfolio"} component={BranchPortfolioDashboard} />
-      <Route path={"/misc-reports"}>
-        <PlaceholderApp title="Miscellaneous Reports" />
-      </Route>
+      <Route path={"/rlms-supplementer"} component={RLMSSupplementer} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

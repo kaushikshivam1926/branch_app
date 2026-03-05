@@ -130,12 +130,12 @@ const defaultAppCards: Omit<AppCard, 'visible' | 'order'>[] = [
   },
 
   {
-    id: "misc-reports",
-    title: "Miscellaneous Reports",
-    description: "Generate various miscellaneous reports",
+    id: "rlms-supplementer",
+    title: "RLMS Supplementer",
+    description: "Supplement RLMS Personal Loan applications with auto-filled forms, annexures and declarations",
     iconName: "FileSpreadsheet",
-    path: "/misc-reports",
-    color: "#795548"
+    path: "/rlms-supplementer",
+    color: "#0066b3"
   }
 ];
 
