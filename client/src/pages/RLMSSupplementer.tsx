@@ -15,8 +15,10 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { sbiLogoUrl } from "@/lib/assets";
 import { toast } from "sonner";
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+// Configure PDF.js worker — use local package worker so the build is offline-capable
+// pdfjs-dist v5+ ships the worker as an ES module; Vite inlines it via ?url import
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 // ─── SVG Graphics for Print Templates ───────────────────────────────────────
 
