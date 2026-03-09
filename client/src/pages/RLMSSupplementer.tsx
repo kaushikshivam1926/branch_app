@@ -293,8 +293,8 @@ const extractDataByCoordinates = (pagesItems: Record<number, { str: string; x: n
   const extracted: Partial<DataModel> = {};
   for (const [key, box] of Object.entries(PDF_COORDINATES)) {
     const pageItems = pagesItems[box.page] || [];
-    // Tolerance: ±12 pts horizontal, ±12 pts vertical to handle font baseline variations
-    const tolerance = 12;
+    // Tolerance: ±5 pts — matches the original hand-calibrated coordinate map
+    const tolerance = 5;
     const left   = box.x - tolerance;
     const right  = box.x + box.width + tolerance;
     // box.y is the baseline y of the value cell (bottom of text, origin at bottom-left of page)
@@ -795,6 +795,7 @@ export default function RLMSSupplementer() {
             <InputField label="Nationality" name="nationality" value={data.nationality} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.nationality} />
             <SelectField label="Category" name="category" value={data.category} onChange={handleChange as (e: ChangeEvent<HTMLSelectElement>) => void} options={['General', 'OBC', 'SC', 'ST']} readOnly={readOnlyFields.category} />
             <SelectField label="Residential Status" name="residentialStatus" value={data.residentialStatus} onChange={handleChange as (e: ChangeEvent<HTMLSelectElement>) => void} options={['Resident Indian', 'NRI']} readOnly={readOnlyFields.residentialStatus} />
+            <InputField label="Religion" name="religion" value={data.religion} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.religion} />
             <InputField label="Educational Qualification" name="education" value={data.education} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.education} />
             <InputField label="Qualifying Year" name="qualifyingYear" type="number" max={new Date().getFullYear()} value={data.qualifyingYear} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.qualifyingYear} />
             <InputField label="Disability Type" name="disabilityType" value={data.disabilityType} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.disabilityType} />
