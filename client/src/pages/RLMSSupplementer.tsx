@@ -14,6 +14,10 @@ import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { sbiLogoUrl } from "@/lib/assets";
 import { toast } from "sonner";
+import { useBranch } from "@/contexts/BranchContext";
+import { Button } from "@/components/ui/button";
+import { Home } from "lucide-react";
+import { useLocation } from "wouter";
 
 // Configure PDF.js worker — use local package worker so the build is offline-capable
 // pdfjs-dist v5+ ships the worker as an ES module; Vite inlines it via ?url import
@@ -452,6 +456,8 @@ export default function RLMSSupplementer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFinalised, setIsFinalised] = useState(false);
   const [printDocId, setPrintDocId] = useState<string | null>(null);
+  const { branchName } = useBranch();
+  const [, navigate] = useLocation();
 
   // Persist to localStorage
   useEffect(() => {
@@ -1086,30 +1092,57 @@ export default function RLMSSupplementer() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 print:hidden">
-      {/* Header — matches app catalogue style */}
-      <header className="w-full flex items-center justify-between px-6"
+      {/* Header — identical style to Letter & Notice Generator */}
+      <header
+        className="w-full py-2 px-6"
         style={{
-          background: 'linear-gradient(to right, #d4007f, #4e1a74)',
+          background: "linear-gradient(to right, #d4007f, #4e1a74)",
           height: '101px',
           paddingTop: '0px'
-        }}>
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <button className="text-white/80 hover:text-white transition p-1 rounded-full hover:bg-white/10">
-              <ArrowLeft className="w-5 h-5" />
+        }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0">
+              <img
+                src={sbiLogoUrl}
+                alt="State Bank of India"
+                className="h-28 w-auto"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
+            </div>
+            <div className="flex flex-col justify-center">
+              <h1
+                className="text-white font-semibold leading-tight"
+                style={{ fontSize: "1.3rem" }}
+              >
+                RLMS Supplementer
+              </h1>
+              <p
+                className="text-white/90"
+                style={{ fontSize: "0.85rem" }}
+              >
+                {branchName}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClearData}
+              className="text-white/80 hover:text-white px-3 py-2 rounded transition font-semibold text-sm hover:bg-white/10 border border-white/30"
+            >
+              Clear Data
             </button>
-          </Link>
-          <img src={sbiLogoUrl} alt="SBI Logo" className="h-12 object-contain
-" />
-          <div>
-            <h1 className="text-white font-bold text-xl leading-tight">RLMS Supplementer</h1>
-            <p className="text-white/70 text-xs">Personal Loan Application Assistant</p>
+            <Button
+              variant="outline"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/40"
+              onClick={() => navigate("/")}
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
           </div>
         </div>
-        <button onClick={handleClearData}
-          className="text-white/70 hover:text-white px-3 py-2 rounded transition font-semibold text-sm hover:bg-white/10">
-          Clear Data
-        </button>
       </header>
 
       {/* Processing overlay */}
