@@ -510,8 +510,9 @@ export default function RLMSSupplementer() {
     setIsProcessing(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
-      setPdfBytes(arrayBuffer);
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      // Store a copy in state; pass a separate copy to pdfjs so neither is detached
+      setPdfBytes(arrayBuffer.slice(0));
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
       const pagesItems: Record<number, { str: string; x: number; y: number }[]> = {};
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -552,7 +553,8 @@ export default function RLMSSupplementer() {
     if (!pdfBytes) { toast.error("Please upload the original Bank PDF first."); return; }
     setIsProcessing(true);
     try {
-      const pdfDoc = await PDFDocument.load(pdfBytes);
+      // Slice a copy so the original ArrayBuffer in state is never detached/neutered
+      const pdfDoc = await PDFDocument.load(pdfBytes.slice(0));
       const pages = pdfDoc.getPages();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       for (const [key, val] of Object.entries(data)) {
