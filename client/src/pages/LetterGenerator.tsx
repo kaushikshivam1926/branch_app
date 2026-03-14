@@ -157,7 +157,11 @@ export default function LetterGenerator() {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ arrayBuffer });
+      // Reset the initialisation guard so the editor picks up the new template content
+      editorInitialisedRef.current = false;
       setTemplateHTML(result.value);
+      setHistory([]);
+      setHistoryIndex(-1);
       toast.success("Template loaded successfully");
     } catch (error) {
       toast.error("Failed to load template");
@@ -197,39 +201,55 @@ export default function LetterGenerator() {
   
   // Editor ref for cursor position
   const editorRef = useRef<HTMLDivElement>(null);
+  // Guard: only initialise innerHTML once per template load — never on re-render
+  const editorInitialisedRef = useRef<boolean>(false);
   
   // Track undo/redo history
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   
   // Handle template change with history tracking
+  // IMPORTANT: does NOT call setTemplateHTML — that would re-trigger the sync
+  // useEffect and reset the editor content. templateHTML state is only updated
+  // when the user leaves the editor (onBlur) or advances to the next step.
   const handleTemplateChange = () => {
     if (editorRef.current) {
       const newHTML = editorRef.current.innerHTML;
-      setTemplateHTML(newHTML);
-      
-      // Add to history
+      // Add to history only — do NOT call setTemplateHTML here
       const newHistory = history.slice(0, historyIndex + 1);
       newHistory.push(newHTML);
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
     }
   };
+
+  // Flush live editor content to templateHTML state (called on blur and on step advance)
+  const flushEditorToState = () => {
+    if (editorRef.current) {
+      setTemplateHTML(editorRef.current.innerHTML);
+    }
+  };
   
-  // Initialize history when template is loaded
+  // Initialize history when a new template is loaded (templateHTML changes from outside)
   useEffect(() => {
     if (templateHTML && history.length === 0) {
       setHistory([templateHTML]);
       setHistoryIndex(0);
+      // Mark editor as needing re-initialisation for this new template
+      editorInitialisedRef.current = false;
     }
   }, [templateHTML]);
-  
-  // Sync editor content when switching to editor step
+
+  // Sync editor content ONLY when first entering the editor step for a given template.
+  // Removing templateHTML from deps prevents the reset loop where every keystroke
+  // (onInput → setTemplateHTML → useEffect → innerHTML reset) wipes the user's edits.
   useEffect(() => {
-    if (currentStep === "editor" && editorRef.current && templateHTML) {
+    if (currentStep === "editor" && editorRef.current && templateHTML && !editorInitialisedRef.current) {
       editorRef.current.innerHTML = templateHTML;
+      editorInitialisedRef.current = true;
     }
-  }, [currentStep, templateHTML]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep]);
   
   // Undo
   const handleUndo = () => {
@@ -317,7 +337,11 @@ export default function LetterGenerator() {
   
   // Save template
   const handleSaveTemplate = () => {
-    if (!templateHTML) {
+    // Flush live editor content to state before validation and step advance
+    flushEditorToState();
+    // Use the editor's live content directly for the empty check
+    const liveHTML = editorRef.current?.innerHTML || templateHTML;
+    if (!liveHTML) {
       toast.error("Template is empty");
       return;
     }
@@ -1032,6 +1056,7 @@ export default function LetterGenerator() {
                 ref={editorRef}
                 contentEditable
                 onInput={handleTemplateChange}
+                onBlur={flushEditorToState}
                 className="min-h-[600px] p-6 border rounded bg-white prose max-w-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                 suppressContentEditableWarning
               />
