@@ -77,19 +77,41 @@ export default function DataUpload() {
     }
     setUploads(newUploads);
 
+    // Processing priority: mapping files must be processed before data files
+    // so that category lookups work correctly even when all files are uploaded at once.
+    const PROCESSING_PRIORITY: Record<string, number> = {
+      "product-mapping": 1,
+      "loan-product-mapping": 1,
+      "loan-shadow": 2,
+      "deposit-shadow": 2,
+      "loan-balance": 3,
+      "ccod-balance": 3,
+      "npa-report": 3,
+    };
+
+    // Pre-read all files and detect types so we can sort by priority
+    const fileEntries: { file: File; idx: number; text: string; fileType: string | null }[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      const text = await file.text();
+      const firstLine = text.split(/\r?\n/)[0] || "";
+      let headerLine = firstLine;
+      if (headerLine.charCodeAt(0) === 0xfeff) headerLine = headerLine.slice(1);
+      const headers = headerLine.split(",").map((h) => h.trim());
+      const ft = detectFileType(file.name, headers);
+      fileEntries.push({ file, idx: i, text, fileType: ft });
+    }
+    fileEntries.sort((a, b) => {
+      const pa = a.fileType ? (PROCESSING_PRIORITY[a.fileType] ?? 5) : 5;
+      const pb = b.fileType ? (PROCESSING_PRIORITY[b.fileType] ?? 5) : 5;
+      return pa - pb;
+    });
+
+    for (const { file, idx: i, text, fileType } of fileEntries) {
       try {
         newUploads[i].status = "processing";
         setUploads([...newUploads]);
 
-        const text = await file.text();
-        const firstLine = text.split(/\r?\n/)[0] || "";
-        let headerLine = firstLine;
-        if (headerLine.charCodeAt(0) === 0xfeff) headerLine = headerLine.slice(1);
-        const headers = headerLine.split(",").map((h) => h.trim());
-
-        const fileType = detectFileType(file.name, headers);
         if (!fileType) {
           newUploads[i].status = "error";
           newUploads[i].fileType = "Unknown";

@@ -659,6 +659,16 @@ export async function processLoanBalance(csvText: string): Promise<number> {
 export async function processCCODBalance(csvText: string): Promise<number> {
   const rows = parseCSV(csvText);
 
+  // Load loan product mapping for CC/OD category lookup
+  const loanProductMapping = await getAllRecords(STORES.LOAN_PRODUCT_MAPPING);
+  // Build lookup by ProductCode AND by ProductName (for ACCTDESC matching)
+  const loanProductByCode: Record<string, any> = {};
+  const loanProductByName: Record<string, any> = {};
+  for (const p of loanProductMapping) {
+    if (p.ProductCode) loanProductByCode[p.ProductCode.trim()] = p;
+    if (p.ProductName) loanProductByName[p.ProductName.trim().toUpperCase()] = p;
+  }
+
   const records = rows
     .filter((r) => (r.ACCTNO || "").trim() !== "")
     .map((r) => {
@@ -687,11 +697,84 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       if (irregamt > 0) irregularFlag = "Irregular";
       else if (currentBalance != null && dp != null && Math.abs(currentBalance) > dp && dp > 0) irregularFlag = "Overdrawn";
 
+      // Category lookup: match ACCTDESC against ProductName in loan product mapping
+      const acctDesc = (r.ACCTDESC || "").trim();
+      const acctDescUpper = acctDesc.toUpperCase();
+      let loanCategory = "CC/OD";
+      let loanSubCategory = "";
+      let loanSegment = "General";
+      let loanPriority = "Medium";
+      let loanSecured = "";
+      let loanScheme = "None";
+      let loanRiskWeight = "100";
+      let productName = acctDesc;
+      let productCode = "";
+
+      // 1. Exact ProductName match
+      const exactMatch = loanProductByName[acctDescUpper];
+      if (exactMatch) {
+        loanCategory = exactMatch.Category || "CC/OD";
+        loanSubCategory = exactMatch.SubCategory || "";
+        loanSegment = exactMatch.Segment || "General";
+        loanPriority = exactMatch.Priority || "Medium";
+        loanSecured = exactMatch.Secured || "";
+        loanScheme = exactMatch.Scheme || "None";
+        loanRiskWeight = exactMatch.RiskWeight || "100";
+        productName = exactMatch.ProductName || acctDesc;
+        productCode = exactMatch.ProductCode || "";
+      } else {
+        // 2. Partial ProductName match (ACCTDESC contains ProductName or vice versa)
+        let bestMatch: any = null;
+        let bestLen = 0;
+        for (const [pname, pm] of Object.entries(loanProductByName)) {
+          if (acctDescUpper.includes(pname) || pname.includes(acctDescUpper)) {
+            if (pname.length > bestLen) {
+              bestLen = pname.length;
+              bestMatch = pm;
+            }
+          }
+        }
+        if (bestMatch) {
+          loanCategory = bestMatch.Category || "CC/OD";
+          loanSubCategory = bestMatch.SubCategory || "";
+          loanSegment = bestMatch.Segment || "General";
+          loanPriority = bestMatch.Priority || "Medium";
+          loanSecured = bestMatch.Secured || "";
+          loanScheme = bestMatch.Scheme || "None";
+          loanRiskWeight = bestMatch.RiskWeight || "100";
+          productName = bestMatch.ProductName || acctDesc;
+          productCode = bestMatch.ProductCode || "";
+        } else {
+          // 3. Keyword fallback
+          if (acctDescUpper.includes("MAXGAIN") || acctDescUpper.includes("HL MAXGAIN")) {
+            loanCategory = "Home Loan"; loanSubCategory = "Maxgain OD";
+          } else if (acctDescUpper.includes("HOME TOPUP") || acctDescUpper.includes("INSTA-HOME")) {
+            loanCategory = "Home Loan"; loanSubCategory = "Home Top-up OD";
+          } else if (acctDescUpper.includes("MSME") || acctDescUpper.includes("CC-SBF") || acctDescUpper.includes("MUDRA")) {
+            loanCategory = "MSME"; loanSubCategory = acctDescUpper.includes("MUDRA") ? "MUDRA Cash Credit" : "Cash Credit";
+          } else if (acctDescUpper.includes("OD BANK") || acctDescUpper.includes("OD-LOAN AG DEP") || acctDescUpper.includes("OD AGAINST DEP")) {
+            loanCategory = "Personal Loan"; loanSubCategory = "OD Against Deposits";
+          } else if (acctDescUpper.includes("OD-LON AGAINST FD") || acctDescUpper.includes("OD-LOAN AGAINST FD") || acctDescUpper.includes("OD AGAINST FD")) {
+            loanCategory = "Personal Loan"; loanSubCategory = "OD Against Fixed Deposit";
+          } else if (acctDescUpper.includes("FESTIVAL") || acctDescUpper.includes("OD FESTIVAL")) {
+            loanCategory = "Personal Loan"; loanSubCategory = "Festival Overdraft";
+          } else if (acctDescUpper.includes("OD PERSONAL") || acctDescUpper.includes("OD-PERSONAL")) {
+            loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
+          } else if (acctDescUpper.includes("STAFF")) {
+            loanCategory = "Personal Loan"; loanSubCategory = "Overdraft - Staff";
+          } else if (acctDescUpper.includes("GOLD") || acctDescUpper.includes("SB PSP") || acctDescUpper.includes("SB CSP") || acctDescUpper.includes("SB SGSP") || acctDescUpper.includes("SB CGSP")) {
+            loanCategory = "Gold Loan"; loanSubCategory = "Gold Loan - OD";
+          } else if (acctDescUpper.includes("MC-OD") || acctDescUpper.includes("E-COMMERCE") || acctDescUpper.includes("ECOMM")) {
+            loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
+          }
+        }
+      }
+
       return {
         LoanKey: loanKey,
         CIF: cif,
         CUSTNAME: (r.CUSTNAME || "").trim(),
-        ACCTDESC: (r.ACCTDESC || "").trim(),
+        ACCTDESC: acctDesc,
         INTRATE: intRate,
         LIMIT: limit,
         DP: dp,
@@ -723,7 +806,16 @@ export async function processCCODBalance(csvText: string): Promise<number> {
         DP_Gap: dpGap,
         Irregular_Flag: irregularFlag,
         Exposure_Type: "CC/OD",
-        Loan_Category: "CC/OD",
+        // Category from loan product mapping (matched via ACCTDESC)
+        Loan_Category: loanCategory,
+        Loan_SubCategory: loanSubCategory,
+        Loan_Segment: loanSegment,
+        Loan_Priority: loanPriority,
+        Loan_Secured: loanSecured,
+        Loan_Scheme: loanScheme,
+        Loan_RiskWeight: loanRiskWeight,
+        Product_Name: productName,
+        Product_Code: productCode,
       };
     });
 
