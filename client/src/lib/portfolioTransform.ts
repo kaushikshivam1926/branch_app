@@ -339,6 +339,9 @@ export async function processDepositShadow(csvText: string): Promise<number> {
 
   await clearStore(STORES.DEPOSIT_DATA);
   await putRecords(STORES.DEPOSIT_DATA, records);
+  // Also write to DEPOSIT_SHADOW so the status indicator shows the correct count
+  await clearStore(STORES.DEPOSIT_SHADOW);
+  await putRecords(STORES.DEPOSIT_SHADOW, records);
   await setSetting("deposit-shadow-date", todayISO());
   await addUploadLog({
     fileType: "deposit-shadow",
