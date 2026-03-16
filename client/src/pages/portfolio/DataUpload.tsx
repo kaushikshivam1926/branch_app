@@ -13,6 +13,7 @@ import {
   clearStore,
   STORES,
   setSetting,
+  addUploadLog,
 } from "@/lib/portfolioDb";
 import {
   parseCSV,
@@ -26,7 +27,12 @@ import {
   buildCustomerDimension,
   detectFileType,
   FILE_TYPE_LABELS,
+  extractFileDateFromName,
+  extractBranchCodeFromName,
+  FILE_TYPES_WITH_DATE_IN_NAME,
+  FILE_TYPES_WITH_UPLOAD_DATE,
 } from "@/lib/portfolioTransform";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface UploadStatus {
   fileName: string;
@@ -34,9 +40,12 @@ interface UploadStatus {
   status: "pending" | "processing" | "success" | "error";
   recordCount?: number;
   errorMessage?: string;
+  fileDate?: string;
+  branchCode?: string;
 }
 
 export default function DataUpload() {
+  const { branchCode: configuredBranchCode } = useBranch();
   const [dataStatus, setDataStatus] = useState<any>(null);
   const [uploadLogs, setUploadLogs] = useState<any[]>([]);
   const [uploads, setUploads] = useState<UploadStatus[]>([]);
@@ -123,6 +132,32 @@ export default function DataUpload() {
 
         newUploads[i].fileType = FILE_TYPE_LABELS[fileType] || fileType;
 
+        // Branch code validation (skip for product mapping files)
+        if (fileType !== "product-mapping" && fileType !== "loan-product-mapping" && configuredBranchCode) {
+          const fileBranchCode = extractBranchCodeFromName(file.name);
+          if (fileBranchCode && fileBranchCode !== configuredBranchCode) {
+            newUploads[i].status = "error";
+            newUploads[i].errorMessage = `Branch code mismatch: file has ${fileBranchCode}, configured branch is ${configuredBranchCode}`;
+            setUploads([...newUploads]);
+            toast.error(`Branch code mismatch for ${file.name}: expected ${configuredBranchCode}, got ${fileBranchCode}`);
+            continue;
+          }
+        }
+
+        // Extract file date
+        let fileDate: string | undefined;
+        if (FILE_TYPES_WITH_DATE_IN_NAME.includes(fileType)) {
+          const extractedDate = extractFileDateFromName(file.name);
+          if (extractedDate) fileDate = extractedDate;
+        } else if (FILE_TYPES_WITH_UPLOAD_DATE.includes(fileType)) {
+          // Use upload date for product mapping files
+          fileDate = new Date().toISOString().split('T')[0];
+        }
+
+        const fileBranchCode = extractBranchCodeFromName(file.name);
+        newUploads[i].fileDate = fileDate;
+        newUploads[i].branchCode = fileBranchCode || undefined;
+
         let count = 0;
         switch (fileType) {
           case "product-mapping":
@@ -152,6 +187,16 @@ export default function DataUpload() {
         newUploads[i].recordCount = count;
         setUploads([...newUploads]);
         toast.success(`${FILE_TYPE_LABELS[fileType]}: ${count.toLocaleString("en-IN")} records processed`);
+        
+        // Log upload with file date and branch code
+        await addUploadLog({
+          fileType,
+          fileName: file.name,
+          recordCount: count,
+          status: "success",
+          fileDate,
+          branchCode: fileBranchCode || undefined,
+        });
       } catch (err: any) {
         newUploads[i].status = "error";
         newUploads[i].errorMessage = err.message || "Processing failed";
@@ -285,6 +330,7 @@ export default function DataUpload() {
                   <p className="text-xs text-gray-500">
                     {u.fileType}
                     {u.recordCount != null && ` — ${u.recordCount.toLocaleString("en-IN")} records`}
+                    {u.fileDate && ` — file date: ${new Date(u.fileDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
                     {u.errorMessage && <span className="text-red-500"> — {u.errorMessage}</span>}
                   </p>
                 </div>
@@ -333,29 +379,37 @@ export default function DataUpload() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Deposit Product Mapping", count: dataStatus.productMapping, icon: "📋" },
-              { label: "Loan Product Mapping", count: dataStatus.loanProductMapping, icon: "📝" },
-              { label: "Deposit Accounts", count: dataStatus.deposits, icon: "🏦" },
-              { label: "Loan Accounts", count: dataStatus.loans, icon: "💳" },
-              { label: "CC/OD Accounts", count: dataStatus.ccod, icon: "💰" },
-              { label: "NPA Accounts", count: dataStatus.npa, icon: "⚠️" },
-              { label: "Loan Shadow", count: dataStatus.loanShadow, icon: "📊" },
-              { label: "Deposit Shadow", count: dataStatus.depositShadow, icon: "📈" },
+              { label: "Deposit Product Mapping", count: dataStatus.productMapping, icon: "📋", fileType: "product-mapping" },
+              { label: "Loan Product Mapping", count: dataStatus.loanProductMapping, icon: "📝", fileType: "loan-product-mapping" },
+              { label: "Deposit Accounts", count: dataStatus.deposits, icon: "🏦", fileType: "deposit-shadow" },
+              { label: "Loan Accounts", count: dataStatus.loans, icon: "💳", fileType: "loan-balance" },
+              { label: "CC/OD Accounts", count: dataStatus.ccod, icon: "💰", fileType: "ccod-balance" },
+              { label: "NPA Accounts", count: dataStatus.npa, icon: "⚠️", fileType: "npa-report" },
+              { label: "Loan Shadow", count: dataStatus.loanShadow, icon: "📊", fileType: "loan-shadow" },
+              { label: "Deposit Shadow", count: dataStatus.depositShadow, icon: "📈", fileType: "deposit-shadow" },
               { label: "Customers", count: dataStatus.customers, icon: "👥" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className={`p-3 rounded-lg border ${statusBg(item.count)}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span>{item.icon}</span>
-                  <span className="text-xs font-medium text-gray-600">{item.label}</span>
+            ].map((item) => {
+              const recentLog = uploadLogs.find((log: any) => log.fileType === item.fileType && log.status === "success");
+              const fileDate = recentLog?.fileDate ? new Date(recentLog.fileDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : null;
+              
+              return (
+                <div
+                  key={item.label}
+                  className={`p-3 rounded-lg border ${statusBg(item.count)}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span>{item.icon}</span>
+                    <span className="text-xs font-medium text-gray-600">{item.label}</span>
+                  </div>
+                  <p className={`text-lg font-bold ${statusColor(item.count)}`}>
+                    {item.count.toLocaleString("en-IN")}
+                  </p>
+                  {fileDate && (
+                    <p className="text-xs text-gray-500 mt-1">file date: {fileDate}</p>
+                  )}
                 </div>
-                <p className={`text-lg font-bold ${statusColor(item.count)}`}>
-                  {item.count.toLocaleString("en-IN")}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -368,7 +422,8 @@ export default function DataUpload() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Date</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Upload Date</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium">File Date</th>
                   <th className="text-left py-2 px-3 text-gray-500 font-medium">File Type</th>
                   <th className="text-left py-2 px-3 text-gray-500 font-medium">File Name</th>
                   <th className="text-right py-2 px-3 text-gray-500 font-medium">Records</th>
@@ -380,6 +435,9 @@ export default function DataUpload() {
                   <tr key={i} className="border-b border-gray-100">
                     <td className="py-2 px-3 text-gray-600">
                       {log.uploadDate ? new Date(log.uploadDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-"}
+                    </td>
+                    <td className="py-2 px-3 text-gray-600">
+                      {log.fileDate ? new Date(log.fileDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
                     </td>
                     <td className="py-2 px-3 text-gray-700 font-medium">
                       {FILE_TYPE_LABELS[log.fileType] || log.fileType}

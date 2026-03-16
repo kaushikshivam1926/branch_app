@@ -220,6 +220,8 @@ export async function addUploadLog(entry: {
   recordCount: number;
   status: string;
   errorMessage?: string;
+  fileDate?: string; // ISO date (YYYY-MM-DD) when the file was created/extracted
+  branchCode?: string; // 5-digit branch code from filename
 }): Promise<void> {
   return putRecord(STORES.UPLOAD_LOG, {
     ...entry,

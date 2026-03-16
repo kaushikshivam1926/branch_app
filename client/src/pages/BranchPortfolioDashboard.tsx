@@ -14,6 +14,7 @@ import { sbiLogoUrl } from '@/lib/assets';
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useBranch } from "@/contexts/BranchContext";
+import { getDataStatus } from "@/lib/portfolioDb";
 import {
   ArrowLeft,
   Home,
@@ -67,13 +68,38 @@ export default function BranchPortfolioDashboard() {
   useEffect(() => {
     // Check IndexedDB for data
     const checkData = async () => {
-      // TODO: Implement data check
-      setDataLoaded(false);
+      try {
+        const status = await getDataStatus();
+        setDataLoaded(status.hasData);
+      } catch (err) {
+        console.error("Failed to check data status:", err);
+        setDataLoaded(false);
+      }
     };
     checkData();
-  }, []);
+    
+    // Re-check when active section changes to data-upload
+    // This ensures the indicator updates after files are uploaded
+  }, [activeSection]);
 
   const ActiveComponent = navigationItems.find(item => item.id === activeSection)?.component || BranchOverview;
+  
+  // Refresh data status when returning from data-upload
+  const handleSectionChange = (sectionId: string) => {
+    if (sectionId !== 'data-upload' && activeSection === 'data-upload') {
+      // Just returned from data upload, refresh status
+      const checkData = async () => {
+        try {
+          const status = await getDataStatus();
+          setDataLoaded(status.hasData);
+        } catch (err) {
+          console.error("Failed to check data status:", err);
+        }
+      };
+      checkData();
+    }
+    setActiveSection(sectionId);
+  };
 
   return (
     <div 
@@ -178,7 +204,7 @@ export default function BranchPortfolioDashboard() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => handleSectionChange(item.id)}
                   className={`
                     w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg
                     transition-all duration-200

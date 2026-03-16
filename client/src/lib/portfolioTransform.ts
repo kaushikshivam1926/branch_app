@@ -9,7 +9,6 @@ import {
   putRecords,
   clearStore,
   getAllRecords,
-  addUploadLog,
   setSetting,
 } from "./portfolioDb";
 
@@ -128,13 +127,6 @@ export async function processProductMapping(csvText: string): Promise<number> {
 
   await clearStore(STORES.PRODUCT_MAPPING);
   await putRecords(STORES.PRODUCT_MAPPING, records);
-  
-  await addUploadLog({
-    fileType: "product-mapping",
-    fileName: "Deposit_Product_Category_Mapping.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -159,12 +151,6 @@ export async function processLoanProductMapping(csvText: string): Promise<number
 
   await clearStore(STORES.LOAN_PRODUCT_MAPPING);
   await putRecords(STORES.LOAN_PRODUCT_MAPPING, records);
-  await addUploadLog({
-    fileType: "loan-product-mapping",
-    fileName: "Loan_Product_Category_Mapping.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -343,12 +329,6 @@ export async function processDepositShadow(csvText: string): Promise<number> {
   await clearStore(STORES.DEPOSIT_SHADOW);
   await putRecords(STORES.DEPOSIT_SHADOW, records);
   await setSetting("deposit-shadow-date", todayISO());
-  await addUploadLog({
-    fileType: "deposit-shadow",
-    fileName: "DEP_Shadow_file.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -413,12 +393,6 @@ export async function processLoanShadow(csvText: string): Promise<number> {
   await clearStore(STORES.LOAN_SHADOW);
   await putRecords(STORES.LOAN_SHADOW, records);
   await setSetting("loan-shadow-date", todayISO());
-  await addUploadLog({
-    fileType: "loan-shadow",
-    fileName: "LON_Shadow_file.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -647,12 +621,6 @@ export async function processLoanBalance(csvText: string): Promise<number> {
   await clearStore(STORES.LOAN_DATA);
   await putRecords(STORES.LOAN_DATA, records);
   await setSetting("loan-balance-date", todayISO());
-  await addUploadLog({
-    fileType: "loan-balance",
-    fileName: "LoansBalanceFile.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -825,12 +793,6 @@ export async function processCCODBalance(csvText: string): Promise<number> {
   await clearStore(STORES.CCOD_DATA);
   await putRecords(STORES.CCOD_DATA, records);
   await setSetting("ccod-balance-date", todayISO());
-  await addUploadLog({
-    fileType: "ccod-balance",
-    fileName: "CC_OD_Balance_File.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -875,12 +837,6 @@ export async function processNPAReport(csvText: string): Promise<number> {
   await clearStore(STORES.NPA_DATA);
   await putRecords(STORES.NPA_DATA, records);
   await setSetting("npa-report-date", todayISO());
-  await addUploadLog({
-    fileType: "npa-report",
-    fileName: "Listof_NPA_Accounts.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -1112,3 +1068,70 @@ export const FILE_TYPE_LABELS: Record<string, string> = {
   "product-mapping": "Deposit Product Category Mapping",
   "loan-product-mapping": "Loan Product Category Mapping",
 };
+
+// ============================================================
+// File Date & Branch Code Extraction
+// ============================================================
+
+/**
+ * Extract YYYYMMDD date from standardized filename
+ * Standard format: YYYYMMDD appears in filenames like:
+ * - 20251016_MiscReports_Listof_NPA_Accounts_lond2572.csv
+ * - 20251016_weeklyreports_dep_shadow_12345.csv
+ * Returns null if no valid date found
+ */
+export function extractFileDateFromName(fileName: string): string | null {
+  // Match YYYYMMDD pattern (8 consecutive digits)
+  const match = fileName.match(/(\d{8})/);
+  if (!match) return null;
+
+  const dateStr = match[1];
+  const year = dateStr.substring(0, 4);
+  const month = dateStr.substring(4, 6);
+  const day = dateStr.substring(6, 8);
+
+  // Validate date
+  const date = new Date(`${year}-${month}-${day}`);
+  if (isNaN(date.getTime())) return null;
+
+  // Return ISO format (YYYY-MM-DD)
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Extract 5-digit branch code from filename
+ * Standard format: Branch code appears at the end like:
+ * - 20251016_MiscReports_Listof_NPA_Accounts_lond2572.csv (branch code: 02572)
+ * - 20251016_weeklyreports_dep_shadow_12345.csv (branch code: 12345)
+ * Returns null if no valid 5-digit code found
+ */
+export function extractBranchCodeFromName(fileName: string): string | null {
+  // Match 5-digit number (usually at end, before .csv)
+  const match = fileName.match(/(\d{5})/);
+  if (!match) return null;
+
+  const branchCode = match[1];
+  // Validate it's a reasonable branch code (not all zeros)
+  if (branchCode === '00000') return null;
+
+  return branchCode;
+}
+
+/**
+ * File types that have dates in their standardized filenames (YYYYMMDD format)
+ */
+export const FILE_TYPES_WITH_DATE_IN_NAME = [
+  "deposit-shadow",
+  "loan-shadow",
+  "loan-balance",
+  "ccod-balance",
+  "npa-report",
+];
+
+/**
+ * File types that use upload timestamp as file date (no date in filename)
+ */
+export const FILE_TYPES_WITH_UPLOAD_DATE = [
+  "product-mapping",
+  "loan-product-mapping",
+];
