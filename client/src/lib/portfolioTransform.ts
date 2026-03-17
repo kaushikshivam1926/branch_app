@@ -123,6 +123,7 @@ export async function processProductMapping(csvText: string): Promise<number> {
       WealthFlag: r.WealthFlag || "No",
       SeniorCitizen: r.SeniorCitizen || "No",
       NRIFlag: r.NRIFlag || "No",
+      StaffFlag: r.StaffFlag || "No",
     }));
 
   await clearStore(STORES.PRODUCT_MAPPING);
@@ -217,6 +218,14 @@ export async function processDepositShadow(csvText: string): Promise<number> {
     const nriFlag = pm.NRIFlag === "Yes" ? "NRI"
       : ((prodDesc.toUpperCase().includes("NRE") || prodDesc.toUpperCase().includes("NRO") || prodDesc.toUpperCase().includes("RFC") || prodDesc.toUpperCase().includes("FCNB")) ? "NRI" : "Resident");
 
+    // Senior Citizen flag
+    const seniorCitizenFlag = pm.SeniorCitizen === "Yes" ? "Senior Citizen"
+      : ((prodDesc.toUpperCase().includes("SENIOR") || (r.Acct_Desc || "").toUpperCase().includes("SENIOR")) ? "Senior Citizen" : "Non-Senior");
+
+    // Staff flag
+    const staffFlag = pm.StaffFlag === "Yes" ? "Staff"
+      : ((prodDesc.toUpperCase().includes("STAFF") || (r.Acct_Desc || "").toUpperCase().includes("STAFF")) ? "Staff" : "Non-Staff");
+
     // VIP flag
     const vipFlag = (r.VIP_Flag || "").toUpperCase() === "Y" ? "VIP" : "Non-VIP";
 
@@ -305,6 +314,8 @@ export async function processDepositShadow(csvText: string): Promise<number> {
       Salary_Account_Flag: salaryFlag,
       Wealth_Client_Flag: wealthFlag,
       NRI_Client_Flag: nriFlag,
+      SeniorCitizen_Flag: seniorCitizenFlag,
+      Staff_Flag: staffFlag,
       Deposit_Value_Band: valueBand,
       Maturity_Bucket: maturityBucket,
       Dormancy_Flag: dormancyFlag,
@@ -604,6 +615,7 @@ export async function processLoanBalance(csvText: string): Promise<number> {
       Remaining_Tenure_Percent: remainingTenurePct,
       Seasoning_Ratio: seasoningRatio,
       Forecast_Bucket: forecastBucket,
+      Staff_Flag: (loanSegment === "Staff" || shadowSegmentCd === "306") ? "Staff" : "Non-Staff",
       Loan_Category: loanCategory,
       Loan_SubCategory: loanSubCategory,
       Loan_Segment: loanSegment,
@@ -873,6 +885,8 @@ export async function buildCustomerDimension(): Promise<number> {
         NRI_Client_Flag: "Resident",
         Wealth_Client_Flag: "Non-Wealth",
         Salary_Account_Flag: "Non-Salary",
+        SeniorCitizen_Flag: "Non-Senior",
+        Staff_Flag: "Non-Staff",
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
@@ -902,6 +916,8 @@ export async function buildCustomerDimension(): Promise<number> {
     if (dep.NRI_Client_Flag === "NRI") c.NRI_Client_Flag = "NRI";
     if (dep.Wealth_Client_Flag === "Wealth") c.Wealth_Client_Flag = "Wealth";
     if (dep.Salary_Account_Flag === "Salary") c.Salary_Account_Flag = "Salary";
+    if (dep.SeniorCitizen_Flag === "Senior Citizen") c.SeniorCitizen_Flag = "Senior Citizen";
+    if (dep.Staff_Flag === "Staff") c.Staff_Flag = "Staff";
     if (!c.CustName && dep.CustName) c.CustName = dep.CustName;
     if (!c.MobileNo && dep.MobileNo) c.MobileNo = dep.MobileNo;
   }
@@ -918,6 +934,8 @@ export async function buildCustomerDimension(): Promise<number> {
         NRI_Client_Flag: "Resident",
         Wealth_Client_Flag: "Non-Wealth",
         Salary_Account_Flag: "Non-Salary",
+        SeniorCitizen_Flag: "Non-Senior",
+        Staff_Flag: "Non-Staff",
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
@@ -945,6 +963,7 @@ export async function buildCustomerDimension(): Promise<number> {
       c.DepositCount += 1;
     }
     if (!c.CustName && loan.CUSTNAME) c.CustName = loan.CUSTNAME;
+    if (loan.Staff_Flag === "Staff") c.Staff_Flag = "Staff";
     // Check NPA
     if (loan.NEWIRAC && loan.NEWIRAC !== "00" && loan.NEWIRAC !== "01") {
       c.NPACount += 1;
@@ -964,6 +983,8 @@ export async function buildCustomerDimension(): Promise<number> {
         NRI_Client_Flag: "Resident",
         Wealth_Client_Flag: "Non-Wealth",
         Salary_Account_Flag: "Non-Salary",
+        SeniorCitizen_Flag: "Non-Senior",
+        Staff_Flag: "Non-Staff",
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
@@ -1009,18 +1030,32 @@ export async function buildCustomerDimension(): Promise<number> {
     c.TotalRelationshipValue = Math.abs(c.TotalDeposits) + Math.abs(c.TotalLoans) + Math.abs(c.TotalCCOD);
     c.NetExposure = c.TotalDeposits - c.TotalLoans - c.TotalCCOD;
 
-    // HNI from deposits
-    if (c.TotalDeposits >= 10000000) c.HNI_Category = "Ultra HNI";
-    else if (c.TotalDeposits >= 2500000) c.HNI_Category = "HNI";
+    // HNI from total relationship value
+    if (c.TotalRelationshipValue >= 10000000) c.HNI_Category = "Ultra HNI";
+    else if (c.TotalRelationshipValue >= 2500000) c.HNI_Category = "HNI";
     else c.HNI_Category = "Regular";
 
-    // Customer segment
-    if (c.HNI_Category === "Ultra HNI") c.CustomerSegment = "Ultra HNI";
-    else if (c.HNI_Category === "HNI") c.CustomerSegment = "HNI";
-    else if (c.NRI_Client_Flag === "NRI") c.CustomerSegment = "NRI";
-    else if (c.Wealth_Client_Flag === "Wealth") c.CustomerSegment = "Wealth";
-    else if (c.Salary_Account_Flag === "Salary") c.CustomerSegment = "Salary";
-    else c.CustomerSegment = "Regular";
+    // Multi-flag system: a customer can have multiple flags
+    const flags: string[] = [];
+    // Flag 1 & 2: HNI tiers based on total relationship value
+    if (c.HNI_Category === "Ultra HNI") flags.push("Ultra HNI");
+    else if (c.HNI_Category === "HNI") flags.push("HNI");
+    // Flag 3: Wealth
+    if (c.Wealth_Client_Flag === "Wealth") flags.push("Wealth");
+    // Flag 4: Salary
+    if (c.Salary_Account_Flag === "Salary") flags.push("Salary");
+    // Flag 5: Senior Citizen
+    if (c.SeniorCitizen_Flag === "Senior Citizen") flags.push("Senior Citizen");
+    // Flag 6: NRI
+    if (c.NRI_Client_Flag === "NRI") flags.push("NRI");
+    // Flag 7: Staff
+    if (c.Staff_Flag === "Staff") flags.push("Staff");
+    // Flag 8: Regular (only if no other flag assigned)
+    if (flags.length === 0) flags.push("Regular");
+
+    c.CustomerFlags = flags;
+    // Keep CustomerSegment for backward compatibility (primary/highest flag)
+    c.CustomerSegment = flags[0];
 
     return c;
   });
