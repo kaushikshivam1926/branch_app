@@ -206,22 +206,13 @@
     background-color: white !important;
   }
 
-  /* Exception: preserve SVG fills for watermark and blue curve in print documents */
-  .print-doc-watermark,
-  .print-doc-watermark *,
-  .print-doc-curve,
-  .print-doc-curve * {
-    background: transparent !important;
-    background-color: transparent !important;
+  /* Preserve watermark and curve images in print — img tags with data URIs bypass background stripping */
+  img {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
-  }
-
-  /* SVG path fills must not be overridden */
-  .print-doc-watermark svg path,
-  .print-doc-curve svg path {
-    fill: inherit !important;
+    display: block !important;
+    visibility: visible !important;
   }
 
   /* Except for table headers and specific styled elements */

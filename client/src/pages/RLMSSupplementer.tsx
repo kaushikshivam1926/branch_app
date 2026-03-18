@@ -58,27 +58,47 @@ const SbiStandardLogo = () => (
   </svg>
 );
 
+// Base64 data URIs ensure SVG colours survive the browser's print colour-stripping
+const WATERMARK_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMzQuNCAzNC40IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0zMy43ODM0ODMsLTE3NS44NDEzKSI+CiAgICA8cGF0aCBkPSJtIDUwLjkxODM0OSwxNzUuODQxMjkgYyAtOS40NjMzMDYsMCAtMTcuMTM0ODY2LDcuNjg5MzYgLTE3LjEzNDg2NiwxNy4xNzQzOCAwLDguODkyMzQgNi43NDI1NjYsMTYuMjA1ODQgMTUuMzgxMzY0LDE3LjA4NTE0IHYgLTEyLjQ3NTg0IGMgLTEuODU2NzI0LC0wLjcwODI0IC0zLjE3OTUsLTIuNTA2NjYgLTMuMTc5NSwtNC42MDkzIDAsLTIuNzIwNzYgMi4yMTIyNjQsLTQuOTM0MzIgNC45MzQzMDIsLTQuOTM0MzIgMi43MTk0NTQsMCA0LjkzNDI2NiwyLjIxMzU2IDQuOTM0MjY2LDQuOTM0MzIgMCwyLjEwMjY0IC0xLjMyNTMxNiwzLjkwMDcyIC0zLjE4MjA0LDQuNjA5MyB2IDEyLjQ3NTg0IGMgOC42NDAwNjYsLTAuODc5MyAxNS4zODI2MzIsLTguMTkyOCAxNS4zODI2MzIsLTE3LjA4NTE0IDAsLTkuNDg1MDIgLTcuNjcxNTY0LC0xNy4xNzQzOCAtMTcuMTM0ODU4LC0xNy4xNzQzOCIgZmlsbD0iIzAwYjVlZiIvPgogIDwvZz4KPC9zdmc+';
+const CURVE_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNIDAgMCBDIDYwIDAgMTAwIDQwIDEwMCAxMDAgTCAxMDAgMCBaIiBmaWxsPSIjMDBBOUUwIi8+Cjwvc3ZnPg==';
+
 const Watermark = () => (
   <div
-    className="print-doc-watermark absolute inset-0 flex items-center justify-center pointer-events-none"
-    style={{ zIndex: 0, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
+    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+    style={{ zIndex: 0 }}
   >
-    <svg viewBox="0 0 34.4 34.4" style={{ width: '450px', height: '450px', opacity: 0.06, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties} xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(-33.783483,-175.8413)">
-        <path d="m 50.918349,175.84129 c -9.463306,0 -17.134866,7.68936 -17.134866,17.17438 0,8.89234 6.742566,16.20584 15.381364,17.08514 v -12.47584 c -1.856724,-0.70824 -3.1795,-2.50666 -3.1795,-4.6093 0,-2.72076 2.212264,-4.93432 4.934302,-4.93432 2.719454,0 4.934266,2.21356 4.934266,4.93432 0,2.10264 -1.325316,3.90072 -3.18204,4.6093 v 12.47584 c 8.640066,-0.8793 15.382632,-8.1928 15.382632,-17.08514 0,-9.48502 -7.671564,-17.17438 -17.134858,-17.17438" fill="#00b5ef"/>
-      </g>
-    </svg>
+    {/* img tag with data URI bypasses CSS print background stripping entirely */}
+    <img
+      src={WATERMARK_URI}
+      alt=""
+      style={{
+        width: '450px',
+        height: '450px',
+        opacity: 0.07,
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+      } as React.CSSProperties}
+    />
   </div>
 );
 
 const TopRightCurve = () => (
   <div
-    className="print-doc-curve absolute top-0 right-0 pointer-events-none"
-    style={{ zIndex: 0, width: '220px', height: '220px', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
+    className="absolute top-0 right-0 pointer-events-none"
+    style={{ zIndex: 0, width: '220px', height: '220px' }}
   >
-    <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties} preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M 0 0 C 60 0 100 40 100 100 L 100 0 Z" fill="#00A9E0"/>
-    </svg>
+    {/* img tag with data URI bypasses CSS print background stripping entirely */}
+    <img
+      src={CURVE_URI}
+      alt=""
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'block',
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+      } as React.CSSProperties}
+    />
   </div>
 );
 
@@ -616,40 +636,63 @@ export default function RLMSSupplementer() {
     const ddoFullAddress = [data.ddoAddress].filter(Boolean).join(', ');
 
     switch (printDocId) {
-      case 'pl12':
+      case 'pl12': {
+        // Compute first EMI month: month after disbursement date
+        const emiMonthLabel = (() => {
+          if (!data.disbursementDate) return '____________';
+          const d = new Date(data.disbursementDate);
+          d.setMonth(d.getMonth() + 1);
+          return d.toLocaleString('en-IN', { month: 'long', year: 'numeric' }).toUpperCase();
+        })();
+        const presentAddress = [data.presentHouseNo, data.presentStreet, data.presentCity, data.presentState, data.presentPin].filter(Boolean).join(', ');
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-8">
               <SbiRlmsLogo />
-              <div className="font-bold text-right pt-2">Annexure: XP-12</div>
+              <div className="text-right pt-2 text-[10pt]">Annexure: XP- 12</div>
             </div>
-            <h2 className="text-center font-bold mb-6 underline text-[12pt]">Irrevocable Standing Instruction given by the Borrower to the Bank</h2>
+            <h2 className="text-center font-bold mb-8 underline text-[10pt]">Irrevocable Standing Instruction given by the Borrower to the Bank</h2>
+            <div className="mb-8 leading-6">
+              <p>{data.branchName || 'PBB NEW MARKET,'}</p>
+              <p>MADHYA PRADESH, PIN- {data.presentPin || '______'}</p>
+            </div>
+            <div className="flex justify-between mb-6">
+              <p>Madam/Dear Sir,</p>
+              <p>Date: {formatDate(data.documentExecutionDate)}</p>
+            </div>
             <div className="mb-6">
-              <p>To,</p><p>The Branch Manager,</p><p>State Bank of India,</p>
-              <p>{data.branchName || '........................................'}</p>
+              <p className="underline">{data.salutation ? `${data.salutation} ` : ''}{data.name || '________________________________'}</p>
+              <p className="underline font-bold">{data.name ? data.name.toUpperCase() : '________________________________'}</p>
+              <p className="underline">Irrevocable Letter of Authority/Standing Instruction</p>
+              <p className="underline">{data.loanVariant || 'Personal Loan'}</p>
+              <p className="underline">Savings Bank/Current Account Number: {data.salaryAcNo ? data.salaryAcNo.replace(/^0+/, '') : '________________________'}</p>
             </div>
-            <p className="mb-4">Madam/Dear Sir,</p>
-            <p className="font-bold my-4 underline">Irrevocable Letter of Authority/Standing Instruction</p>
-            <p className="font-bold my-4 underline">Personal Loan</p>
-            <p className="font-bold my-4 underline">Savings Bank/Current Account Number: {data.salaryAcNo ? data.salaryAcNo.replace(/^0+/, '') : '................................'}</p>
             <p className="text-justify mb-4">
-              I intend to avail the benefit of the aforesaid scheme, at present I am serving as <strong>{data.designation || '.............................'}</strong> in <strong>{data.empDeptName || '.............................'}</strong> Department at <strong>{empAddress || '...................................................'}</strong>. I undertake to deposit my salary every month for credit to the aforesaid Savings Bank/Current account maintained at your branch till liquidation of the amount advanced to me with up to date interest etc.
+              I intend to avail the benefit of the aforesaid scheme, at present I am serving as{' '}
+              <span className="inline-block border-b border-black min-w-[120px]">{data.designation || ''}</span>{' '}in{' '}
+              <span className="inline-block border-b border-black min-w-[120px]">{data.empDeptName || ''}</span>{' '}
+              Department at {empAddress || '___________________________________________'}. I undertake to deposit my salary every month for credit to the aforesaid Savings Bank/Current account maintained at your branch till liquidation of the amount advanced to me with up to date interest etc.
             </p>
             <p className="text-justify mb-4">
-              2. I further authorise you to deduct a sum of <strong>Rs. {data.proposedEmi || '...........'}</strong> per month beginning from the month following the month in which the loan is disbursed and to credit the same to the loan account as EMI (Equated Monthly Instalment) till the loan is fully repaid.
+              2. I further authorise you to deduct a sum of ₹ <strong>{data.proposedEmi || '____________'}</strong>{data.proposedEmi ? ` (Rupees ${numberToWords(data.proposedEmi)} only)` : ' (Rupees _________________________ only)'} per month beginning from the salary for the month of <strong>{emiMonthLabel}</strong> from the aforesaid account for adjustment towards the balance outstanding in the loan account till liquidation.
             </p>
-            <p className="text-justify mb-4">3. I further authorise you to debit my Savings Bank/Current Account for the EMI amount even if the balance in the account is insufficient, resulting in a debit balance in the account.</p>
-            <p className="text-justify mb-4">4. I undertake to maintain sufficient balance in my Savings Bank/Current Account to meet the EMI obligation every month.</p>
-            <p className="text-justify mb-16">5. This letter of authority/standing instruction is irrevocable and shall remain in force until the loan is fully repaid.</p>
-            <div className="flex justify-between w-4/5 mt-16">
-              <div>
-                <p className="mb-8">Signature of Borrower: _______________________</p>
-                <p>Name of Borrower: <strong>{data.name || '........................................................'}</strong></p>
-                <p>Date: {formatDate(data.documentExecutionDate)}</p>
-              </div>
+            <p className="text-justify mb-4">
+              3. I hereby authorise State Bank of India, <strong>{data.branchName || '________________'}</strong> Branch to collect and receive any amount payable towards provident fund, gratuity, pension or similar dues on my behalf in the event of my retirement/resignation/termination or discontinuation of my services for any reason whatsoever.
+            </p>
+            <p className="text-justify mb-4">
+              4. I agree that the aforesaid authority shall be irrevocable till the entire amount of loan together with interest stands liquidated. I further undertake to execute necessary authorisation/documents as deemed just and necessary by the Bank.
+            </p>
+            <p className="text-justify mb-10">
+              5. I hereby undertake that I shall not shift/close my salary account with SBI and will continue to route my salary from the same account till the currency of the loan.
+            </p>
+            <div className="mt-16">
+              <p className="mb-8">Signature of the borrower</p>
+              <p className="font-semibold">{data.name || '________________________________'}</p>
+              <p>{presentAddress || '________________________________'}</p>
             </div>
           </div>
         );
+      }
       case 'sec281':
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
@@ -675,13 +718,9 @@ export default function RLMSSupplementer() {
               D. I/we further declare that no dues are pending to the IT department in my name as on date.
             </p>
             <p className="text-justify mb-10">The above mention facts are true and correct to the best of my knowledge, information and belief.</p>
-            <div className="flex justify-between items-end mt-16">
-              <div>
-                <p>Date: {formatDate(data.documentExecutionDate) || '___/___/______'}</p>
-              </div>
-              <div className="text-right">
-                <p className="mb-10">Signature of Borrower</p>
-              </div>
+            <div className="mt-16">
+              <p className="mb-10">Signature of Borrower</p>
+              <p>Date: {formatDate(data.documentExecutionDate) || '___/___/______'}</p>
             </div>
           </div>
         );
@@ -689,7 +728,7 @@ export default function RLMSSupplementer() {
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
             <div className="mb-8"><SbiStandardLogo /></div>
-            <h2 className="font-bold mb-6 text-[10pt]">Consent to disclose credit/security information to Information Utilities (IUs) by Borrower</h2>
+            <h2 className="text-center font-bold mb-6 text-[10pt]">Consent to disclose credit/security information to Information Utilities (IUs) by Borrower</h2>
             <p className="text-justify mb-6 indent-8">
               The Borrower hereby agrees and gives consent for the disclosure/ sharing by the Bank of all or any such (a) information and data relating to it/him (b) information or data relating to his obligation in any credit facility granted / to be granted by the Bank and availed/enjoyed/guaranteed by it/ him as Borrower (c) Information relating to assets in relation to which any security interest has been created in favour of the Bank and (d)) default, if any, committed by it/ him in discharge of such obligation as the Bank may deem appropriate and necessary to disclose and furnish to any of the Information Utilities (IUs) registered with Insolvency and Bankruptcy Board of India (IBBI), Credit Information Companies (&ldquo;CIC&rdquo;) registered with Reserve Bank of India (RBI) and any other agency authorised in this behalf by the IBBI, RBI, and/or any such agency that may be constituted or require such information at any time under any of the statutory provisions/ Regulations. The Borrower declares that the information and data furnished by it/him is true and correct. The Borrower further undertakes that (a) the IU/CICs and / or any other agency so authorised may use, process the said information and data disclosed by the Bank in the matter as deemed fit by them and (b) the IU/CICs and / any other agency so authorised may furnish for consideration, the processed information and data or products thereof prepared by them, to Banks / Financial Institutions or other Credit Grantors or Registered Users/ Insolvency Professionals, as may be specified by the IBBI/RBI or such other Regulators/ Statutory Authorities in this behalf. Notwithstanding any right available to the Bank under any law for the time-being in force, the Borrower hereby further agrees and undertakes that the furnishing of information to IUs and any default as reported by IU is sufficient to record the default for the purpose of filing/ initiating any proceedings including but not limited to filing application before the Adjudicating Authority under Insolvency and Bankruptcy Code (IBC) for Insolvency Resolution Process.
             </p>
@@ -1063,7 +1102,7 @@ export default function RLMSSupplementer() {
                 <SectionHeader title="Supplementary Formats & Annexures" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { id: 'pl12', label: '2. Irrevocable Authority (PL-12)' },
+                    { id: 'pl12', label: '2. Standing Instruction (PL-12)' },
                     { id: 'sec281', label: '3. IT Undertaking Sec 281' },
                     { id: 'nesl', label: '4. Consent to Disclose to NeSL' },
                     { id: 'annex2', label: '5. Annexure II' },
