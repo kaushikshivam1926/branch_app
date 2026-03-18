@@ -149,7 +149,7 @@ export default function FloatingCalculator() {
       {/* Floating Action Button */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all z-50"
+        className="print:hidden fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all z-50"
         style={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         }}
@@ -161,7 +161,7 @@ export default function FloatingCalculator() {
       {/* Calculator Panel */}
       <div
         ref={calculatorRef}
-        className={`fixed bottom-24 right-6 w-80 bg-white rounded-2xl shadow-2xl transition-all duration-300 z-40 ${
+        className={`print:hidden fixed bottom-24 right-6 w-80 bg-white rounded-2xl shadow-2xl transition-all duration-300 z-40 ${
           isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
         }`}
         style={{

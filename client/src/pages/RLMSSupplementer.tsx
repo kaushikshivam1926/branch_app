@@ -59,8 +59,11 @@ const SbiStandardLogo = () => (
 );
 
 const Watermark = () => (
-  <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 0 }}>
-    <svg viewBox="0 0 34.4 34.4" className="w-[450px] h-[450px] opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
+  <div
+    className="print-doc-watermark absolute inset-0 flex items-center justify-center pointer-events-none"
+    style={{ zIndex: 0, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
+  >
+    <svg viewBox="0 0 34.4 34.4" style={{ width: '450px', height: '450px', opacity: 0.06, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties} xmlns="http://www.w3.org/2000/svg">
       <g transform="translate(-33.783483,-175.8413)">
         <path d="m 50.918349,175.84129 c -9.463306,0 -17.134866,7.68936 -17.134866,17.17438 0,8.89234 6.742566,16.20584 15.381364,17.08514 v -12.47584 c -1.856724,-0.70824 -3.1795,-2.50666 -3.1795,-4.6093 0,-2.72076 2.212264,-4.93432 4.934302,-4.93432 2.719454,0 4.934266,2.21356 4.934266,4.93432 0,2.10264 -1.325316,3.90072 -3.18204,4.6093 v 12.47584 c 8.640066,-0.8793 15.382632,-8.1928 15.382632,-17.08514 0,-9.48502 -7.671564,-17.17438 -17.134858,-17.17438" fill="#00b5ef"/>
       </g>
@@ -69,8 +72,11 @@ const Watermark = () => (
 );
 
 const TopRightCurve = () => (
-  <div className="absolute top-0 right-0 w-[220px] h-[220px] pointer-events-none" style={{ zIndex: 0 }}>
-    <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <div
+    className="print-doc-curve absolute top-0 right-0 pointer-events-none"
+    style={{ zIndex: 0, width: '220px', height: '220px', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
+  >
+    <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties} preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M 0 0 C 60 0 100 40 100 100 L 100 0 Z" fill="#00A9E0"/>
     </svg>
   </div>
@@ -648,22 +654,33 @@ export default function RLMSSupplementer() {
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
             <div className="mb-8"><SbiStandardLogo /></div>
-            <h2 className="text-center font-bold mb-2 text-[12pt]">UNDERTAKING UNDER SECTION 281 OF INCOME TAX ACT, 1961</h2>
-            <p className="text-center mb-10 text-[9pt]">(To be stamped as an agreement)</p>
-            <p className="mb-6">I/We, <strong>{data.name || '............................................'}</strong>, hereby declare and undertake as follows:</p>
-            <p className="text-justify mb-4">1. That I/We have applied for a loan of Rs. <strong>{data.loanAmount || '.................'}</strong> {data.loanAmount ? `(Rupees ${numberToWords(data.loanAmount)} only)` : '(Rupees ........................................................ only)'} from State Bank of India, <strong>{data.branchName || '.......................................'}</strong>.</p>
-            <p className="text-justify mb-4">2. That I/We am/are not aware of any pending proceedings for assessment or reassessment of my/our income under the Income Tax Act, 1961 for any assessment year.</p>
-            <p className="text-justify mb-4">3. That I/We undertake to inform the Bank immediately in the event of any such proceedings being initiated against me/us.</p>
-            <p className="text-justify mb-4">4. That I/We am/are not aware of any demand outstanding against me/us under the Income Tax Act, 1961.</p>
-            <p className="text-justify mb-16">5. That I/We undertake that in case any demand is raised against me/us under the Income Tax Act, 1961 in future, I/We shall immediately inform the Bank and shall not create any charge on my/our assets without the prior written consent of the Bank.</p>
+            <h2 className="text-center font-bold mb-8 text-[12pt]">UNDERTAKING</h2>
+            <p className="text-justify mb-6">
+              I, Shri / Smt. / Kum. <strong>{data.name || '_________________________________'}</strong> Son / Wife / Daughter
+              of Shri <strong>{data.fatherName || '_________________________'}</strong> residing at{' '}
+              <strong>{[data.presentHouseNo, data.presentStreet, data.presentCity, data.presentState, data.presentPin].filter(Boolean).join(', ') || '______________________________________'}</strong>{' '}
+              do hereby solemnly affirm and declare as follows:
+            </p>
+            <p className="text-justify mb-4">
+              A. I had availed credit facilities to the extent of Rs. <strong>{data.loanAmount || '____________'}</strong>{' '}
+              (Rupees <strong>{data.loanAmount ? numberToWords(data.loanAmount) : '_______________________________________'}</strong> only) from State Bank of India, PBB New Market Branch, Bhopal
+            </p>
+            <p className="text-justify mb-4">
+              B. I confirm herewith that no IT proceedings for recovery of taxes are pending against me, under Section 281 of the Income-Tax Act or any other law in force for the time being.
+            </p>
+            <p className="text-justify mb-4">
+              C. I confirm herewith that no notice has been issued and/or served on me under Rules 2, 16, or 51, or any other Rules of the second schedule to the income-tax Act 1961 or under any other law.
+            </p>
+            <p className="text-justify mb-16">
+              D. I/we further declare that no dues are pending to the IT department in my name as on date.
+            </p>
+            <p className="text-justify mb-10">The above mention facts are true and correct to the best of my knowledge, information and belief.</p>
             <div className="flex justify-between items-end mt-16">
               <div>
-                <p>Place: {data.place || '................................'}</p>
-                <p>Date: {formatDate(data.documentExecutionDate)}</p>
+                <p>Date: {formatDate(data.documentExecutionDate) || '___/___/______'}</p>
               </div>
               <div className="text-right">
-                <p className="mb-10">Signature of Borrower(s)</p>
-                <p>Name: <strong>{data.name || '........................................................'}</strong></p>
+                <p className="mb-10">Signature of Borrower</p>
               </div>
             </div>
           </div>
@@ -672,26 +689,17 @@ export default function RLMSSupplementer() {
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
             <div className="mb-8"><SbiStandardLogo /></div>
-            <h2 className="text-center font-bold mb-2 text-[12pt]">CONSENT TO DISCLOSE INFORMATION TO NeSL</h2>
-            <p className="text-center mb-10 text-[9pt]">(National e-Governance Services Limited)</p>
-            <p className="mb-6">I/We, <strong>{data.name || '............................................'}</strong>, hereby give my/our consent to State Bank of India to disclose the following information to National e-Governance Services Limited (NeSL) for the purpose of registration of the loan documents:</p>
-            <ul className="list-disc ml-6 mb-6 space-y-2">
-              <li>Name and address of the borrower(s)</li>
-              <li>Loan account number and details</li>
-              <li>Details of securities/collaterals</li>
-              <li>Any other information as required for registration</li>
-            </ul>
-            <p className="text-justify mb-4">I/We understand that this information will be used solely for the purpose of registration of loan documents under the applicable laws and regulations.</p>
-            <p className="text-justify mb-16">I/We confirm that I/We have read and understood the terms and conditions of this consent and agree to the same.</p>
-            <div className="flex justify-between items-end mt-16">
-              <div>
-                <p>Place: {data.place || '................................'}</p>
-                <p>Date: {formatDate(data.documentExecutionDate)}</p>
-              </div>
-              <div className="text-right">
-                <p className="mb-10">Signature of Borrower(s)</p>
-                <p>Name: <strong>{data.name || '........................................................'}</strong></p>
-              </div>
+            <h2 className="font-bold mb-6 text-[10pt]">Consent to disclose credit/security information to Information Utilities (IUs) by Borrower</h2>
+            <p className="text-justify mb-6 indent-8">
+              The Borrower hereby agrees and gives consent for the disclosure/ sharing by the Bank of all or any such (a) information and data relating to it/him (b) information or data relating to his obligation in any credit facility granted / to be granted by the Bank and availed/enjoyed/guaranteed by it/ him as Borrower (c) Information relating to assets in relation to which any security interest has been created in favour of the Bank and (d)) default, if any, committed by it/ him in discharge of such obligation as the Bank may deem appropriate and necessary to disclose and furnish to any of the Information Utilities (IUs) registered with Insolvency and Bankruptcy Board of India (IBBI), Credit Information Companies (&ldquo;CIC&rdquo;) registered with Reserve Bank of India (RBI) and any other agency authorised in this behalf by the IBBI, RBI, and/or any such agency that may be constituted or require such information at any time under any of the statutory provisions/ Regulations. The Borrower declares that the information and data furnished by it/him is true and correct. The Borrower further undertakes that (a) the IU/CICs and / or any other agency so authorised may use, process the said information and data disclosed by the Bank in the matter as deemed fit by them and (b) the IU/CICs and / any other agency so authorised may furnish for consideration, the processed information and data or products thereof prepared by them, to Banks / Financial Institutions or other Credit Grantors or Registered Users/ Insolvency Professionals, as may be specified by the IBBI/RBI or such other Regulators/ Statutory Authorities in this behalf. Notwithstanding any right available to the Bank under any law for the time-being in force, the Borrower hereby further agrees and undertakes that the furnishing of information to IUs and any default as reported by IU is sufficient to record the default for the purpose of filing/ initiating any proceedings including but not limited to filing application before the Adjudicating Authority under Insolvency and Bankruptcy Code (IBC) for Insolvency Resolution Process.
+            </p>
+            <p className="text-justify mb-16 indent-8">
+              The Borrower further agrees and undertakes to authenticate the information furnished by it/ him to the Bank/IUs/CICs or such Institutions (&ldquo;Credit Information Institutions&rdquo;) in such manner as may be prescribed by the respective Credit Information Institutions or the Regulators/Authorities governing such Credit Information Institutions.
+            </p>
+            <div className="mt-16 space-y-4">
+              <p>Signature of Borrower: <span className="inline-block w-48 border-b border-black">&nbsp;</span></p>
+              <p>Name of Borrower: <strong>{data.name || <span className="inline-block w-48 border-b border-black">&nbsp;</span>}</strong></p>
+              <p>Date: {formatDate(data.documentExecutionDate) || '___/___/______'}</p>
             </div>
           </div>
         );
@@ -1084,7 +1092,10 @@ export default function RLMSSupplementer() {
   // Print mode: show only the document
   if (printDocId) {
     return (
-      <div className="bg-white w-full max-w-[210mm] min-h-[297mm] mx-auto p-10 text-black relative overflow-hidden shadow-xl print:shadow-none print:p-[15mm] print:m-0">
+      <div
+        className="bg-white w-full max-w-[210mm] min-h-[297mm] mx-auto p-10 text-black relative overflow-hidden shadow-xl print:shadow-none print:p-[15mm] print:m-0"
+        style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', colorAdjust: 'exact' } as React.CSSProperties}
+      >
         <TopRightCurve />
         {(printDocId === 'pl12' || printDocId === 'annex10') && <Watermark />}
         <div className="relative z-10">{renderPrintDocument()}</div>

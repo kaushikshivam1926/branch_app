@@ -206,6 +206,24 @@
     background-color: white !important;
   }
 
+  /* Exception: preserve SVG fills for watermark and blue curve in print documents */
+  .print-doc-watermark,
+  .print-doc-watermark *,
+  .print-doc-curve,
+  .print-doc-curve * {
+    background: transparent !important;
+    background-color: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* SVG path fills must not be overridden */
+  .print-doc-watermark svg path,
+  .print-doc-curve svg path {
+    fill: inherit !important;
+  }
+
   /* Except for table headers and specific styled elements */
   thead,
   .bg-gray-100,
