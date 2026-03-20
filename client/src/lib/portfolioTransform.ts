@@ -719,7 +719,30 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       }
 
       // ── STEP 2: Look up product code in Loan Product Category Mapping ──
-      const productMappingEntry = productCode ? loanProductByCode[productCode] : null;
+      // Also check a built-in fallback table for common CC/OD product codes
+      // that may not yet be in the user's uploaded mapping file.
+      const BUILTIN_CCOD_PRODUCT_MAP: Record<string, { Category: string; SubCategory: string; Segment: string; Priority: string; Secured: string }> = {
+        "1029-1431": { Category: "Gold Loan", SubCategory: "CSP Silver OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1094-1441": { Category: "Gold Loan", SubCategory: "Capital Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1096-1431": { Category: "Gold Loan", SubCategory: "SGS Plus Silver OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1096-1441": { Category: "Gold Loan", SubCategory: "SGS Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1097-1441": { Category: "Gold Loan", SubCategory: "PSP Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1098-1441": { Category: "Gold Loan", SubCategory: "CGS Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "5011-1301": { Category: "CC/OD", SubCategory: "Current Account OD", Segment: "General", Priority: "Medium", Secured: "No" },
+        "6040-4011": { Category: "MSME", SubCategory: "Current Account OD", Segment: "General", Priority: "Medium", Secured: "No" },
+        "6059-1001": { Category: "Personal Loan", SubCategory: "Overdraft - Staff", Segment: "Staff", Priority: "High", Secured: "No" },
+        "6059-5001": { Category: "Personal Loan", SubCategory: "Overdraft - Staff", Segment: "Staff", Priority: "High", Secured: "No" },
+        "6500-2020": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2021": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2078": { Category: "Gold Loan", SubCategory: "Liquid Gold Loan OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2158": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2258": { Category: "Personal Loan", SubCategory: "OD Against Mutual Funds", Segment: "General", Priority: "Medium", Secured: "Yes" },
+      };
+      const productMappingEntry = productCode
+        ? (loanProductByCode[productCode] || (BUILTIN_CCOD_PRODUCT_MAP[productCode]
+            ? { ...BUILTIN_CCOD_PRODUCT_MAP[productCode], ProductName: acctDesc, Scheme: "None", RiskWeight: "100", StaffFlag: BUILTIN_CCOD_PRODUCT_MAP[productCode].Segment === "Staff" ? "Yes" : "No" }
+            : null))
+        : null;
 
       if (productMappingEntry) {
         // Primary path: product code found in loan product mapping
