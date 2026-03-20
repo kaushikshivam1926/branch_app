@@ -174,13 +174,10 @@ export async function processDepositShadow(csvText: string): Promise<number> {
   // First pass: build CIF aggregation for HNI
   const cifTotals: Record<string, number> = {};
 
-  const records = rows
-    .filter((r) => {
-      // Exclude accounts that exist in CC/OD Balance file (deduplication)
-      const acNo = trimLeadingZeros(r.AcNo || "");
-      return !ccodAccountSet.has(acNo);
-    })
-    .map((r) => {
+  // Process ALL rows (including CC/OD accounts) for the shadow lookup
+  // CC/OD accounts need their Acct_Type + Int_cat to be available for product code derivation
+  // in processCCODBalance. DEPOSIT_SHADOW stores all rows; DEPOSIT_DATA stores only non-CC/OD.
+  const allRows = rows.map((r) => {
     const acNo = trimLeadingZeros(r.AcNo || "");
     const cif = trimLeadingZeros(r.CIFNo || "");
     const currentBalance = parseNum(r.Curr_Bal);
@@ -261,8 +258,8 @@ export async function processDepositShadow(csvText: string): Promise<number> {
     else if (acCloseDt) dormancyFlag = "Closed";
     else if (status === "03" || status === "19") dormancyFlag = "Dormant/Inoperative";
 
-    // CIF total aggregation
-    if (cif) {
+    // CIF total aggregation — only count non-CC/OD accounts as deposits
+    if (cif && !ccodAccountSet.has(acNo)) {
       cifTotals[cif] = (cifTotals[cif] || 0) + currentBalance;
     }
 
@@ -326,7 +323,7 @@ export async function processDepositShadow(csvText: string): Promise<number> {
   });
 
   // Second pass: set HNI category based on CIF totals
-  for (const rec of records) {
+  for (const rec of allRows) {
     const total = cifTotals[rec.CIF] || 0;
     rec.CIF_Total_Deposit = total;
     if (total >= 10000000) rec.HNI_Category = "Ultra HNI";
@@ -334,13 +331,19 @@ export async function processDepositShadow(csvText: string): Promise<number> {
     else rec.HNI_Category = "Regular";
   }
 
-  await clearStore(STORES.DEPOSIT_DATA);
-  await putRecords(STORES.DEPOSIT_DATA, records);
-  // Also write to DEPOSIT_SHADOW so the status indicator shows the correct count
+  // DEPOSIT_SHADOW: store ALL rows (including CC/OD accounts) so that
+  // processCCODBalance can look up Acct_Type + Int_cat for product code derivation.
   await clearStore(STORES.DEPOSIT_SHADOW);
-  await putRecords(STORES.DEPOSIT_SHADOW, records);
+  await putRecords(STORES.DEPOSIT_SHADOW, allRows);
+
+  // DEPOSIT_DATA: store only non-CC/OD rows for deposit analytics
+  // (CC/OD accounts are classified as loans, not deposits)
+  const depositOnlyRecords = allRows.filter((rec: any) => !ccodAccountSet.has(rec.AcNo));
+  await clearStore(STORES.DEPOSIT_DATA);
+  await putRecords(STORES.DEPOSIT_DATA, depositOnlyRecords);
+
   await setSetting("deposit-shadow-date", todayISO());
-  return records.length;
+  return depositOnlyRecords.length;
 }
 
 // ============================================================
@@ -644,12 +647,22 @@ export async function processCCODBalance(csvText: string): Promise<number> {
 
   // Load loan product mapping for CC/OD category lookup
   const loanProductMapping = await getAllRecords(STORES.LOAN_PRODUCT_MAPPING);
-  // Build lookup by ProductCode AND by ProductName (for ACCTDESC matching)
+  // Build lookup by ProductCode (primary) AND by ProductName (fallback for ACCTDESC matching)
   const loanProductByCode: Record<string, any> = {};
   const loanProductByName: Record<string, any> = {};
   for (const p of loanProductMapping) {
     if (p.ProductCode) loanProductByCode[p.ProductCode.trim()] = p;
     if (p.ProductName) loanProductByName[p.ProductName.trim().toUpperCase()] = p;
+  }
+
+  // ── PRIMARY: Load Deposit Shadow to fetch Acct_Type + Int_cat for CC/OD accounts ──
+  // CC/OD accounts exist in the Deposit Shadow file (they are OD/CC type accounts)
+  // but their balances come from the CC/OD Balance file (which is more current).
+  // We use Deposit Shadow only for product code derivation.
+  const depositShadowRecords = await getAllRecords(STORES.DEPOSIT_SHADOW);
+  const depositShadowByAcNo: Record<string, any> = {};
+  for (const ds of depositShadowRecords) {
+    if (ds.AcNo) depositShadowByAcNo[ds.AcNo.trim()] = ds;
   }
 
   const records = rows
@@ -680,7 +693,6 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       if (irregamt > 0) irregularFlag = "Irregular";
       else if (currentBalance != null && dp != null && Math.abs(currentBalance) > dp && dp > 0) irregularFlag = "Overdrawn";
 
-      // Category lookup: match ACCTDESC against ProductName in loan product mapping
       const acctDesc = (r.ACCTDESC || "").trim();
       const acctDescUpper = acctDesc.toUpperCase();
       let loanCategory = "CC/OD";
@@ -692,63 +704,98 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       let loanRiskWeight = "100";
       let productName = acctDesc;
       let productCode = "";
+      let staffFlag = "Non-Staff";
 
-      // 1. Exact ProductName match
-      const exactMatch = loanProductByName[acctDescUpper];
-      if (exactMatch) {
-        loanCategory = exactMatch.Category || "CC/OD";
-        loanSubCategory = exactMatch.SubCategory || "";
-        loanSegment = exactMatch.Segment || "General";
-        loanPriority = exactMatch.Priority || "Medium";
-        loanSecured = exactMatch.Secured || "";
-        loanScheme = exactMatch.Scheme || "None";
-        loanRiskWeight = exactMatch.RiskWeight || "100";
-        productName = exactMatch.ProductName || acctDesc;
-        productCode = exactMatch.ProductCode || "";
+      // ── STEP 1: Look up account in Deposit Shadow to get Acct_Type + Int_cat ──
+      // The Deposit Shadow file contains the product type codes for CC/OD accounts.
+      // These are the same codes used in the Loan Product Category Mapping.
+      const shadowRecord = depositShadowByAcNo[loanKey];
+      if (shadowRecord) {
+        const actType = (shadowRecord.ActType || "").trim();
+        const intCat = (shadowRecord.IntCat || "").trim();
+        if (actType && intCat) {
+          productCode = `${actType}-${intCat}`;
+        }
+      }
+
+      // ── STEP 2: Look up product code in Loan Product Category Mapping ──
+      const productMappingEntry = productCode ? loanProductByCode[productCode] : null;
+
+      if (productMappingEntry) {
+        // Primary path: product code found in loan product mapping
+        loanCategory = productMappingEntry.Category || "CC/OD";
+        loanSubCategory = productMappingEntry.SubCategory || "";
+        loanSegment = productMappingEntry.Segment || "General";
+        loanPriority = productMappingEntry.Priority || "Medium";
+        loanSecured = productMappingEntry.Secured || "";
+        loanScheme = productMappingEntry.Scheme || "None";
+        loanRiskWeight = productMappingEntry.RiskWeight || "100";
+        productName = productMappingEntry.ProductName || acctDesc;
+        // Staff flag from product mapping
+        if (productMappingEntry.StaffFlag === "Yes" || loanSegment === "Staff") {
+          staffFlag = "Staff";
+        }
       } else {
-        // 2. Partial ProductName match (ACCTDESC contains ProductName or vice versa)
-        let bestMatch: any = null;
-        let bestLen = 0;
-        for (const [pname, pm] of Object.entries(loanProductByName)) {
-          if (acctDescUpper.includes(pname) || pname.includes(acctDescUpper)) {
-            if (pname.length > bestLen) {
-              bestLen = pname.length;
-              bestMatch = pm;
+        // ── STEP 3: Fallback — match ACCTDESC against ProductName in loan product mapping ──
+        // Used when the account is not found in Deposit Shadow or product code has no mapping entry.
+        const exactMatch = loanProductByName[acctDescUpper];
+        if (exactMatch) {
+          loanCategory = exactMatch.Category || "CC/OD";
+          loanSubCategory = exactMatch.SubCategory || "";
+          loanSegment = exactMatch.Segment || "General";
+          loanPriority = exactMatch.Priority || "Medium";
+          loanSecured = exactMatch.Secured || "";
+          loanScheme = exactMatch.Scheme || "None";
+          loanRiskWeight = exactMatch.RiskWeight || "100";
+          productName = exactMatch.ProductName || acctDesc;
+          productCode = exactMatch.ProductCode || productCode;
+          if (exactMatch.StaffFlag === "Yes" || loanSegment === "Staff") staffFlag = "Staff";
+        } else {
+          // Partial ProductName match (ACCTDESC contains ProductName or vice versa)
+          let bestMatch: any = null;
+          let bestLen = 0;
+          for (const [pname, pm] of Object.entries(loanProductByName)) {
+            if (acctDescUpper.includes(pname) || pname.includes(acctDescUpper)) {
+              if (pname.length > bestLen) {
+                bestLen = pname.length;
+                bestMatch = pm;
+              }
             }
           }
-        }
-        if (bestMatch) {
-          loanCategory = bestMatch.Category || "CC/OD";
-          loanSubCategory = bestMatch.SubCategory || "";
-          loanSegment = bestMatch.Segment || "General";
-          loanPriority = bestMatch.Priority || "Medium";
-          loanSecured = bestMatch.Secured || "";
-          loanScheme = bestMatch.Scheme || "None";
-          loanRiskWeight = bestMatch.RiskWeight || "100";
-          productName = bestMatch.ProductName || acctDesc;
-          productCode = bestMatch.ProductCode || "";
-        } else {
-          // 3. Keyword fallback
-          if (acctDescUpper.includes("MAXGAIN") || acctDescUpper.includes("HL MAXGAIN")) {
-            loanCategory = "Home Loan"; loanSubCategory = "Maxgain OD";
-          } else if (acctDescUpper.includes("HOME TOPUP") || acctDescUpper.includes("INSTA-HOME")) {
-            loanCategory = "Home Loan"; loanSubCategory = "Home Top-up OD";
-          } else if (acctDescUpper.includes("MSME") || acctDescUpper.includes("CC-SBF") || acctDescUpper.includes("MUDRA")) {
-            loanCategory = "MSME"; loanSubCategory = acctDescUpper.includes("MUDRA") ? "MUDRA Cash Credit" : "Cash Credit";
-          } else if (acctDescUpper.includes("OD BANK") || acctDescUpper.includes("OD-LOAN AG DEP") || acctDescUpper.includes("OD AGAINST DEP")) {
-            loanCategory = "Personal Loan"; loanSubCategory = "OD Against Deposits";
-          } else if (acctDescUpper.includes("OD-LON AGAINST FD") || acctDescUpper.includes("OD-LOAN AGAINST FD") || acctDescUpper.includes("OD AGAINST FD")) {
-            loanCategory = "Personal Loan"; loanSubCategory = "OD Against Fixed Deposit";
-          } else if (acctDescUpper.includes("FESTIVAL") || acctDescUpper.includes("OD FESTIVAL")) {
-            loanCategory = "Personal Loan"; loanSubCategory = "Festival Overdraft";
-          } else if (acctDescUpper.includes("OD PERSONAL") || acctDescUpper.includes("OD-PERSONAL")) {
-            loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
-          } else if (acctDescUpper.includes("STAFF")) {
-            loanCategory = "Personal Loan"; loanSubCategory = "Overdraft - Staff";
-          } else if (acctDescUpper.includes("GOLD") || acctDescUpper.includes("SB PSP") || acctDescUpper.includes("SB CSP") || acctDescUpper.includes("SB SGSP") || acctDescUpper.includes("SB CGSP")) {
-            loanCategory = "Gold Loan"; loanSubCategory = "Gold Loan - OD";
-          } else if (acctDescUpper.includes("MC-OD") || acctDescUpper.includes("E-COMMERCE") || acctDescUpper.includes("ECOMM")) {
-            loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
+          if (bestMatch) {
+            loanCategory = bestMatch.Category || "CC/OD";
+            loanSubCategory = bestMatch.SubCategory || "";
+            loanSegment = bestMatch.Segment || "General";
+            loanPriority = bestMatch.Priority || "Medium";
+            loanSecured = bestMatch.Secured || "";
+            loanScheme = bestMatch.Scheme || "None";
+            loanRiskWeight = bestMatch.RiskWeight || "100";
+            productName = bestMatch.ProductName || acctDesc;
+            productCode = bestMatch.ProductCode || productCode;
+            if (bestMatch.StaffFlag === "Yes" || loanSegment === "Staff") staffFlag = "Staff";
+          } else {
+            // Keyword fallback
+            if (acctDescUpper.includes("MAXGAIN") || acctDescUpper.includes("HL MAXGAIN")) {
+              loanCategory = "Home Loan"; loanSubCategory = "Maxgain OD";
+            } else if (acctDescUpper.includes("HOME TOPUP") || acctDescUpper.includes("INSTA-HOME")) {
+              loanCategory = "Home Loan"; loanSubCategory = "Home Top-up OD";
+            } else if (acctDescUpper.includes("MSME") || acctDescUpper.includes("CC-SBF") || acctDescUpper.includes("MUDRA")) {
+              loanCategory = "MSME"; loanSubCategory = acctDescUpper.includes("MUDRA") ? "MUDRA Cash Credit" : "Cash Credit";
+            } else if (acctDescUpper.includes("OD BANK") || acctDescUpper.includes("OD-LOAN AG DEP") || acctDescUpper.includes("OD AGAINST DEP")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "OD Against Deposits";
+            } else if (acctDescUpper.includes("OD-LON AGAINST FD") || acctDescUpper.includes("OD-LOAN AGAINST FD") || acctDescUpper.includes("OD AGAINST FD")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "OD Against Fixed Deposit";
+            } else if (acctDescUpper.includes("FESTIVAL") || acctDescUpper.includes("OD FESTIVAL")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "Festival Overdraft";
+            } else if (acctDescUpper.includes("OD PERSONAL") || acctDescUpper.includes("OD-PERSONAL")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
+            } else if (acctDescUpper.includes("STAFF")) {
+              loanCategory = "Staff Loan"; loanSubCategory = "Overdraft - Staff"; staffFlag = "Staff";
+            } else if (acctDescUpper.includes("GOLD") || acctDescUpper.includes("SB PSP") || acctDescUpper.includes("SB CSP") || acctDescUpper.includes("SB SGSP") || acctDescUpper.includes("SB CGSP")) {
+              loanCategory = "Gold Loan"; loanSubCategory = "Gold Loan - OD";
+            } else if (acctDescUpper.includes("MC-OD") || acctDescUpper.includes("E-COMMERCE") || acctDescUpper.includes("ECOMM")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
+            }
           }
         }
       }
@@ -789,7 +836,8 @@ export async function processCCODBalance(csvText: string): Promise<number> {
         DP_Gap: dpGap,
         Irregular_Flag: irregularFlag,
         Exposure_Type: "CC/OD",
-        // Category from loan product mapping (matched via ACCTDESC)
+        // Category from Loan Product Category Mapping
+        // (product code fetched from Deposit Shadow → Acct_Type-Int_cat → Loan Product Mapping)
         Loan_Category: loanCategory,
         Loan_SubCategory: loanSubCategory,
         Loan_Segment: loanSegment,
@@ -799,6 +847,7 @@ export async function processCCODBalance(csvText: string): Promise<number> {
         Loan_RiskWeight: loanRiskWeight,
         Product_Name: productName,
         Product_Code: productCode,
+        Staff_Flag: staffFlag,
       };
     });
 
@@ -1015,6 +1064,8 @@ export async function buildCustomerDimension(): Promise<number> {
       c.CCODCount += 1; // Zero balance
     }
     if (!c.CustName && cc.CUSTNAME) c.CustName = cc.CUSTNAME;
+    // Propagate Staff flag from CC/OD record (set during CC/OD processing via Loan Product Mapping)
+    if (cc.Staff_Flag === "Staff") c.Staff_Flag = "Staff";
     // Check NPA
     if (cc.NEWIRAC && cc.NEWIRAC !== "00" && cc.NEWIRAC !== "01" && cc.NEWIRAC !== "0") {
       c.NPACount += 1;
