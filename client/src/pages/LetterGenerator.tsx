@@ -429,46 +429,75 @@ export default function LetterGenerator() {
 
   // Render a letter HTML to a canvas PNG using html2canvas
   const renderLetterToCanvas = async (letter: GeneratedLetter): Promise<HTMLCanvasElement> => {
-    // Create an off-screen container with A4 content area dimensions
-    // A4 at 96dpi: 794px wide, 1123px tall
-    // Content area (minus 2.54cm top, 2cm sides, 2cm bottom):
-    //   width = 794 - 2*(2cm * 37.8px/cm) = 794 - 151 = 643px
-    //   height = 1123 - (2.54cm * 37.8) - (2cm * 37.8) = 1123 - 96 - 75.6 = 951px
-    const container = document.createElement('div');
-    container.style.cssText = `
-      position: fixed;
-      top: -9999px;
-      left: -9999px;
-      width: 643px;
-      background: transparent;
-      font-family: Arial, 'Noto Sans Devanagari', sans-serif;
-      font-size: 12pt;
-      line-height: 1.4;
-      color: #000;
-      padding: 0;
-      margin: 0;
-    `;
-    container.innerHTML = `
-      <div style="text-align: right; margin-bottom: 15px; font-family: Arial, sans-serif; font-size: 12pt;">
-        <strong>Ref No:</strong> ${letter.refNo}<br>
-        <strong>Date:</strong> ${letter.date}
-      </div>
-      <div style="font-family: Arial, 'Noto Sans Devanagari', sans-serif; font-size: 12pt; line-height: 1.4;">${letter.content}</div>
-    `;
-    document.body.appendChild(container);
+    // Render inside an isolated iframe to prevent Tailwind 4's oklch() CSS variables
+    // from leaking into the html2canvas render context (html2canvas cannot parse oklch).
+    return new Promise((resolve, reject) => {
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:643px;height:1200px;border:none;visibility:hidden;';
+      document.body.appendChild(iframe);
 
-    try {
-      const canvas = await html2canvas(container, {
-        backgroundColor: null, // transparent background
-        scale: 2,
-        useCORS: false,
-        logging: false,
-        width: 643,
-      });
-      return canvas;
-    } finally {
-      document.body.removeChild(container);
-    }
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) {
+        document.body.removeChild(iframe);
+        reject(new Error('Could not access iframe document'));
+        return;
+      }
+
+      // Write a fully self-contained HTML document with only safe hex/rgb colors
+      iframeDoc.open();
+      iframeDoc.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #ffffff;
+    color: #000000;
+    font-family: Arial, 'Noto Sans Devanagari', sans-serif;
+    font-size: 12pt;
+    line-height: 1.4;
+    width: 643px;
+  }
+  strong, b { font-weight: bold; }
+  p { margin-bottom: 8px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: 4px 8px; border: 1px solid #cccccc; }
+</style>
+</head>
+<body>
+  <div id="content" style="width:643px;background:#ffffff;color:#000000;font-family:Arial,sans-serif;font-size:12pt;line-height:1.4;padding:0;margin:0;">
+    <div style="text-align:right;margin-bottom:15px;font-family:Arial,sans-serif;font-size:12pt;color:#000000;">
+      <strong>Ref No:</strong> ${letter.refNo}<br>
+      <strong>Date:</strong> ${letter.date}
+    </div>
+    <div style="font-family:Arial,'Noto Sans Devanagari',sans-serif;font-size:12pt;line-height:1.4;color:#000000;">${letter.content}</div>
+  </div>
+</body>
+</html>`);
+      iframeDoc.close();
+
+      // Wait for iframe to fully load before rendering
+      setTimeout(async () => {
+        try {
+          const contentEl = iframeDoc.getElementById('content');
+          if (!contentEl) throw new Error('Content element not found in iframe');
+          const canvas = await html2canvas(contentEl, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: false,
+            logging: false,
+            width: 643,
+            windowWidth: 643,
+          });
+          resolve(canvas);
+        } catch (err) {
+          reject(err);
+        } finally {
+          document.body.removeChild(iframe);
+        }
+      }, 150);
+    });
   };
 
   // Generate PDF with letterhead using pdf-lib:
