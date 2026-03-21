@@ -34,19 +34,24 @@ interface DakRecord {
   remarks: string;
 }
 
+const MONTH_ABBRS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
 function getTodayInfo() {
   const now = new Date();
   const d = String(now.getDate()).padStart(2, "0");
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const y = now.getFullYear();
+  const monthAbbr = MONTH_ABBRS[now.getMonth()];
 
   const fyStart = now.getMonth() + 1 >= 4 ? y : y - 1;
   const fyEnd = fyStart + 1;
 
   return {
-    dateDisplay: `${d}-${m}-${y}`,
+    dateDisplay: `${d}/${m}/${y}`,
     monthNo: m,
-    fyLabel: `${fyStart}-${String(fyEnd).slice(-2)}`
+    monthAbbr,
+    monthDisplay: `${m} / ${monthAbbr}`,
+    fyLabel: `${String(fyStart).slice(-2)}-${String(fyEnd).slice(-2)}`
   };
 }
 
@@ -81,13 +86,13 @@ async function saveRecordsToStorage(records: DakRecord[]) {
 
 function generateSerial(records: DakRecord[], fy: string): string {
   const sameFy = records.filter(r => r.financialYear === fy);
-  if (!sameFy.length) return "0001";
+  if (!sameFy.length) return "001";
   const max = Math.max(...sameFy.map(r => parseInt(r.serialNo)));
-  return String(max + 1).padStart(4, "0");
+  return String(max + 1).padStart(3, "0");
 }
 
-function buildRef(fy: string, month: string, serial: string, branchCode: string): string {
-  return `SBI/${branchCode}/${fy}/${month}/${serial}`;
+function buildRef(fy: string, monthAbbr: string, serial: string, branchCode: string): string {
+  return `SBI/${branchCode}/${fy}/${monthAbbr}/${serial}`;
 }
 
 function generateSlipHTML(record: DakRecord): string {
@@ -128,7 +133,7 @@ function generateSlipHTML(record: DakRecord): string {
         <div class="row"><span class="label">Reference No:</span> ${record.refNo}</div>
         <div class="row"><span class="label">Date:</span> ${record.dateDisplay}</div>
         <div class="row"><span class="label">Financial Year:</span> ${record.financialYear}</div>
-        <div class="row"><span class="label">Month:</span> ${record.monthNo}</div>
+        <div class="row"><span class="label">Month:</span> ${record.monthNo} / ${MONTH_ABBRS[parseInt(record.monthNo) - 1]}</div>
         <div class="row"><span class="label">Letter Type:</span> ${record.letterType}</div>
         <div class="row"><span class="label">Destination:</span> ${record.letterDestination}</div>
         <div class="row"><span class="label">Recipient:</span> ${record.recipientDetails}</div>
@@ -171,7 +176,7 @@ export default function DakNumberGenerator() {
       const loadedRecords = await loadRecords();
       setRecords(loadedRecords);
       const serial = generateSerial(loadedRecords, today.fyLabel);
-      setRefNo(buildRef(today.fyLabel, today.monthNo, serial, branchCode));
+      setRefNo(buildRef(today.fyLabel, today.monthAbbr, serial, branchCode));
     };
     initRecords();
   }, [today.fyLabel, today.monthNo, branchCode]);
@@ -196,7 +201,7 @@ export default function DakNumberGenerator() {
     } else {
       // Create new record
       const serial = generateSerial(records, today.fyLabel);
-      const ref = buildRef(today.fyLabel, today.monthNo, serial, branchCode);
+      const ref = buildRef(today.fyLabel, today.monthAbbr, serial, branchCode);
 
       const record: DakRecord = {
         id: Date.now(),
@@ -219,7 +224,7 @@ export default function DakNumberGenerator() {
       
       // Generate next reference
       const nextSerial = generateSerial(newRecords, today.fyLabel);
-      setRefNo(buildRef(today.fyLabel, today.monthNo, nextSerial, branchCode));
+      setRefNo(buildRef(today.fyLabel, today.monthAbbr, nextSerial, branchCode));
     }
 
     // Reset form
@@ -239,7 +244,7 @@ export default function DakNumberGenerator() {
     setStatus({ message: "", type: "" });
     setEditingId(null);
     const serial = generateSerial(records, today.fyLabel);
-    setRefNo(buildRef(today.fyLabel, today.monthNo, serial, branchCode));
+    setRefNo(buildRef(today.fyLabel, today.monthAbbr, serial, branchCode));
   };
 
   const handlePrintSlip = () => {
@@ -449,9 +454,9 @@ export default function DakNumberGenerator() {
                 </label>
                 <input 
                   type="text" 
-                  value={today.monthNo}
+                  value={today.monthDisplay}
                   readOnly
-                  className="w-full px-3 py-2 rounded-md border text-sm"
+                  className="w-full px-3 py-2 rounded-md border text-sm font-medium"
                   style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
                 />
               </div>
