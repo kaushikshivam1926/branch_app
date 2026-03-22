@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 
@@ -169,17 +169,37 @@ export default function DakNumberGenerator() {
   const [searchText, setSearchText] = useState("");
   const [showEntriesTable, setShowEntriesTable] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(new Date().getMonth()); // 0-based
+  const [copied, setCopied] = useState(false);
+
+  // Derived selected month info
+  const selectedMonthNo = String(selectedMonthIdx + 1).padStart(2, "0");
+  const selectedMonthAbbr = MONTH_ABBRS[selectedMonthIdx];
+  const selectedMonthDisplay = `${selectedMonthNo} / ${selectedMonthAbbr}`;
+
+  // Recompute FY based on selected month (April = new FY)
+  const now = new Date();
+  const selectedFyStart = selectedMonthIdx + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+  const selectedFyLabel = `${String(selectedFyStart).slice(-2)}-${String(selectedFyStart + 1).slice(-2)}`;
 
   // Load records on mount
   useEffect(() => {
     const initRecords = async () => {
       const loadedRecords = await loadRecords();
       setRecords(loadedRecords);
-      const serial = generateSerial(loadedRecords, today.fyLabel);
-      setRefNo(buildRef(today.fyLabel, today.monthAbbr, serial, branchCode));
+      const serial = generateSerial(loadedRecords, selectedFyLabel);
+      setRefNo(buildRef(selectedFyLabel, selectedMonthAbbr, serial, branchCode));
     };
     initRecords();
-  }, [today.fyLabel, today.monthNo, branchCode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchCode]);
+
+  // Recompute ref when selected month changes
+  useEffect(() => {
+    const serial = generateSerial(records, selectedFyLabel);
+    setRefNo(buildRef(selectedFyLabel, selectedMonthAbbr, serial, branchCode));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonthIdx, branchCode]);
 
   const handleSave = async () => {
     if (!letterType || !letterDestination || !recipientDetails || !subject) {
@@ -200,15 +220,15 @@ export default function DakNumberGenerator() {
       setEditingId(null);
     } else {
       // Create new record
-      const serial = generateSerial(records, today.fyLabel);
-      const ref = buildRef(today.fyLabel, today.monthAbbr, serial, branchCode);
+      const serial = generateSerial(records, selectedFyLabel);
+      const ref = buildRef(selectedFyLabel, selectedMonthAbbr, serial, branchCode);
 
       const record: DakRecord = {
         id: Date.now(),
         refNo: ref,
         serialNo: serial,
-        financialYear: today.fyLabel,
-        monthNo: today.monthNo,
+        financialYear: selectedFyLabel,
+        monthNo: selectedMonthNo,
         dateDisplay: today.dateDisplay,
         letterType,
         letterDestination,
@@ -223,8 +243,8 @@ export default function DakNumberGenerator() {
       setStatus({ message: "Saved successfully.", type: "success" });
       
       // Generate next reference
-      const nextSerial = generateSerial(newRecords, today.fyLabel);
-      setRefNo(buildRef(today.fyLabel, today.monthAbbr, nextSerial, branchCode));
+      const nextSerial = generateSerial(newRecords, selectedFyLabel);
+      setRefNo(buildRef(selectedFyLabel, selectedMonthAbbr, nextSerial, branchCode));
     }
 
     // Reset form
@@ -243,8 +263,25 @@ export default function DakNumberGenerator() {
     setRemarks("");
     setStatus({ message: "", type: "" });
     setEditingId(null);
-    const serial = generateSerial(records, today.fyLabel);
-    setRefNo(buildRef(today.fyLabel, today.monthAbbr, serial, branchCode));
+    const serial = generateSerial(records, selectedFyLabel);
+    setRefNo(buildRef(selectedFyLabel, selectedMonthAbbr, serial, branchCode));
+  };
+
+  const handleCopyRef = () => {
+    navigator.clipboard.writeText(refNo).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement("textarea");
+      el.value = refNo;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const handlePrintSlip = () => {
@@ -428,13 +465,28 @@ export default function DakNumberGenerator() {
                 <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
                   Reference Number
                 </label>
-                <input 
-                  type="text" 
-                  value={refNo}
-                  readOnly
-                  className="w-full px-3 py-2 rounded-md border text-sm"
-                  style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
-                />
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={refNo}
+                    readOnly
+                    className="flex-1 px-3 py-2 rounded-md border text-sm font-mono"
+                    style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
+                  />
+                  <button
+                    onClick={handleCopyRef}
+                    title={copied ? "Copied!" : "Copy reference number"}
+                    className="flex items-center justify-center px-3 py-2 rounded-md border text-sm transition-all"
+                    style={{
+                      backgroundColor: copied ? "#d1fae5" : "#ffffff",
+                      borderColor: copied ? "#6ee7b7" : "#d0d7de",
+                      color: copied ? "#065f46" : "#4e1a74",
+                      minWidth: "40px"
+                    }}
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
@@ -442,7 +494,7 @@ export default function DakNumberGenerator() {
                 </label>
                 <input 
                   type="text" 
-                  value={today.fyLabel}
+                  value={selectedFyLabel}
                   readOnly
                   className="w-full px-3 py-2 rounded-md border text-sm"
                   style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
@@ -451,14 +503,24 @@ export default function DakNumberGenerator() {
               <div>
                 <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
                   Month
+                  <span className="ml-2 text-xs font-normal" style={{ color: "#4e1a74" }}>(override allowed)</span>
                 </label>
-                <input 
-                  type="text" 
-                  value={today.monthDisplay}
-                  readOnly
-                  className="w-full px-3 py-2 rounded-md border text-sm font-medium"
-                  style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
-                />
+                <select
+                  value={selectedMonthIdx}
+                  onChange={(e) => setSelectedMonthIdx(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-md border text-sm bg-white font-medium"
+                  style={{ borderColor: selectedMonthIdx !== new Date().getMonth() ? "#4e1a74" : "#d0d7de",
+                           boxShadow: selectedMonthIdx !== new Date().getMonth() ? "0 0 0 2px rgba(78,26,116,0.15)" : "none" }}
+                >
+                  {MONTH_ABBRS.map((abbr, idx) => (
+                    <option key={abbr} value={idx}>
+                      {String(idx + 1).padStart(2, "0")} / {abbr}
+                    </option>
+                  ))}
+                </select>
+                {selectedMonthIdx !== new Date().getMonth() && (
+                  <p className="text-xs mt-1" style={{ color: "#b45309" }}>⚠ Month overridden from current month</p>
+                )}
               </div>
             </div>
 
