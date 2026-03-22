@@ -9,11 +9,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  Upload, Settings, History, Download, CheckCircle, AlertCircle,
+  Upload, Settings, Download, CheckCircle, AlertCircle,
   FileText, Plus, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   RefreshCw, Database, X, Search
 } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
+import { getAllRecords, getSetting, STORES } from "@/lib/portfolioDb";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -195,10 +196,13 @@ export default function LoanFileManager() {
   const ROWS_PER_PAGE = 100;
 
   const productFileRef = useRef<HTMLInputElement>(null);
-  const historyRefs = useRef<Record<CategoryCode, HTMLInputElement | null>>({
-    PERLOAN: null, PENLOAN: null, GOLDLON: null, PMSURYA: null
-  });
-  const loanBalanceRef = useRef<HTMLInputElement>(null);
+  const historyRefs = useRef<Record<CategoryCode, HTMLInputElement | null>>({ PERLOAN: null, PENLOAN: null, GOLDLON: null, PMSURYA: null });
+  const [loanBalanceDate, setLoanBalanceDate] = useState<string>("");
+
+  // Load loan-balance-date from portfolioDb settings
+  useEffect(() => {
+    getSetting("loan-balance-date").then(d => { if (d) setLoanBalanceDate(d); });
+  }, []);
 
   // ── Load from IndexedDB ────────────────────────────────────────────────────
   useEffect(() => {
@@ -302,118 +306,120 @@ export default function LoanFileManager() {
     e.target.value = "";
   };
 
-  // ── Loan Balance Sync ──────────────────────────────────────────────────────
-  const handleLoanBalanceSync = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // ── Loan Balance Sync from IndexedDB ──────────────────────────────────────
+  const handleSyncFromDashboard = async () => {
+    if (productMappings.length === 0) {
+      setSyncStatus({ type: "error", message: "No product mappings loaded. Please upload PRODUCT_LIST.csv in Setup first." });
+      return;
+    }
     setIsSyncing(true);
     setSyncStatus({ type: "", message: "" });
+    try {
+      // Read from both LOAN_DATA and CCOD_DATA stores
+      const [loanRows, ccodRows] = await Promise.all([
+        getAllRecords(STORES.LOAN_DATA),
+        getAllRecords(STORES.CCOD_DATA),
+      ]);
+      const allRows = [...loanRows, ...ccodRows];
 
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const text = ev.target?.result as string;
-        const rawRows = parseCSV(text);
-        const snapshotDate = extractSnapshotDate(file.name);
+      if (allRows.length === 0) {
+        setSyncStatus({ type: "error", message: "No loan data found in the dashboard. Please upload the Loan Balance file in Data Upload first." });
+        setIsSyncing(false);
+        return;
+      }
 
-        if (productMappings.length === 0) {
-          setSyncStatus({ type: "error", message: "No product mappings loaded. Please upload PRODUCT_LIST.csv in Setup first." });
-          setIsSyncing(false);
-          return;
-        }
+      // Get snapshot date from settings
+      const settingDate = await getSetting("loan-balance-date");
+      const snapshotDate = settingDate || new Date().toISOString().slice(0, 10);
+      setLoanBalanceDate(snapshotDate);
 
-        // Build lookup: ACCTDESC → category
-        const descToCategory = new Map<string, CategoryCode>();
-        productMappings.forEach(m => descToCategory.set(m.desc.trim(), m.category));
+      // Build lookup: ACCTDESC → category
+      const descToCategory = new Map<string, CategoryCode>();
+      productMappings.forEach(m => descToCategory.set(m.desc.trim(), m.category));
 
-        // Filter rows that match our product mappings
-        const liveByCategory = new Map<CategoryCode, Map<string, Record<string, string>>>();
-        CATEGORY_ORDER.forEach(cat => liveByCategory.set(cat, new Map()));
+      // Filter rows that match our product mappings
+      const liveByCategory = new Map<CategoryCode, Map<string, Record<string, string>>>();
+      CATEGORY_ORDER.forEach(cat => liveByCategory.set(cat, new Map()));
 
-        rawRows.forEach(row => {
-          const desc = row["ACCTDESC"]?.trim();
-          const acctNo = row["ACCTNO"]?.trim();
-          if (!desc || !acctNo) return;
-          const cat = descToCategory.get(desc);
-          if (cat) liveByCategory.get(cat)!.set(acctNo, row);
+      allRows.forEach((row: any) => {
+        const desc = (row["ACCTDESC"] || "").trim();
+        const acctNo = (row["LoanKey"] || row["ACCTNO"] || "").trim();
+        if (!desc || !acctNo) return;
+        const cat = descToCategory.get(desc);
+        if (cat) liveByCategory.get(cat)!.set(acctNo, row);
+      });
+
+      // Process each category
+      let totalNew = 0, totalClosed = 0, totalActive = 0;
+      const updatedAccounts: LoanFileRecord[] = [];
+
+      for (const cat of CATEGORY_ORDER) {
+        const cfg = CATEGORY_CONFIG[cat];
+        const liveMap = liveByCategory.get(cat)!;
+        const existingForCat = accounts.filter(a => a.category === cat);
+
+        // Update existing records
+        const existingAccountNos = new Set(existingForCat.map(a => a.accountNo));
+        const updatedExisting = existingForCat.map(rec => {
+          if (liveMap.has(rec.accountNo)) {
+            totalActive++;
+            return { ...rec, status: "ACTIVE" as const, lastSeen: snapshotDate };
+          } else {
+            if (rec.status === "ACTIVE") totalClosed++;
+            return { ...rec, status: "CLOSED" as const };
+          }
         });
 
-        // Process each category
-        let totalNew = 0, totalClosed = 0, totalActive = 0;
-        const updatedAccounts: LoanFileRecord[] = [];
+        // Find new accounts (in live but not in existing)
+        const newRows = Array.from(liveMap.entries())
+          .filter(([acctNo]) => !existingAccountNos.has(acctNo))
+          .map(([, row]) => row)
+          .sort((a: any, b: any) => ((a["LoanKey"] || a["ACCTNO"]) > (b["LoanKey"] || b["ACCTNO"]) ? 1 : -1));
 
-        for (const cat of CATEGORY_ORDER) {
-          const cfg = CATEGORY_CONFIG[cat];
-          const liveMap = liveByCategory.get(cat)!;
-          const existingForCat = accounts.filter(a => a.category === cat);
+        const maxSerial = getMaxSerial(existingForCat, cfg.prefix);
+        const newRecords: LoanFileRecord[] = newRows.map((row: any, idx: number) => ({
+          serialNo: generateSerial(cfg.prefix, cfg.padCount, maxSerial, idx),
+          accountNo: (row["LoanKey"] || row["ACCTNO"] || "").trim(),
+          accountDesc: (row["ACCTDESC"] || "").trim(),
+          cifNo: (row["CIF"] || row["CUSTNUMBER"] || "").trim(),
+          customerName: (row["CUSTNAME"] || "").trim(),
+          limit: String(row["LIMIT"] || ""),
+          sanctionDate: (row["SANCTDT"] || "").trim(),
+          status: "ACTIVE",
+          lastSeen: snapshotDate,
+          category: cat,
+        }));
 
-          // Update existing records
-          const existingAccountNos = new Set(existingForCat.map(a => a.accountNo));
-          const updatedExisting = existingForCat.map(rec => {
-            if (liveMap.has(rec.accountNo)) {
-              totalActive++;
-              return { ...rec, status: "ACTIVE" as const, lastSeen: snapshotDate };
-            } else {
-              if (rec.status === "ACTIVE") totalClosed++;
-              return { ...rec, status: "CLOSED" as const };
-            }
-          });
-
-          // Find new accounts (in live but not in existing)
-          const newRows = Array.from(liveMap.entries())
-            .filter(([acctNo]) => !existingAccountNos.has(acctNo))
-            .map(([, row]) => row)
-            .sort((a, b) => (a["ACCTNO"] > b["ACCTNO"] ? 1 : -1));
-
-          const maxSerial = getMaxSerial(existingForCat, cfg.prefix);
-          const newRecords: LoanFileRecord[] = newRows.map((row, idx) => ({
-            serialNo: generateSerial(cfg.prefix, cfg.padCount, maxSerial, idx),
-            accountNo: row["ACCTNO"]?.trim() || "",
-            accountDesc: row["ACCTDESC"]?.trim() || "",
-            cifNo: row["CUSTNUMBER"]?.trim() || "",
-            customerName: row["CUSTNAME"]?.trim() || "",
-            limit: row["LIMIT"]?.trim() || "",
-            sanctionDate: formatExcelDate(row["SANCTDT"]?.trim() || ""),
-            status: "ACTIVE",
-            lastSeen: snapshotDate,
-            category: cat,
-          }));
-
-          totalNew += newRecords.length;
-          updatedAccounts.push(...updatedExisting, ...newRecords);
-        }
-
-        // Preserve accounts from other categories (shouldn't happen but safe)
-        const finalAccounts = updatedAccounts;
-        setAccounts(finalAccounts);
-        await saveData(STORE_ACCOUNTS, finalAccounts);
-
-        const result: SyncResult = {
-          newAccounts: totalNew,
-          closedAccounts: totalClosed,
-          activeAccounts: totalActive,
-          snapshotDate,
-          totalProcessed: rawRows.length,
-        };
-
-        const logEntry = {
-          date: snapshotDate,
-          message: `Sync: ${totalNew} new, ${totalActive} active, ${totalClosed} newly closed. File: ${file.name}`
-        };
-        const newLog = [logEntry, ...syncLog].slice(0, 50);
-        setSyncLog(newLog);
-        await saveData(STORE_SYNC_LOG, newLog);
-
-        setSyncStatus({ type: "success", message: "Sync completed successfully.", result });
-        setTab("register");
-      } catch (err: unknown) {
-        setSyncStatus({ type: "error", message: `Sync error: ${err instanceof Error ? err.message : String(err)}` });
-      } finally {
-        setIsSyncing(false);
+        totalNew += newRecords.length;
+        updatedAccounts.push(...updatedExisting, ...newRecords);
       }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
+
+      setAccounts(updatedAccounts);
+      await saveData(STORE_ACCOUNTS, updatedAccounts);
+
+      const result: SyncResult = {
+        newAccounts: totalNew,
+        closedAccounts: totalClosed,
+        activeAccounts: totalActive,
+        snapshotDate,
+        totalProcessed: allRows.length,
+      };
+
+      const logEntry = {
+        date: snapshotDate,
+        message: `Sync from Dashboard: ${totalNew} new, ${totalActive} active, ${totalClosed} newly closed. (${allRows.length} loan records read)`
+      };
+      const newLog = [logEntry, ...syncLog].slice(0, 50);
+      setSyncLog(newLog);
+      await saveData(STORE_SYNC_LOG, newLog);
+
+      setSyncStatus({ type: "success", message: "Sync completed successfully.", result });
+      setTab("register");
+    } catch (err: unknown) {
+      setSyncStatus({ type: "error", message: `Sync error: ${err instanceof Error ? err.message : String(err)}` });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   // ── Register View ──────────────────────────────────────────────────────────
@@ -669,10 +675,10 @@ export default function LoanFileManager() {
         <div className="max-w-2xl">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-bold text-gray-800 text-lg">Sync with Loan Balance File</h3>
+              <h3 className="font-bold text-gray-800 text-lg">Sync from Dashboard Loan Data</h3>
               <p className="text-sm text-gray-500 mt-1">
-                Upload the latest Loan Balance CSV to update account statuses and assign serial numbers to new accounts.
-                Existing accounts not found in the file will be marked as <strong>CLOSED</strong>.
+                Reads the loan data already uploaded in <strong>Data Upload</strong> (Loan Balance file) to update account statuses and assign serial numbers to new accounts.
+                Existing accounts not found in the latest data will be marked as <strong>CLOSED</strong>.
               </p>
             </div>
             <div className="p-6 space-y-4">
@@ -683,17 +689,29 @@ export default function LoanFileManager() {
                 </div>
               )}
 
-              <label className={`flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${isSyncing ? "opacity-50 pointer-events-none" : "hover:border-purple-400 hover:bg-purple-50"}`}
-                style={{ borderColor: "#d1d5db" }}>
-                <div className="p-4 rounded-full bg-purple-100">
-                  {isSyncing ? <RefreshCw className="w-8 h-8 animate-spin" style={{ color: "#4e1a74" }} /> : <Upload className="w-8 h-8" style={{ color: "#4e1a74" }} />}
+              {/* Data source info */}
+              <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                <Database className="w-5 h-5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Data Source: Branch Portfolio Dashboard</p>
+                  {loanBalanceDate
+                    ? <p className="text-xs mt-0.5">Latest Loan Balance data as of <strong>{loanBalanceDate}</strong> is available. Click Sync to process.</p>
+                    : <p className="text-xs mt-0.5">No loan data found. Please upload the Loan Balance file in <strong>Data Upload</strong> first.</p>
+                  }
                 </div>
-                <div className="text-center">
-                  <p className="font-semibold text-gray-700">{isSyncing ? "Processing..." : "Select Loan Balance File"}</p>
-                  <p className="text-xs text-gray-400 mt-1">CSV format · e.g. 13042_20251127_MiscReports_LoansBalanceFile-lond2390.csv</p>
-                </div>
-                <input ref={loanBalanceRef} type="file" accept=".csv" className="hidden" onChange={handleLoanBalanceSync} disabled={isSyncing} />
-              </label>
+              </div>
+
+              {/* Sync button */}
+              <button
+                onClick={handleSyncFromDashboard}
+                disabled={isSyncing || !loanBalanceDate}
+                className="w-full flex items-center justify-center gap-3 p-5 rounded-xl border-2 transition-all font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: isSyncing ? "#7c3aed" : "#4e1a74", borderColor: "#4e1a74" }}
+              >
+                {isSyncing
+                  ? <><RefreshCw className="w-5 h-5 animate-spin" /> Processing...</>
+                  : <><RefreshCw className="w-5 h-5" /> Sync Now from Dashboard Data</>}
+              </button>
 
               {syncStatus.type && (
                 <div className={`flex items-start gap-3 p-4 rounded-lg border text-sm ${syncStatus.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700"}`}>
@@ -858,7 +876,7 @@ export default function LoanFileManager() {
                   : "None";
                 return (
                   <div key={cat} className={`rounded-xl border-t-4 p-5 flex flex-col items-center text-center ${cfg.borderClass} bg-gray-50`}>
-                    <History className={`w-8 h-8 mb-3 ${cfg.textClass}`} />
+                    <FileText className={`w-8 h-8 mb-3 ${cfg.textClass}`} />
                     <h4 className="font-semibold text-gray-800 text-sm mb-1">{cfg.label}</h4>
                     {catAccounts.length > 0 ? (
                       <div className="text-xs text-green-600 font-medium mb-1">
