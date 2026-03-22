@@ -29,6 +29,7 @@ import {
   ChevronLeft,
   PanelLeftClose,
   PanelLeft,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -40,6 +41,7 @@ import DepositPortfolio from "./portfolio/DepositPortfolio";
 import LoansPortfolio from "./portfolio/LoansPortfolio";
 import AssetQuality from "./portfolio/AssetQuality";
 import DataUpload from "./portfolio/DataUpload";
+import LoanFileManager from "./portfolio/LoanFileManager";
 
 type NavigationItem = {
   id: string;
@@ -54,6 +56,7 @@ const navigationItems: NavigationItem[] = [
   { id: "deposits", label: "Deposit Portfolio", icon: PiggyBank, component: DepositPortfolio },
   { id: "loans", label: "Loans Portfolio", icon: CreditCard, component: LoansPortfolio },
   { id: "asset-quality", label: "Asset Quality", icon: AlertTriangle, component: AssetQuality },
+  { id: "loan-file-manager", label: "Loan File Register", icon: BookOpen, component: LoanFileManager },
   { id: "data-upload", label: "Data Upload", icon: Upload, component: DataUpload },
 ];
 
