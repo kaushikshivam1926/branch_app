@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   Upload, Settings, Download, CheckCircle, AlertCircle,
   FileText, Plus, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
-  RefreshCw, Database, X, Search
+  RefreshCw, Database, X, Search, RotateCcw, ShieldAlert
 } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
 import { getAllRecords, getSetting, STORES } from "@/lib/portfolioDb";
@@ -182,7 +182,9 @@ export default function LoanFileManager() {
   const [accounts, setAccounts] = useState<LoanFileRecord[]>([]);
   const [syncLog, setSyncLog] = useState<{ date: string; message: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMappingsCollapsed, setIsMappingsCollapsed] = useState(false);
+   const [isMappingsCollapsed, setIsMappingsCollapsed] = useState(true);
+  const [showResetDialog, setShowResetDialog] = useState<"full" | CategoryCode | null>(null);
+  const [resetConfirmText, setResetConfirmText] = useState("");
   const [setupStatus, setSetupStatus] = useState<{ type: "success" | "error" | ""; message: string }>({ type: "", message: "" });
   const [syncStatus, setSyncStatus] = useState<{ type: "success" | "error" | ""; message: string; result?: SyncResult }>({ type: "", message: "" });
   const [isSyncing, setIsSyncing] = useState(false);
@@ -304,6 +306,34 @@ export default function LoanFileManager() {
     };
     reader.readAsText(file);
     e.target.value = "";
+  };
+
+  // ── Reset / Clear Functions ─────────────────────────────────────────────
+  const handleReset = async (scope: "full" | CategoryCode) => {
+    if (resetConfirmText !== "RESET") return;
+    try {
+      if (scope === "full") {
+        // Clear everything
+        setAccounts([]);
+        setProductMappings([]);
+        setSyncLog([]);
+        await saveData(STORE_ACCOUNTS, []);
+        await saveData(STORE_PRODUCT_LIST, []);
+        await saveData(STORE_SYNC_LOG, []);
+        setSetupStatus({ type: "success", message: "All data cleared. The register has been fully reset. You can now re-upload the Product List and historical files." });
+      } else {
+        // Clear only the selected category
+        const remaining = accounts.filter(a => a.category !== scope);
+        setAccounts(remaining);
+        await saveData(STORE_ACCOUNTS, remaining);
+        setSetupStatus({ type: "success", message: `${CATEGORY_CONFIG[scope].label} (${CATEGORY_CONFIG[scope].prefix} series) cleared — ${accounts.filter(a => a.category === scope).length} records removed. Re-upload the historical CSV for this category.` });
+      }
+    } catch (err) {
+      setSetupStatus({ type: "error", message: `Reset failed: ${err instanceof Error ? err.message : String(err)}` });
+    } finally {
+      setShowResetDialog(null);
+      setResetConfirmText("");
+    }
   };
 
   // ── Loan Balance Sync from IndexedDB ──────────────────────────────────────
@@ -897,9 +927,110 @@ export default function LoanFileManager() {
                         onChange={e => handleHistoricalUpload(e, cat)}
                       />
                     </label>
+                    {catAccounts.length > 0 && (
+                      <button
+                        onClick={() => { setShowResetDialog(cat); setResetConfirmText(""); }}
+                        className="mt-2 w-full py-1.5 px-3 rounded-lg text-xs font-medium border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Clear {cfg.prefix} Data
+                      </button>
+                    )}
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Section 3: Reset & Re-initialise */}
+          <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-red-100 bg-red-50 flex items-center gap-3">
+              <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
+              <div>
+                <h3 className="font-bold text-red-800">3. Reset &amp; Re-initialise</h3>
+                <p className="text-xs text-red-600 mt-0.5">
+                  Use this if the initial setup had errors or you need to start fresh. This action is irreversible.
+                </p>
+              </div>
+            </div>
+            <div className="p-5">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 rounded-lg border border-red-200 p-4 bg-red-50">
+                  <h4 className="text-sm font-semibold text-red-800 mb-1">Full Reset</h4>
+                  <p className="text-xs text-red-600 mb-3">Clears all accounts across all categories, product mappings, and sync history. You will need to re-upload everything from scratch.</p>
+                  <button
+                    onClick={() => { setShowResetDialog("full"); setResetConfirmText(""); }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" /> Reset Everything
+                  </button>
+                </div>
+                <div className="flex-1 rounded-lg border border-amber-200 p-4 bg-amber-50">
+                  <h4 className="text-sm font-semibold text-amber-800 mb-1">Clear Individual Category</h4>
+                  <p className="text-xs text-amber-700 mb-3">Use the <strong>"Clear [PREFIX] Data"</strong> button on each category card above to reset just that category while keeping others intact.</p>
+                  <button
+                    onClick={() => setIsMappingsCollapsed(false)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-amber-800 bg-amber-100 border border-amber-300 hover:bg-amber-200 transition-colors"
+                  >
+                    <ChevronUp className="w-4 h-4" /> View Category Cards Above
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RESET CONFIRMATION DIALOG ─────────────────────────────────────────── */}
+      {showResetDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl border border-red-200 w-full max-w-md mx-4 overflow-hidden">
+            <div className="p-5 bg-red-50 border-b border-red-200 flex items-center gap-3">
+              <ShieldAlert className="w-6 h-6 text-red-600 shrink-0" />
+              <div>
+                <h3 className="font-bold text-red-800">
+                  {showResetDialog === "full"
+                    ? "Full Reset — Clear All Data"
+                    : `Clear ${CATEGORY_CONFIG[showResetDialog as CategoryCode].label}`}
+                </h3>
+                <p className="text-xs text-red-600 mt-0.5">This action cannot be undone.</p>
+              </div>
+              <button onClick={() => { setShowResetDialog(null); setResetConfirmText(""); }} className="ml-auto p-1 text-red-400 hover:text-red-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-700 mb-1">
+                {showResetDialog === "full"
+                  ? `This will permanently delete all ${accounts.length} account records, all product mappings, and the entire sync history.`
+                  : `This will permanently delete ${accounts.filter(a => a.category === showResetDialog).length} records in the ${CATEGORY_CONFIG[showResetDialog as CategoryCode].prefix} series.`}
+              </p>
+              <p className="text-sm text-gray-500 mb-4">You will need to re-upload the data to restore it.</p>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Type <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-red-700">RESET</span> to confirm:</label>
+              <input
+                type="text"
+                value={resetConfirmText}
+                onChange={e => setResetConfirmText(e.target.value)}
+                placeholder="Type RESET here"
+                className="w-full px-3 py-2.5 border-2 rounded-lg text-sm font-mono focus:outline-none transition-colors"
+                style={{ borderColor: resetConfirmText === "RESET" ? "#dc2626" : "#e5e7eb" }}
+                autoFocus
+              />
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => { setShowResetDialog(null); setResetConfirmText(""); }}
+                  className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleReset(showResetDialog as "full" | CategoryCode)}
+                  disabled={resetConfirmText !== "RESET"}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {showResetDialog === "full" ? "Reset Everything" : `Clear ${CATEGORY_CONFIG[showResetDialog as CategoryCode].prefix} Data`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
