@@ -11,10 +11,11 @@ import { useState, useEffect, useRef } from "react";
 import {
   Upload, Settings, Download, CheckCircle, AlertCircle,
   FileText, Plus, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
-  RefreshCw, Database, X, Search, RotateCcw, ShieldAlert
+  RefreshCw, Database, X, Search, RotateCcw, ShieldAlert, Printer
 } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
 import { getAllRecords, getSetting, STORES } from "@/lib/portfolioDb";
+import XpressCreditFrontPage from "./XpressCreditFrontPage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -183,6 +184,7 @@ export default function LoanFileManager() {
   const [syncLog, setSyncLog] = useState<{ date: string; message: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
    const [isMappingsCollapsed, setIsMappingsCollapsed] = useState(true);
+  const [printRecord, setPrintRecord] = useState<LoanFileRecord | null>(null);
   const [showResetDialog, setShowResetDialog] = useState<"full" | CategoryCode | null>(null);
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [setupStatus, setSetupStatus] = useState<{ type: "success" | "error" | ""; message: string }>({ type: "", message: "" });
@@ -647,6 +649,9 @@ export default function LoanFileManager() {
                           <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">CIF</th>
                           <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Limit</th>
                           <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Sanction Date</th>
+                          {selectedCategory === "PERLOAN" && (
+                            <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Front Page</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -664,6 +669,18 @@ export default function LoanFileManager() {
                             <td className="px-4 py-3 text-gray-500 text-xs">{row.cifNo}</td>
                             <td className="px-4 py-3 text-gray-800 font-medium text-right">{formatINR(row.limit)}</td>
                             <td className="px-4 py-3 text-gray-500 text-xs">{row.sanctionDate}</td>
+                            {selectedCategory === "PERLOAN" && (
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  onClick={() => setPrintRecord(row)}
+                                  title="Print Xpress Credit Front Page"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                  Front Page
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -1034,6 +1051,14 @@ export default function LoanFileManager() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Xpress Credit Front Page Print Modal ── */}
+      {printRecord && (
+        <XpressCreditFrontPage
+          record={printRecord}
+          onClose={() => setPrintRecord(null)}
+        />
       )}
     </div>
   );
