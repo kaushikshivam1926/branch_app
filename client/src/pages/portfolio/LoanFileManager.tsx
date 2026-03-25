@@ -16,6 +16,9 @@ import {
 import { loadData, saveData } from "@/lib/db";
 import { getAllRecords, getSetting, STORES } from "@/lib/portfolioDb";
 import XpressCreditFrontPage from "./XpressCreditFrontPage";
+import GoldLoanFrontPage from "./GoldLoanFrontPage";
+import PensionLoanFrontPage from "./PensionLoanFrontPage";
+import PMSuryaGharFrontPage from "./PMSuryaGharFrontPage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -649,9 +652,7 @@ export default function LoanFileManager() {
                           <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">CIF</th>
                           <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Limit</th>
                           <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Sanction Date</th>
-                          {selectedCategory === "PERLOAN" && (
-                            <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Front Page</th>
-                          )}
+                          <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Front Page</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -669,8 +670,8 @@ export default function LoanFileManager() {
                             <td className="px-4 py-3 text-gray-500 text-xs">{row.cifNo}</td>
                             <td className="px-4 py-3 text-gray-800 font-medium text-right">{formatINR(row.limit)}</td>
                             <td className="px-4 py-3 text-gray-500 text-xs">{row.sanctionDate}</td>
-                            {selectedCategory === "PERLOAN" && (
-                              <td className="px-4 py-3 text-center">
+                            <td className="px-4 py-3 text-center">
+                              {selectedCategory === "PERLOAN" && (
                                 <button
                                   onClick={() => setPrintRecord(row)}
                                   title="Print Xpress Credit Front Page"
@@ -679,8 +680,38 @@ export default function LoanFileManager() {
                                   <Printer className="w-3.5 h-3.5" />
                                   Front Page
                                 </button>
-                              </td>
-                            )}
+                              )}
+                              {selectedCategory === "GOLDLON" && (
+                                <button
+                                  onClick={() => setPrintRecord(row)}
+                                  title="Print Gold Loan Front Page"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                  Front Page
+                                </button>
+                              )}
+                              {selectedCategory === "PENLOAN" && (
+                                <button
+                                  onClick={() => setPrintRecord(row)}
+                                  title="Print Pension Loan Front Page"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                  Front Page
+                                </button>
+                              )}
+                              {selectedCategory === "PMSURYA" && (
+                                <button
+                                  onClick={() => setPrintRecord(row)}
+                                  title="Print PM Surya Ghar Front Page"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 transition-colors"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                  Front Page
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1053,9 +1084,27 @@ export default function LoanFileManager() {
         </div>
       )}
 
-      {/* ── Xpress Credit Front Page Print Modal ── */}
-      {printRecord && (
+      {/* ── Front Page Print Modals (category-aware) ── */}
+      {printRecord && selectedCategory === "PERLOAN" && (
         <XpressCreditFrontPage
+          record={printRecord}
+          onClose={() => setPrintRecord(null)}
+        />
+      )}
+      {printRecord && selectedCategory === "GOLDLON" && (
+        <GoldLoanFrontPage
+          record={printRecord}
+          onClose={() => setPrintRecord(null)}
+        />
+      )}
+      {printRecord && selectedCategory === "PENLOAN" && (
+        <PensionLoanFrontPage
+          record={printRecord}
+          onClose={() => setPrintRecord(null)}
+        />
+      )}
+      {printRecord && selectedCategory === "PMSURYA" && (
+        <PMSuryaGharFrontPage
           record={printRecord}
           onClose={() => setPrintRecord(null)}
         />
