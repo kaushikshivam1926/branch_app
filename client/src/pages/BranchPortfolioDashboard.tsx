@@ -31,6 +31,7 @@ import {
   PanelLeft,
   BookOpen,
   Activity,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ import AssetQuality from "./portfolio/AssetQuality";
 import DataUpload from "./portfolio/DataUpload";
 import LoanFileManager from "./portfolio/LoanFileManager";
 import NPATracking from "./portfolio/NPATracking";
+import LoanClosureModule from "./portfolio/LoanClosureModule";
 
 type NavigationItem = {
   id: string;
@@ -60,6 +62,7 @@ const navigationItems: NavigationItem[] = [
   { id: "asset-quality", label: "Asset Quality", icon: AlertTriangle, component: AssetQuality },
   { id: "loan-file-manager", label: "Loan File Register", icon: BookOpen, component: LoanFileManager },
   { id: "npa-tracking", label: "NPA Tracking", icon: Activity, component: NPATracking },
+  { id: "loan-closure", label: "Loan Closure Module", icon: FileText, component: LoanClosureModule },
   { id: "data-upload", label: "Data Upload", icon: Upload, component: DataUpload },
 ];
 
