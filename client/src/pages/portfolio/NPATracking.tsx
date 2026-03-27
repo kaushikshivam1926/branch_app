@@ -40,6 +40,8 @@ interface RawLoanRecord {
   Computed_NPA_SubCategory?: string;
   Computed_Is_NPA?: boolean;
   Computed_DPD?: number;
+  Computed_NPA_Exempt?: boolean;
+  Computed_NPA_Exempt_Reason?: string;
   Exposure_Type?: string;
   Loan_Category?: string;
   Loan_SubCategory?: string;
@@ -62,6 +64,8 @@ interface RawCCODRecord {
   Computed_NPA_SubCategory?: string;
   Computed_Is_NPA?: boolean;
   Computed_DPD?: number;
+  Computed_NPA_Exempt?: boolean;
+  Computed_NPA_Exempt_Reason?: string;
   Exposure_Type?: string;
   Loan_Category?: string;
   Loan_SubCategory?: string;
@@ -85,6 +89,8 @@ interface TrackedAccount {
   irac: string;
   smaClass: string;       // Computed RBI SMA class (SMA-0, SMA-1, SMA-2, NPA, STD)
   npaSubCategory: string; // Substandard / Doubtful-1 (D1) / D2 / D3 / Loss
+  npaExempt: boolean;     // True if exempt from NPA classification
+  exemptReason: string;   // Reason for exemption
   category: string;
   subCategory: string;
   // Computed
@@ -282,6 +288,11 @@ export default function NPATracking() {
 
       // Use pre-computed DPD if available and more accurate
       const effectiveDPD = (r.Computed_DPD != null && r.Computed_DPD > 0) ? Math.max(dpd, r.Computed_DPD) : dpd;
+      const npaExempt = r.Computed_NPA_Exempt === true;
+      const exemptReason = r.Computed_NPA_Exempt_Reason ?? "";
+
+      // Exclude NPA-exempt accounts (Staff Loans) from NPA Tracking
+      if (npaExempt) return;
 
       if (effectiveDPD <= 0) return; // Only stressed accounts
 
@@ -307,6 +318,8 @@ export default function NPATracking() {
         irac,
         smaClass: computedSMAClass,
         npaSubCategory,
+        npaExempt,
+        exemptReason,
         category: r.Loan_Category ?? "",
         subCategory: r.Loan_SubCategory ?? "",
         dpd: effectiveDPD,
@@ -341,6 +354,11 @@ export default function NPATracking() {
 
       // Use pre-computed DPD if available and more accurate
       const effectiveDPD = (r.Computed_DPD != null && r.Computed_DPD > 0) ? Math.max(dpd, r.Computed_DPD) : dpd;
+      const npaExempt = r.Computed_NPA_Exempt === true;
+      const exemptReason = r.Computed_NPA_Exempt_Reason ?? "";
+
+      // Exclude NPA-exempt accounts (OD against Deposits, Staff OD) from NPA Tracking
+      if (npaExempt) return;
 
       if (effectiveDPD <= 0) return;
 
@@ -366,6 +384,8 @@ export default function NPATracking() {
         irac,
         smaClass: computedSMAClass,
         npaSubCategory,
+        npaExempt,
+        exemptReason,
         category: r.Loan_Category ?? "",
         subCategory: r.Loan_SubCategory ?? "",
         dpd: effectiveDPD,

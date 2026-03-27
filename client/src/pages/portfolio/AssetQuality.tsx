@@ -49,23 +49,31 @@ export default function AssetQuality() {
     const totalAdvances = totalLoanOutstanding + totalCCODBalance;
 
     // NPA from loan balance — use Computed_SMA_Class (RBI IRAC norms)
-    const npaLoans = loans.filter(l => l.Computed_Is_NPA === true || l.Computed_SMA_Class === "NPA");
-    const npaCCOD = ccod.filter(c => c.Computed_Is_NPA === true || c.Computed_SMA_Class === "NPA");
+    // Exclude NPA-exempt accounts: OD against Bank's Deposits and Staff OD
+    const npaLoans = loans.filter(l =>
+      !l.Computed_NPA_Exempt &&
+      (l.Computed_Is_NPA === true || l.Computed_SMA_Class === "NPA")
+    );
+    const npaCCOD = ccod.filter(c =>
+      !c.Computed_NPA_Exempt &&
+      (c.Computed_Is_NPA === true || c.Computed_SMA_Class === "NPA")
+    );
     const npaLoanAmount = npaLoans.reduce((s, l) => s + Math.abs(l.OUTSTAND || 0), 0);
     const npaCCODAmount = npaCCOD.reduce((s, c) => s + Math.abs(c.CurrentBalance || 0), 0);
     const totalNPAAmount = npaLoanAmount + npaCCODAmount;
     const grossNPA = totalAdvances > 0 ? (totalNPAAmount / totalAdvances) * 100 : 0;
 
     // SMA breakdown — use Computed_SMA_Class (RBI IRAC norms: SMA-0=1-30d, SMA-1=31-60d, SMA-2=61-90d)
+    // Exempt accounts (OD against Deposits, Staff OD) are excluded from SMA stress counts
     const smaLoans = {
-      "SMA-0": loans.filter(l => l.Computed_SMA_Class === "SMA-0"),
-      "SMA-1": loans.filter(l => l.Computed_SMA_Class === "SMA-1"),
-      "SMA-2": loans.filter(l => l.Computed_SMA_Class === "SMA-2"),
+      "SMA-0": loans.filter(l => !l.Computed_NPA_Exempt && l.Computed_SMA_Class === "SMA-0"),
+      "SMA-1": loans.filter(l => !l.Computed_NPA_Exempt && l.Computed_SMA_Class === "SMA-1"),
+      "SMA-2": loans.filter(l => !l.Computed_NPA_Exempt && l.Computed_SMA_Class === "SMA-2"),
     };
     const smaCCOD = {
-      "SMA-0": ccod.filter(c => c.Computed_SMA_Class === "SMA-0"),
-      "SMA-1": ccod.filter(c => c.Computed_SMA_Class === "SMA-1"),
-      "SMA-2": ccod.filter(c => c.Computed_SMA_Class === "SMA-2"),
+      "SMA-0": ccod.filter(c => !c.Computed_NPA_Exempt && c.Computed_SMA_Class === "SMA-0"),
+      "SMA-1": ccod.filter(c => !c.Computed_NPA_Exempt && c.Computed_SMA_Class === "SMA-1"),
+      "SMA-2": ccod.filter(c => !c.Computed_NPA_Exempt && c.Computed_SMA_Class === "SMA-2"),
     };
 
     const smaData = ["SMA-0", "SMA-1", "SMA-2"].map(cls => ({
@@ -123,10 +131,14 @@ export default function AssetQuality() {
     return filtered.sort((a, b) => Math.abs(b.OUTSTANDING || 0) - Math.abs(a.OUTSTANDING || 0));
   }, [npaReport, searchTerm, iracFilter, typeFilter]);
 
-  // SMA watchlist — use Computed_SMA_Class (RBI IRAC norms)
+  // SMA watchlist — use Computed_SMA_Class (RBI IRAC norms); exclude NPA-exempt accounts
   const smaWatchlist = useMemo(() => {
-    const smaLoansFiltered = loans.filter(l => ["SMA-0", "SMA-1", "SMA-2"].includes(l.Computed_SMA_Class || ""));
-    const smaCCODFiltered = ccod.filter(c => ["SMA-0", "SMA-1", "SMA-2"].includes(c.Computed_SMA_Class || ""));
+    const smaLoansFiltered = loans.filter(l =>
+      !l.Computed_NPA_Exempt && ["SMA-0", "SMA-1", "SMA-2"].includes(l.Computed_SMA_Class || "")
+    );
+    const smaCCODFiltered = ccod.filter(c =>
+      !c.Computed_NPA_Exempt && ["SMA-0", "SMA-1", "SMA-2"].includes(c.Computed_SMA_Class || "")
+    );
     const combined = [
       ...smaLoansFiltered.map(l => ({ acNo: l.LoanKey, name: l.CUSTNAME, type: "Term Loan", sma: l.Computed_SMA_Class, dpd: l.Computed_DPD || 0, outstanding: Math.abs(l.OUTSTAND || 0), emiOverdue: l.EMISOvrdue || 0, irac: l.NEWIRAC })),
       ...smaCCODFiltered.map(c => ({ acNo: c.LoanKey, name: c.CUSTNAME, type: "CC/OD", sma: c.Computed_SMA_Class, dpd: c.Computed_DPD || 0, outstanding: Math.abs(c.CurrentBalance || 0), emiOverdue: 0, irac: c.NEWIRAC })),

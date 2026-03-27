@@ -650,10 +650,22 @@ export async function processLoanBalance(csvText: string): Promise<number> {
       SMA_CODE: (r.SMA_CODE_INCIPIENT_STRESS || "").trim(),
       SMA_ARREAR_CONDITION: (r.SMA_ARREAR_CONDITION || "").trim(),
       // ── RBI IRAC Computed Fields ──
-      Computed_SMA_Class: computedSMAClass,
-      Computed_NPA_SubCategory: computedNPASubCategory,
-      Computed_Is_NPA: computedIsNPA,
+      // NPA Exemption Rule: Staff Loans (Segment_Cd=306 or Staff category) are exempt
+      // from NPA classification per RBI IRAC norms — advances to bank's own staff.
+      Computed_SMA_Class: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? (computedSMAClass === "NPA" ? "STD" : computedSMAClass)
+        : computedSMAClass,
+      Computed_NPA_SubCategory: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? ""
+        : computedNPASubCategory,
+      Computed_Is_NPA: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? false
+        : computedIsNPA,
       Computed_DPD: dpd,
+      Computed_NPA_Exempt: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306"),
+      Computed_NPA_Exempt_Reason: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? "Staff Loan — Exempt from NPA classification"
+        : "",
       STRESS: (r.STRESS || "").trim(),
       RA: (r.RA || "").trim(),
       RA_DATE: raDate,
@@ -941,10 +953,46 @@ export async function processCCODBalance(csvText: string): Promise<number> {
         SMA_DATE: parseDate(r.SMA_DATE),
         SMA_ARREAR_CONDITION: (r.SMA_ARREAR_CONDITION || "").trim(),
         // ── RBI IRAC Computed Fields ──
-        Computed_SMA_Class: computedSMAClass,
-        Computed_NPA_SubCategory: computedNPASubCategory,
-        Computed_Is_NPA: computedIsNPA,
+        // NPA Exemption Rules (RBI IRAC norms):
+        //  1. OD against Bank's own Deposits — secured by bank's own deposits; not treated as NPA.
+        //  2. OD to Bank Staff — advances to bank's own employees; not treated as NPA.
+        // These are identified by Loan_SubCategory or Loan_Category / Staff_Flag.
+        Computed_SMA_Class: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ) ? (computedSMAClass === "NPA" ? "STD" : computedSMAClass)
+          : computedSMAClass,
+        Computed_NPA_SubCategory: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ) ? "" : computedNPASubCategory,
+        Computed_Is_NPA: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ) ? false : computedIsNPA,
         Computed_DPD: dpd,
+        Computed_NPA_Exempt: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ),
+        Computed_NPA_Exempt_Reason: (
+          loanSubCategory === "OD Against Deposits" || loanSubCategory === "OD Against Fixed Deposit"
+        ) ? "OD against Bank's Deposit — Exempt from NPA classification"
+          : (loanCategory === "Staff Loan" || loanSubCategory === "Overdraft - Staff" || staffFlag === "Staff")
+          ? "Staff Overdraft — Exempt from NPA classification"
+          : "",
         // Computed
         Utilization: utilization,
         DP_Gap: dpGap,
