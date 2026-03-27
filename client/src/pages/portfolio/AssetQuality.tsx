@@ -48,27 +48,27 @@ export default function AssetQuality() {
     const totalCCODBalance = ccod.reduce((s, c) => s + Math.abs(c.CurrentBalance || 0), 0);
     const totalAdvances = totalLoanOutstanding + totalCCODBalance;
 
-    // NPA from loan balance
-    const npaLoans = loans.filter(l => l.SMA_CLASS === "NPA" || (l.NEWIRAC && !["00", "01", ""].includes(l.NEWIRAC)));
-    const npaCCOD = ccod.filter(c => c.SMA_CLASS === "NPA" || (c.NEWIRAC && !["00", "01", "0", ""].includes(c.NEWIRAC)));
+    // NPA from loan balance — use Computed_SMA_Class (RBI IRAC norms)
+    const npaLoans = loans.filter(l => l.Computed_Is_NPA === true || l.Computed_SMA_Class === "NPA");
+    const npaCCOD = ccod.filter(c => c.Computed_Is_NPA === true || c.Computed_SMA_Class === "NPA");
     const npaLoanAmount = npaLoans.reduce((s, l) => s + Math.abs(l.OUTSTAND || 0), 0);
     const npaCCODAmount = npaCCOD.reduce((s, c) => s + Math.abs(c.CurrentBalance || 0), 0);
     const totalNPAAmount = npaLoanAmount + npaCCODAmount;
     const grossNPA = totalAdvances > 0 ? (totalNPAAmount / totalAdvances) * 100 : 0;
 
-    // SMA breakdown
+    // SMA breakdown — use Computed_SMA_Class (RBI IRAC norms: SMA-0=1-30d, SMA-1=31-60d, SMA-2=61-90d)
     const smaLoans = {
-      SMA0: loans.filter(l => l.SMA_CLASS === "SMA0"),
-      SMA1: loans.filter(l => l.SMA_CLASS === "SMA1"),
-      SMA2: loans.filter(l => l.SMA_CLASS === "SMA2"),
+      "SMA-0": loans.filter(l => l.Computed_SMA_Class === "SMA-0"),
+      "SMA-1": loans.filter(l => l.Computed_SMA_Class === "SMA-1"),
+      "SMA-2": loans.filter(l => l.Computed_SMA_Class === "SMA-2"),
     };
     const smaCCOD = {
-      SMA0: ccod.filter(c => c.SMA_CLASS === "SMA0"),
-      SMA1: ccod.filter(c => c.SMA_CLASS === "SMA1"),
-      SMA2: ccod.filter(c => c.SMA_CLASS === "SMA2"),
+      "SMA-0": ccod.filter(c => c.Computed_SMA_Class === "SMA-0"),
+      "SMA-1": ccod.filter(c => c.Computed_SMA_Class === "SMA-1"),
+      "SMA-2": ccod.filter(c => c.Computed_SMA_Class === "SMA-2"),
     };
 
-    const smaData = ["SMA0", "SMA1", "SMA2"].map(cls => ({
+    const smaData = ["SMA-0", "SMA-1", "SMA-2"].map(cls => ({
       class: cls,
       loanCount: (smaLoans as any)[cls].length,
       loanAmount: (smaLoans as any)[cls].reduce((s: number, l: any) => s + Math.abs(l.OUTSTAND || 0), 0),
@@ -123,16 +123,16 @@ export default function AssetQuality() {
     return filtered.sort((a, b) => Math.abs(b.OUTSTANDING || 0) - Math.abs(a.OUTSTANDING || 0));
   }, [npaReport, searchTerm, iracFilter, typeFilter]);
 
-  // SMA watchlist
+  // SMA watchlist — use Computed_SMA_Class (RBI IRAC norms)
   const smaWatchlist = useMemo(() => {
-    const smaLoansFiltered = loans.filter(l => ["SMA0", "SMA1", "SMA2"].includes(l.SMA_CLASS));
-    const smaCCODFiltered = ccod.filter(c => ["SMA0", "SMA1", "SMA2"].includes(c.SMA_CLASS));
+    const smaLoansFiltered = loans.filter(l => ["SMA-0", "SMA-1", "SMA-2"].includes(l.Computed_SMA_Class || ""));
+    const smaCCODFiltered = ccod.filter(c => ["SMA-0", "SMA-1", "SMA-2"].includes(c.Computed_SMA_Class || ""));
     const combined = [
-      ...smaLoansFiltered.map(l => ({ acNo: l.LoanKey, name: l.CUSTNAME, type: "Term Loan", sma: l.SMA_CLASS, outstanding: Math.abs(l.OUTSTAND || 0), emiOverdue: l.EMISOvrdue || 0, irac: l.NEWIRAC })),
-      ...smaCCODFiltered.map(c => ({ acNo: c.LoanKey, name: c.CUSTNAME, type: "CC/OD", sma: c.SMA_CLASS, outstanding: Math.abs(c.CurrentBalance || 0), emiOverdue: 0, irac: c.NEWIRAC })),
+      ...smaLoansFiltered.map(l => ({ acNo: l.LoanKey, name: l.CUSTNAME, type: "Term Loan", sma: l.Computed_SMA_Class, dpd: l.Computed_DPD || 0, outstanding: Math.abs(l.OUTSTAND || 0), emiOverdue: l.EMISOvrdue || 0, irac: l.NEWIRAC })),
+      ...smaCCODFiltered.map(c => ({ acNo: c.LoanKey, name: c.CUSTNAME, type: "CC/OD", sma: c.Computed_SMA_Class, dpd: c.Computed_DPD || 0, outstanding: Math.abs(c.CurrentBalance || 0), emiOverdue: 0, irac: c.NEWIRAC })),
     ];
     return combined.sort((a, b) => {
-      const order: Record<string, number> = { SMA2: 0, SMA1: 1, SMA0: 2 };
+      const order: Record<string, number> = { "SMA-2": 0, "SMA-1": 1, "SMA-0": 2 };
       return (order[a.sma] ?? 3) - (order[b.sma] ?? 3) || b.outstanding - a.outstanding;
     });
   }, [loans, ccod]);
@@ -201,10 +201,11 @@ export default function AssetQuality() {
     a.click(); URL.revokeObjectURL(url);
   }
 
+  // RBI IRAC SMA colour map (SMA-0=1-30d, SMA-1=31-60d, SMA-2=61-90d)
   const smaColorMap: Record<string, string> = {
-    SMA0: "bg-yellow-100 text-yellow-800 border-yellow-300",
-    SMA1: "bg-orange-100 text-orange-800 border-orange-300",
-    SMA2: "bg-red-100 text-red-800 border-red-300",
+    "SMA-0": "bg-yellow-100 text-yellow-800 border-yellow-300",
+    "SMA-1": "bg-orange-100 text-orange-800 border-orange-300",
+    "SMA-2": "bg-red-100 text-red-800 border-red-300",
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -423,7 +424,8 @@ export default function AssetQuality() {
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Account No</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Customer</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Type</th>
-                    <th className="text-center py-3 px-3 text-gray-500 font-medium">SMA</th>
+                    <th className="text-center py-3 px-3 text-gray-500 font-medium">SMA Class</th>
+                    <th className="text-center py-3 px-3 text-gray-500 font-medium">DPD</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Outstanding</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">EMIs O/D</th>
                   </tr>
@@ -435,7 +437,12 @@ export default function AssetQuality() {
                       <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[200px]">{s.name}</td>
                       <td className="py-2 px-3 text-xs text-gray-600">{s.type}</td>
                       <td className="py-2 px-3 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${smaColorMap[s.sma] || "bg-gray-100 text-gray-600"}`}>{s.sma}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${smaColorMap[s.sma] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{s.sma}</span>
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <span className={`text-xs font-bold ${
+                          s.dpd >= 61 ? "text-red-700" : s.dpd >= 31 ? "text-orange-600" : "text-yellow-700"
+                        }`}>{s.dpd}d</span>
                       </td>
                       <td className="py-2 px-3 text-right font-medium text-gray-800">{formatINR(s.outstanding)}</td>
                       <td className="py-2 px-3 text-center">{s.emiOverdue > 0 ? <span className="text-red-600 font-medium">{s.emiOverdue}</span> : "-"}</td>

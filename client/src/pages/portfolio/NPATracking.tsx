@@ -35,6 +35,11 @@ interface RawLoanRecord {
   SANCTDT?: string | null;
   NEWIRAC?: string;
   SMA_CLASS?: string;
+  // RBI IRAC Computed Fields (from portfolioTransform)
+  Computed_SMA_Class?: string;
+  Computed_NPA_SubCategory?: string;
+  Computed_Is_NPA?: boolean;
+  Computed_DPD?: number;
   Exposure_Type?: string;
   Loan_Category?: string;
   Loan_SubCategory?: string;
@@ -52,6 +57,11 @@ interface RawCCODRecord {
   IRRGDT?: string | null;
   NEWIRAC?: string;
   SMA_CLASS?: string;
+  // RBI IRAC Computed Fields (from portfolioTransform)
+  Computed_SMA_Class?: string;
+  Computed_NPA_SubCategory?: string;
+  Computed_Is_NPA?: boolean;
+  Computed_DPD?: number;
   Exposure_Type?: string;
   Loan_Category?: string;
   Loan_SubCategory?: string;
@@ -73,7 +83,8 @@ interface TrackedAccount {
   irregDate: string | null;
   sancDate: string | null;
   irac: string;
-  smaClass: string;
+  smaClass: string;       // Computed RBI SMA class (SMA-0, SMA-1, SMA-2, NPA, STD)
+  npaSubCategory: string; // Substandard / Doubtful-1 (D1) / D2 / D3 / Loss
   category: string;
   subCategory: string;
   // Computed
@@ -253,7 +264,9 @@ export default function NPATracking() {
       const limit = r.LIMIT ?? 0;
       const irregAmt = r.IRREGAMT ?? 0;
       const irac = r.NEWIRAC ?? "";
-      const smaClass = r.SMA_CLASS ?? "STD";
+      // Use pre-computed RBI IRAC class if available; otherwise fall back to legacy SMA_CLASS
+      const computedSMAClass = r.Computed_SMA_Class ?? r.SMA_CLASS ?? "STD";
+      const npaSubCategory = r.Computed_NPA_SubCategory ?? "";
 
       const { dpd, reason } = calculateDPD(
         "LOAN",
@@ -261,15 +274,18 @@ export default function NPATracking() {
         r.IRRGDT ?? null,
         r.SANCTDT ?? null,
         irac,
-        smaClass,
+        computedSMAClass,
         balance,
         limit,
         today
       );
 
-      if (dpd <= 0) return; // Only stressed accounts
+      // Use pre-computed DPD if available and more accurate
+      const effectiveDPD = (r.Computed_DPD != null && r.Computed_DPD > 0) ? Math.max(dpd, r.Computed_DPD) : dpd;
 
-      const daysToNPA = Math.max(0, 90 - dpd);
+      if (effectiveDPD <= 0) return; // Only stressed accounts
+
+      const daysToNPA = Math.max(0, 90 - effectiveDPD);
       let riskCategory: RiskCategory = "SAFE";
       if (daysToNPA === 0) riskCategory = "NPA";
       else if (daysToNPA <= 7) riskCategory = "7_DAYS";
@@ -289,10 +305,11 @@ export default function NPATracking() {
         irregDate: r.IRRGDT ?? null,
         sancDate: r.SANCTDT ?? null,
         irac,
-        smaClass,
+        smaClass: computedSMAClass,
+        npaSubCategory,
         category: r.Loan_Category ?? "",
         subCategory: r.Loan_SubCategory ?? "",
-        dpd,
+        dpd: effectiveDPD,
         daysToNPA,
         riskCategory,
         reason,
@@ -306,7 +323,9 @@ export default function NPATracking() {
       const dp = r.DP ?? limit; // Drawing Power; fallback to limit
       const irregAmt = r.IRREGAMT ?? 0;
       const irac = r.NEWIRAC ?? "";
-      const smaClass = r.SMA_CLASS ?? "STD";
+      // Use pre-computed RBI IRAC class if available; otherwise fall back to legacy SMA_CLASS
+      const computedSMAClass = r.Computed_SMA_Class ?? r.SMA_CLASS ?? "STD";
+      const npaSubCategory = r.Computed_NPA_SubCategory ?? "";
 
       const { dpd, reason } = calculateDPD(
         "CCOD",
@@ -314,15 +333,18 @@ export default function NPATracking() {
         r.IRRGDT ?? null,
         null, // no sanction date for CC/OD
         irac,
-        smaClass,
+        computedSMAClass,
         balance,
         dp, // use Drawing Power for out-of-order check
         today
       );
 
-      if (dpd <= 0) return;
+      // Use pre-computed DPD if available and more accurate
+      const effectiveDPD = (r.Computed_DPD != null && r.Computed_DPD > 0) ? Math.max(dpd, r.Computed_DPD) : dpd;
 
-      const daysToNPA = Math.max(0, 90 - dpd);
+      if (effectiveDPD <= 0) return;
+
+      const daysToNPA = Math.max(0, 90 - effectiveDPD);
       let riskCategory: RiskCategory = "SAFE";
       if (daysToNPA === 0) riskCategory = "NPA";
       else if (daysToNPA <= 7) riskCategory = "7_DAYS";
@@ -342,10 +364,11 @@ export default function NPATracking() {
         irregDate: r.IRRGDT ?? null,
         sancDate: null,
         irac,
-        smaClass,
+        smaClass: computedSMAClass,
+        npaSubCategory,
         category: r.Loan_Category ?? "",
         subCategory: r.Loan_SubCategory ?? "",
-        dpd,
+        dpd: effectiveDPD,
         daysToNPA,
         riskCategory,
         reason,
@@ -668,17 +691,30 @@ export default function NPATracking() {
                               <span className="text-slate-400">Date: {acc.irregDate}</span>
                             )}
                           </div>
-                          <span className="inline-block mt-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[10px] font-bold">
-                            {acc.smaClass || "STD"}
-                          </span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                              acc.smaClass === "SMA-2" ? "bg-red-100 text-red-700 border-red-300"
+                              : acc.smaClass === "SMA-1" ? "bg-orange-100 text-orange-700 border-orange-300"
+                              : acc.smaClass === "SMA-0" ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                              : acc.smaClass === "NPA" ? "bg-slate-800 text-white border-slate-900"
+                              : "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}>
+                              {acc.smaClass || "STD"}
+                            </span>
+                            {acc.npaSubCategory && (
+                              <span className="inline-block px-1.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[10px] font-semibold">
+                                {acc.npaSubCategory}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
-                        {/* DPD Circle */}
+                        {/* DPD Circle — RBI thresholds: SMA-0=1-30d, SMA-1=31-60d, SMA-2=61-90d, NPA>90d */}
                         <td className="p-3 text-center">
                           <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm border-2
                             ${acc.dpd >= 90 ? "bg-slate-800 text-white border-slate-900"
-                              : acc.dpd >= 75 ? "bg-red-100 text-red-800 border-red-300"
-                              : acc.dpd >= 45 ? "bg-orange-100 text-orange-800 border-orange-300"
+                              : acc.dpd >= 61 ? "bg-red-100 text-red-800 border-red-300"
+                              : acc.dpd >= 31 ? "bg-orange-100 text-orange-800 border-orange-300"
                               : "bg-yellow-100 text-yellow-800 border-yellow-300"}`}>
                             {acc.dpd}
                           </div>
@@ -725,11 +761,33 @@ export default function NPATracking() {
           </div>
 
           {/* Methodology note */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1">
-            <p className="font-semibold">DPD Calculation Methodology (RBI IRAC Norms)</p>
-            <p><span className="font-medium">Term Loans:</span> DPD counted from the oldest unpaid EMI due date (monthly anniversary of sanction date). Fallback: irregularity date → 30 days × overdue EMIs.</p>
-            <p><span className="font-medium">CC/OD:</span> DPD counted from irregularity date (IRRGDT). If unavailable, SMA class is used as anchor (SMA-1 → 45 DPD, SMA-2 → 75 DPD).</p>
-            <p><span className="font-medium">Hard Lock:</span> Accounts with IRAC ≥ 03 (Substandard/Doubtful/Loss) are hard-locked at DPD ≥ 90.</p>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
+            <p className="font-semibold text-sm">RBI IRACP Norms — Classification Methodology</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+              <div>
+                <p className="font-semibold mb-1">SMA Classification (Para 31)</p>
+                <p>• <span className="font-medium">SMA-0:</span> Overdue 1–30 days</p>
+                <p>• <span className="font-medium">SMA-1:</span> Overdue 31–60 days</p>
+                <p>• <span className="font-medium">SMA-2:</span> Overdue 61–90 days</p>
+                <p>• <span className="font-medium">NPA:</span> Overdue &gt; 90 days</p>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">NPA Sub-Categories (Para 42)</p>
+                <p>• <span className="font-medium">Substandard:</span> NPA ≤ 12 months (91–365 days)</p>
+                <p>• <span className="font-medium">Doubtful-1 (D1):</span> NPA 12–24 months</p>
+                <p>• <span className="font-medium">Doubtful-2 (D2):</span> NPA 24–36 months</p>
+                <p>• <span className="font-medium">Doubtful-3 (D3):</span> NPA &gt; 36 months</p>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">Term Loan DPD Calculation</p>
+                <p>Counted from oldest unpaid EMI due date (monthly anniversary of sanction date). Fallback: IRRGDT → 30 days × overdue EMIs.</p>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">CC/OD DPD Calculation</p>
+                <p>Counted from IRRGDT (Out of Order date). Account is “out of order” when balance continuously exceeds DP/Limit or no credits for 90 days (Para 42).</p>
+                <p className="mt-1"><span className="font-medium">Hard Lock:</span> IRAC ≥ 03 → DPD hard-locked at ≥ 90.</p>
+              </div>
+            </div>
           </div>
 
         </div>

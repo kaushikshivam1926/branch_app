@@ -83,6 +83,69 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * Compute RBI IRAC-compliant SMA/NPA classification based on Days Past Due (DPD)
+ * 
+ * RBI IRAC Norms (Para 31, 42):
+ * - SMA-0: 1-30 days overdue
+ * - SMA-1: 31-60 days overdue
+ * - SMA-2: 61-90 days overdue
+ * - NPA: >90 days overdue
+ *   - Substandard: NPA for ≤ 12 months (91-365 days)
+ *   - Doubtful-1 (D1): NPA for > 12-24 months (366-730 days)
+ *   - Doubtful-2 (D2): NPA for > 24-36 months (731-1095 days)
+ *   - Doubtful-3 (D3): NPA for > 36 months (>1095 days)
+ * 
+ * @param dpd Days Past Due (for Term Loans) or Days since Out of Order (for CC/OD)
+ * @param iracCode NEW_IRAC code from CBS (if available, used as override)
+ * @returns { smaClass, npaSubCategory, isNPA }
+ */
+function computeRBIClassification(dpd: number, iracCode?: string): {
+  smaClass: string;
+  npaSubCategory: string;
+  isNPA: boolean;
+} {
+  // Hard lock: If IRAC code indicates NPA (≥03), override DPD-based classification
+  const iracNum = iracCode ? parseInt(iracCode, 10) : 0;
+  if (iracNum >= 3) {
+    // IRAC 03 = Substandard, 04 = Doubtful, 05 = D1, 06 = D2, 07 = D3, 08 = Loss
+    if (iracNum === 3 || iracNum === 4) return { smaClass: "NPA", npaSubCategory: "Substandard", isNPA: true };
+    if (iracNum === 5) return { smaClass: "NPA", npaSubCategory: "Doubtful-1 (D1)", isNPA: true };
+    if (iracNum === 6) return { smaClass: "NPA", npaSubCategory: "Doubtful-2 (D2)", isNPA: true };
+    if (iracNum === 7) return { smaClass: "NPA", npaSubCategory: "Doubtful-3 (D3)", isNPA: true };
+    if (iracNum === 8) return { smaClass: "NPA", npaSubCategory: "Loss", isNPA: true };
+  }
+
+  // DPD-based classification
+  if (dpd === 0) return { smaClass: "STD", npaSubCategory: "", isNPA: false };
+  if (dpd >= 1 && dpd <= 30) return { smaClass: "SMA-0", npaSubCategory: "", isNPA: false };
+  if (dpd >= 31 && dpd <= 60) return { smaClass: "SMA-1", npaSubCategory: "", isNPA: false };
+  if (dpd >= 61 && dpd <= 90) return { smaClass: "SMA-2", npaSubCategory: "", isNPA: false };
+  
+  // NPA (>90 days)
+  if (dpd > 90 && dpd <= 365) return { smaClass: "NPA", npaSubCategory: "Substandard", isNPA: true };
+  if (dpd > 365 && dpd <= 730) return { smaClass: "NPA", npaSubCategory: "Doubtful-1 (D1)", isNPA: true };
+  if (dpd > 730 && dpd <= 1095) return { smaClass: "NPA", npaSubCategory: "Doubtful-2 (D2)", isNPA: true };
+  if (dpd > 1095) return { smaClass: "NPA", npaSubCategory: "Doubtful-3 (D3)", isNPA: true };
+
+  return { smaClass: "STD", npaSubCategory: "", isNPA: false };
+}
+
+/**
+ * Calculate Days Past Due (DPD) from overdue date
+ * @param overdueDate Date when account became overdue (YYYY-MM-DD format)
+ * @returns Number of days past due, or 0 if no overdue date
+ */
+function calculateDPD(overdueDate: string | null): number {
+  if (!overdueDate) return 0;
+  const od = new Date(overdueDate);
+  if (isNaN(od.getTime())) return 0;
+  const today = new Date();
+  const diffMs = today.getTime() - od.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
+
 // ============================================================
 // Indian Currency Formatter
 // ============================================================
@@ -477,14 +540,23 @@ export async function processLoanBalance(csvText: string): Promise<number> {
     const monthlyInterest = outstand && intRate ? outstand * (intRate / 1200) : null;
     const monthlyPrincipal = instalamt && monthlyInterest != null ? instalamt - monthlyInterest : null;
 
+    // ── RBI IRAC Classification (Computed from DPD or IRAC code) ──────────────
+    // For Term Loans: Use IRRGDT (Irregular Date) as overdue date
+    // For CC/OD: This will be handled separately in CCOD processing
+    const dpd = calculateDPD(irrgDt);
+    const rbiClassification = computeRBIClassification(dpd, newIrac || shadowNewIRAC);
+    const computedSMAClass = rbiClassification.smaClass;
+    const computedNPASubCategory = rbiClassification.npaSubCategory;
+    const computedIsNPA = rbiClassification.isNPA;
+
     // Risk weight
     let riskWeight = 0.95;
-    const effectiveSMA = smaClass || shadowSMAClass;
+    const effectiveSMA = computedSMAClass; // Use computed SMA instead of CSV value
     const effectiveIRAC = newIrac || shadowNewIRAC;
     if (effectiveSMA === "STD") riskWeight = 0.95;
-    else if (effectiveSMA === "SMA0") riskWeight = 0.85;
-    else if (effectiveSMA === "SMA1") riskWeight = 0.65;
-    else if (effectiveSMA === "SMA2") riskWeight = 0.35;
+    else if (effectiveSMA === "SMA-0") riskWeight = 0.85;
+    else if (effectiveSMA === "SMA-1") riskWeight = 0.65;
+    else if (effectiveSMA === "SMA-2") riskWeight = 0.35;
     else if (effectiveIRAC === "05") riskWeight = 0.10;
     else if (effectiveIRAC === "06" || effectiveIRAC === "08") riskWeight = 0.05;
 
@@ -573,10 +645,15 @@ export async function processLoanBalance(csvText: string): Promise<number> {
       NEWIRAC: newIrac,
       OLDIRAC: oldIrac,
       ARRCOND: (r.ARRCOND || "").trim(),
-      SMA_CLASS: smaClass,
+      SMA_CLASS: smaClass, // Original CSV value (kept for reference)
       SMA_DATE: smaDate,
       SMA_CODE: (r.SMA_CODE_INCIPIENT_STRESS || "").trim(),
       SMA_ARREAR_CONDITION: (r.SMA_ARREAR_CONDITION || "").trim(),
+      // ── RBI IRAC Computed Fields ──
+      Computed_SMA_Class: computedSMAClass,
+      Computed_NPA_SubCategory: computedNPASubCategory,
+      Computed_Is_NPA: computedIsNPA,
+      Computed_DPD: dpd,
       STRESS: (r.STRESS || "").trim(),
       RA: (r.RA || "").trim(),
       RA_DATE: raDate,
@@ -692,6 +769,15 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       let irregularFlag = "Regular";
       if (irregamt > 0) irregularFlag = "Irregular";
       else if (currentBalance != null && dp != null && Math.abs(currentBalance) > dp && dp > 0) irregularFlag = "Overdrawn";
+
+      // ── RBI IRAC Classification for CC/OD (Computed from Out of Order Date) ─────
+      // For CC/OD: IRRGDT represents the "Out of Order" date (when account became irregular)
+      const irrgDt = parseDate(r.IRRGDT);
+      const dpd = calculateDPD(irrgDt);
+      const rbiClassification = computeRBIClassification(dpd, newIrac);
+      const computedSMAClass = rbiClassification.smaClass;
+      const computedNPASubCategory = rbiClassification.npaSubCategory;
+      const computedIsNPA = rbiClassification.isNPA;
 
       const acctDesc = (r.ACCTDESC || "").trim();
       const acctDescUpper = acctDesc.toUpperCase();
@@ -851,9 +937,14 @@ export async function processCCODBalance(csvText: string): Promise<number> {
         WRITE_OFF_FLAG: (r.WRITE_OFF_FLAG || "").trim(),
         WRITE_OFF_AMT: writeOffAmt,
         WRITE_OFF_DATE: parseDate(r.WRITE_OFF_DATE),
-        SMA_CLASS: smaClass,
+        SMA_CLASS: smaClass, // Original CSV value (kept for reference)
         SMA_DATE: parseDate(r.SMA_DATE),
         SMA_ARREAR_CONDITION: (r.SMA_ARREAR_CONDITION || "").trim(),
+        // ── RBI IRAC Computed Fields ──
+        Computed_SMA_Class: computedSMAClass,
+        Computed_NPA_SubCategory: computedNPASubCategory,
+        Computed_Is_NPA: computedIsNPA,
+        Computed_DPD: dpd,
         // Computed
         Utilization: utilization,
         DP_Gap: dpGap,
