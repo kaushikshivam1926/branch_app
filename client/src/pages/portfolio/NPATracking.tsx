@@ -14,7 +14,8 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   AlertTriangle, AlertCircle, Clock, Filter, Download,
-  Activity, ShieldAlert, ArrowUpDown, RefreshCw, Info
+  Activity, ShieldAlert, ArrowUpDown, RefreshCw, Info,
+  ShieldCheck, ChevronDown, ChevronUp, Building2, User
 } from "lucide-react";
 import { getAllRecords, STORES } from "@/lib/portfolioDb";
 import { Button } from "@/components/ui/button";
@@ -233,6 +234,9 @@ export default function NPATracking() {
   const [sortBy, setSortBy] = useState<SortField>("dpd");
   const [sortAsc, setSortAsc] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [showExemptPanel, setShowExemptPanel] = useState(false);
+  const [exemptSortField, setExemptSortField] = useState<"balance" | "dpd" | "account">("balance");
+  const [exemptFilter, setExemptFilter] = useState<"ALL" | "OD_DEPOSIT" | "STAFF">("ALL");
 
   // ── Load data from IndexedDB ────────────────────────────────────────────
   const loadData = async () => {
@@ -397,6 +401,109 @@ export default function NPATracking() {
 
     return result;
   }, [loanRecords, ccodRecords, today]);
+
+  // ── Exempt Accounts (OD against Deposits + Staff OD) ─────────────────
+  const exemptAccounts = useMemo(() => {
+    const result: Array<{
+      id: string;
+      cif: string;
+      name: string;
+      acctDesc: string;
+      facType: "LOAN" | "CCOD";
+      balance: number;
+      limit: number;
+      irregAmt: number;
+      irregDate: string | null;
+      dpd: number;
+      smaClass: string;
+      irac: string;
+      category: string;
+      subCategory: string;
+      exemptReason: string;
+      exemptType: "OD_DEPOSIT" | "STAFF";
+    }> = [];
+
+    // Term Loans — Staff Loans only (OD-against-deposit is a CC/OD product)
+    loanRecords.forEach(r => {
+      if (r.Computed_NPA_Exempt !== true) return;
+      const balance = Math.abs(r.OUTSTAND ?? 0);
+      const limit = r.LIMIT ?? 0;
+      const irregAmt = r.IRREGAMT ?? 0;
+      const dpd = r.Computed_DPD ?? 0;
+      const exemptType: "OD_DEPOSIT" | "STAFF" =
+        (r.Loan_SubCategory === "OD Against Deposits" || r.Loan_SubCategory === "OD Against Fixed Deposit")
+          ? "OD_DEPOSIT" : "STAFF";
+      result.push({
+        id: r.LoanKey,
+        cif: r.CIF ?? "",
+        name: r.CUSTNAME ?? "Unknown",
+        acctDesc: r.ACCTDESC ?? "",
+        facType: "LOAN",
+        balance,
+        limit,
+        irregAmt,
+        irregDate: r.IRRGDT ?? null,
+        dpd,
+        smaClass: r.Computed_SMA_Class ?? "STD",
+        irac: r.NEWIRAC ?? "",
+        category: r.Loan_Category ?? "",
+        subCategory: r.Loan_SubCategory ?? "",
+        exemptReason: r.Computed_NPA_Exempt_Reason ?? "",
+        exemptType,
+      });
+    });
+
+    // CC/OD — OD against Deposits and Staff OD
+    ccodRecords.forEach(r => {
+      if (r.Computed_NPA_Exempt !== true) return;
+      const balance = Math.abs(r.CurrentBalance ?? 0);
+      const limit = r.LIMIT ?? 0;
+      const irregAmt = r.IRREGAMT ?? 0;
+      const dpd = r.Computed_DPD ?? 0;
+      const exemptType: "OD_DEPOSIT" | "STAFF" =
+        (r.Loan_SubCategory === "OD Against Deposits" || r.Loan_SubCategory === "OD Against Fixed Deposit")
+          ? "OD_DEPOSIT" : "STAFF";
+      result.push({
+        id: r.LoanKey,
+        cif: r.CIF ?? "",
+        name: r.CUSTNAME ?? "Unknown",
+        acctDesc: r.ACCTDESC ?? "",
+        facType: "CCOD",
+        balance,
+        limit,
+        irregAmt,
+        irregDate: r.IRRGDT ?? null,
+        dpd,
+        smaClass: r.Computed_SMA_Class ?? "STD",
+        irac: r.NEWIRAC ?? "",
+        category: r.Loan_Category ?? "",
+        subCategory: r.Loan_SubCategory ?? "",
+        exemptReason: r.Computed_NPA_Exempt_Reason ?? "",
+        exemptType,
+      });
+    });
+
+    return result;
+  }, [loanRecords, ccodRecords]);
+
+  const filteredExemptAccounts = useMemo(() => {
+    let list = exemptFilter === "ALL" ? [...exemptAccounts]
+      : exemptAccounts.filter(a => a.exemptType === exemptFilter);
+    list.sort((a, b) => {
+      if (exemptSortField === "account") return a.id.localeCompare(b.id);
+      if (exemptSortField === "dpd") return b.dpd - a.dpd;
+      return b.balance - a.balance; // default: balance desc
+    });
+    return list;
+  }, [exemptAccounts, exemptFilter, exemptSortField]);
+
+  const exemptStats = useMemo(() => ({
+    total: exemptAccounts.length,
+    odDeposit: exemptAccounts.filter(a => a.exemptType === "OD_DEPOSIT").length,
+    staff: exemptAccounts.filter(a => a.exemptType === "STAFF").length,
+    totalBalance: exemptAccounts.reduce((s, a) => s + a.balance, 0),
+    outOfOrder: exemptAccounts.filter(a => a.dpd > 0).length,
+  }), [exemptAccounts]);
 
   // ── Stats ───────────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
@@ -778,6 +885,292 @@ export default function NPATracking() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* ── Exempt Accounts Panel ─────────────────────────────────────── */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            {/* Panel header — always visible, click to expand */}
+            <button
+              onClick={() => setShowExemptPanel(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-teal-600" />
+                <div>
+                  <span className="font-semibold text-slate-800 text-sm">NPA-Exempt Accounts</span>
+                  <span className="ml-2 text-[11px] text-slate-400 font-normal">
+                    OD against Bank's Deposits &amp; Staff Overdrafts — excluded from NPA classification per RBI IRAC norms
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {/* Summary chips */}
+                <div className="hidden md:flex items-center gap-2 text-[11px]">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 font-semibold">
+                    <Building2 className="w-3 h-3" />
+                    {exemptStats.odDeposit} OD-Deposit
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold">
+                    <User className="w-3 h-3" />
+                    {exemptStats.staff} Staff
+                  </span>
+                  {exemptStats.outOfOrder > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-semibold">
+                      <Clock className="w-3 h-3" />
+                      {exemptStats.outOfOrder} Out of Order
+                    </span>
+                  )}
+                </div>
+                <span className="bg-slate-100 text-slate-600 text-[11px] font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                  {exemptStats.total} accounts
+                </span>
+                {showExemptPanel
+                  ? <ChevronUp className="w-4 h-4 text-slate-400" />
+                  : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              </div>
+            </button>
+
+            {/* Collapsible body */}
+            {showExemptPanel && (
+              <div className="border-t border-slate-200">
+
+                {/* Summary KPI row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-y md:divide-y-0 divide-slate-100 border-b border-slate-100 bg-slate-50/60">
+                  <div className="p-3 flex flex-col">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Exempt</span>
+                    <span className="text-xl font-black text-slate-800 mt-0.5">{exemptStats.total}</span>
+                    <span className="text-[10px] text-slate-400">accounts</span>
+                  </div>
+                  <div className="p-3 flex flex-col">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-600">OD vs Deposit</span>
+                    <span className="text-xl font-black text-slate-800 mt-0.5">{exemptStats.odDeposit}</span>
+                    <span className="text-[10px] text-slate-400">secured by own FD/deposit</span>
+                  </div>
+                  <div className="p-3 flex flex-col">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600">Staff OD</span>
+                    <span className="text-xl font-black text-slate-800 mt-0.5">{exemptStats.staff}</span>
+                    <span className="text-[10px] text-slate-400">bank staff overdrafts</span>
+                  </div>
+                  <div className="p-3 flex flex-col">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Balance</span>
+                    <span className="text-base font-bold text-slate-800 mt-0.5 leading-tight">{formatCurrency(exemptStats.totalBalance)}</span>
+                    <span className="text-[10px] text-slate-400">outstanding</span>
+                  </div>
+                </div>
+
+                {/* Filter + Sort bar */}
+                <div className="px-4 py-2.5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-white">
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <span className="text-slate-500 font-medium mr-1">Show:</span>
+                    {(["ALL", "OD_DEPOSIT", "STAFF"] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setExemptFilter(f)}
+                        className={`px-2.5 py-1 rounded-full border transition font-semibold ${
+                          exemptFilter === f
+                            ? f === "OD_DEPOSIT" ? "bg-teal-100 border-teal-400 text-teal-800"
+                              : f === "STAFF" ? "bg-indigo-100 border-indigo-400 text-indigo-800"
+                              : "bg-slate-200 border-slate-400 text-slate-800"
+                            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                        }`}
+                      >
+                        {f === "ALL" ? "All" : f === "OD_DEPOSIT" ? "OD vs Deposit" : "Staff OD"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                    <span className="font-medium">Sort:</span>
+                    {(["balance", "dpd", "account"] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setExemptSortField(f)}
+                        className={`px-2 py-1 rounded hover:bg-slate-100 capitalize transition ${
+                          exemptSortField === f ? "bg-slate-100 font-semibold text-slate-800" : ""
+                        }`}
+                      >
+                        {f === "balance" ? "Balance" : f === "dpd" ? "DPD" : "Account"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+                      <tr>
+                        <th className="p-3">Account Details</th>
+                        <th className="p-3">Type</th>
+                        <th className="p-3">Product / Sub-Category</th>
+                        <th className="p-3 text-right">Balance</th>
+                        <th className="p-3 text-right">Limit</th>
+                        <th className="p-3 text-right">Irregular Amt</th>
+                        <th className="p-3 text-center">DPD</th>
+                        <th className="p-3 text-center">SMA Class</th>
+                        <th className="p-3">Out-of-Order Date</th>
+                        <th className="p-3">Exemption Basis</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredExemptAccounts.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="p-8 text-center text-slate-400 text-sm">
+                            No exempt accounts in this category.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredExemptAccounts.map((acc, i) => (
+                          <tr key={`${acc.id}-${i}`} className={`transition ${
+                            acc.exemptType === "OD_DEPOSIT"
+                              ? "hover:bg-teal-50/30"
+                              : "hover:bg-indigo-50/30"
+                          }`}>
+
+                            {/* Account Details */}
+                            <td className="p-3">
+                              <div className="font-bold text-slate-900 text-xs">{acc.id}</div>
+                              <div className="text-[11px] text-slate-500 truncate max-w-[180px] mt-0.5">{acc.name}</div>
+                              {acc.acctDesc && (
+                                <div className="text-[10px] text-slate-400 truncate max-w-[180px]">{acc.acctDesc}</div>
+                              )}
+                              {acc.cif && (
+                                <div className="text-[10px] text-slate-400">CIF: {acc.cif}</div>
+                              )}
+                            </td>
+
+                            {/* Facility Type */}
+                            <td className="p-3">
+                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider ${
+                                acc.facType === "CCOD"
+                                  ? "bg-purple-100 text-purple-700 border border-purple-200"
+                                  : "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                              }`}>
+                                {acc.facType === "CCOD" ? "CC / OD" : "TERM LOAN"}
+                              </span>
+                            </td>
+
+                            {/* Product */}
+                            <td className="p-3">
+                              <div className="text-[11px] text-slate-700 font-medium">{acc.category}</div>
+                              {acc.subCategory && (
+                                <div className="text-[10px] text-slate-400">{acc.subCategory}</div>
+                              )}
+                            </td>
+
+                            {/* Balance */}
+                            <td className="p-3 text-right">
+                              <span className="text-[12px] font-bold text-slate-800">{formatCurrency(acc.balance)}</span>
+                            </td>
+
+                            {/* Limit */}
+                            <td className="p-3 text-right">
+                              <span className="text-[11px] text-slate-500">{acc.limit > 0 ? formatCurrency(acc.limit) : "—"}</span>
+                            </td>
+
+                            {/* Irregular Amount */}
+                            <td className="p-3 text-right">
+                              {acc.irregAmt > 0 ? (
+                                <span className="text-[11px] font-semibold text-amber-700">{formatCurrency(acc.irregAmt)}</span>
+                              ) : (
+                                <span className="text-[11px] text-slate-300">—</span>
+                              )}
+                            </td>
+
+                            {/* DPD */}
+                            <td className="p-3 text-center">
+                              {acc.dpd > 0 ? (
+                                <div className={`inline-flex items-center justify-center w-9 h-9 rounded-full font-bold text-xs border-2 ${
+                                  acc.dpd >= 61 ? "bg-red-100 text-red-800 border-red-300"
+                                  : acc.dpd >= 31 ? "bg-orange-100 text-orange-800 border-orange-300"
+                                  : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                }`}>
+                                  {acc.dpd}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-300">0</span>
+                              )}
+                            </td>
+
+                            {/* SMA Class */}
+                            <td className="p-3 text-center">
+                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                acc.smaClass === "SMA-2" ? "bg-red-100 text-red-700 border-red-300"
+                                : acc.smaClass === "SMA-1" ? "bg-orange-100 text-orange-700 border-orange-300"
+                                : acc.smaClass === "SMA-0" ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                : "bg-green-100 text-green-700 border-green-300"
+                              }`}>
+                                {acc.smaClass || "STD"}
+                              </span>
+                              {acc.irac && parseInt(acc.irac, 10) >= 3 && (
+                                <div className="text-[10px] text-slate-400 mt-0.5">IRAC {acc.irac}</div>
+                              )}
+                            </td>
+
+                            {/* Out-of-Order Date */}
+                            <td className="p-3">
+                              {acc.irregDate ? (
+                                <span className="text-[11px] text-slate-600">
+                                  {acc.irregDate.includes("-")
+                                    ? new Date(acc.irregDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
+                                    : acc.irregDate}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-300">Regular</span>
+                              )}
+                            </td>
+
+                            {/* Exemption Basis */}
+                            <td className="p-3">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                acc.exemptType === "OD_DEPOSIT"
+                                  ? "bg-teal-50 border-teal-200 text-teal-700"
+                                  : "bg-indigo-50 border-indigo-200 text-indigo-700"
+                              }`}>
+                                {acc.exemptType === "OD_DEPOSIT"
+                                  ? <><Building2 className="w-3 h-3" /> OD vs Deposit</>
+                                  : <><User className="w-3 h-3" /> Staff OD</>}
+                              </span>
+                            </td>
+
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {/* Footer total row */}
+                    {filteredExemptAccounts.length > 0 && (
+                      <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                        <tr>
+                          <td colSpan={3} className="p-3 text-[11px] font-semibold text-slate-600">
+                            Total — {filteredExemptAccounts.length} account{filteredExemptAccounts.length !== 1 ? "s" : ""}
+                          </td>
+                          <td className="p-3 text-right text-[12px] font-bold text-slate-800">
+                            {formatCurrency(filteredExemptAccounts.reduce((s, a) => s + a.balance, 0))}
+                          </td>
+                          <td className="p-3 text-right text-[11px] text-slate-500">
+                            {formatCurrency(filteredExemptAccounts.reduce((s, a) => s + a.limit, 0))}
+                          </td>
+                          <td className="p-3 text-right text-[11px] text-amber-700 font-semibold">
+                            {formatCurrency(filteredExemptAccounts.reduce((s, a) => s + a.irregAmt, 0))}
+                          </td>
+                          <td colSpan={4} className="p-3 text-[10px] text-slate-400 italic">
+                            These accounts are excluded from NPA counts and SMA watchlist.
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+
+                {/* Regulatory note */}
+                <div className="px-4 py-3 bg-teal-50/50 border-t border-teal-100 text-[11px] text-teal-700 flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
+                  <p>
+                    <span className="font-semibold">RBI IRAC Exemption:</span> Overdrafts secured by the bank's own deposits are not classified as NPA even if out of order, as the bank holds the deposit as collateral and can set off the liability. Advances to bank staff are similarly exempt per RBI guidelines. These accounts are shown here for transparency but are excluded from all NPA/SMA counts and notice generation.
+                  </p>
+                </div>
+
+              </div>
+            )}
           </div>
 
           {/* Methodology note */}
