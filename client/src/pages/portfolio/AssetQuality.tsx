@@ -4,11 +4,54 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { AlertTriangle, Search, Download, Printer, FileText, Filter } from "lucide-react";
+import { AlertTriangle, Search, Download, Printer, FileText, Filter, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAllRecords, getRecordCount, STORES } from "@/lib/portfolioDb";
 import { formatINR, formatINRFull } from "@/lib/portfolioTransform";
 import { useBranch } from "@/contexts/BranchContext";
+import { loadData as dbLoad, saveData as dbSave } from "@/lib/db";
+import { toast } from "sonner";
+
+// ─── Dak Number Utilities (same pattern as LetterGenerator) ──────────────────
+interface DakRecord {
+  id: number;
+  refNo: string;
+  serialNo: string;
+  financialYear: string;
+  monthNo: string;
+  dateDisplay: string;
+  letterType: string;
+  letterDestination: string;
+  recipientDetails: string;
+  subject: string;
+  remarks: string;
+}
+
+function getDakTodayInfo() {
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, "0");
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const y = now.getFullYear();
+  const fyStart = now.getMonth() + 1 >= 4 ? y : y - 1;
+  const fyEnd = fyStart + 1;
+  return {
+    dateDisplay: `${d}-${m}-${y}`,
+    dateForSubject: `${d}/${m}/${y}`,
+    monthNo: m,
+    fyLabel: `${fyStart}-${String(fyEnd).slice(-2)}`,
+  };
+}
+
+function generateDakSerial(records: DakRecord[], fy: string): string {
+  const sameFy = records.filter(r => r.financialYear === fy);
+  if (!sameFy.length) return "0001";
+  const max = Math.max(...sameFy.map(r => parseInt(r.serialNo, 10)));
+  return String(max + 1).padStart(4, "0");
+}
+
+function buildDakRef(fy: string, month: string, serial: string, branchCode: string): string {
+  return `SBI/${branchCode}/${fy}/${month}/${serial}`;
+}
 
 export default function AssetQuality() {
   const { branchName, branchCode } = useBranch();
@@ -23,6 +66,7 @@ export default function AssetQuality() {
   const [viewMode, setViewMode] = useState<"overview" | "npa-list" | "sma-watch">("overview");
   const [selectedForNotice, setSelectedForNotice] = useState<Set<string>>(new Set());
   const [showNoticePreview, setShowNoticePreview] = useState(false);
+  const [noticeLang, setNoticeLang] = useState<"en" | "hi">("en");
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadData(); }, []);
@@ -164,40 +208,187 @@ export default function AssetQuality() {
     }
   }
 
-  function printNotices() {
+  async function printNotices() {
+    if (selectedForNotice.size === 0) return;
     setShowNoticePreview(true);
-    setTimeout(() => {
-      const printContent = printRef.current;
-      if (!printContent) return;
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) return;
-      printWindow.document.write(`
-        <html><head><title>NPA Recovery Notices</title>
-        <style>
-          @page { size: A4; margin: 1.5cm; }
-          body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: #000; }
-          .notice { page-break-after: always; padding: 20px; }
-          .notice:last-child { page-break-after: auto; }
-          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-          .header h1 { font-size: 16pt; font-weight: bold; margin: 0; }
-          .header h2 { font-size: 13pt; margin: 5px 0; }
-          .header p { font-size: 10pt; margin: 2px 0; }
-          .ref-line { display: flex; justify-content: space-between; margin: 15px 0; font-size: 11pt; }
-          .address-block { margin: 15px 0; }
-          .subject { font-weight: bold; text-align: center; margin: 15px 0; text-decoration: underline; }
-          .body-text { text-align: justify; margin: 10px 0; }
-          table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-          th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; font-size: 11pt; }
-          th { background: #f0f0f0; font-weight: bold; }
-          .signature { margin-top: 40px; }
-          .signature-line { margin-top: 50px; }
-        </style></head><body>
-        ${printContent.innerHTML}
-        </body></html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
-    }, 500);
+
+    // ── 1. Generate Dak records for each selected account ─────────────────────
+    try {
+      const { dateDisplay, dateForSubject, monthNo, fyLabel } = getDakTodayInfo();
+      const existingDak: DakRecord[] = (await dbLoad("dak-records")) || [];
+      let runningRecords = [...existingDak];
+      const newDakEntries: DakRecord[] = [];
+      const refMap: Record<string, string> = {}; // acNo → refNo
+
+      for (const acNo of Array.from(selectedForNotice)) {
+        const npa = npaReport.find((n: any) => n.ACCOUNT_NO === acNo);
+        const customerName = npa?.CUSTOMER_NAME || acNo;
+        const serial = generateDakSerial(runningRecords, fyLabel);
+        const refNo = buildDakRef(fyLabel, monthNo, serial, branchCode || "XXXXX");
+        const entry: DakRecord = {
+          id: Date.now() + newDakEntries.length,
+          refNo,
+          serialNo: serial,
+          financialYear: fyLabel,
+          monthNo,
+          dateDisplay,
+          letterType: "Notices",
+          letterDestination: "Customer",
+          recipientDetails: customerName,
+          subject: `NPA Notice dt. ${dateForSubject} - A/c ${acNo}`,
+          remarks: "Auto-generated",
+        };
+        newDakEntries.push(entry);
+        runningRecords = [...runningRecords, entry]; // keep serial counter monotonic
+        refMap[acNo] = refNo;
+      }
+
+      await dbSave("dak-records", [...existingDak, ...newDakEntries]);
+      toast.success(`${newDakEntries.length} Dak record${newDakEntries.length > 1 ? "s" : ""} saved. Opening print window…`);
+
+      // ── 2. Build print HTML with LAMS format ───────────────────────────────
+      const { dateDisplay: printDate } = getDakTodayInfo();
+      const isHindi = noticeLang === "hi";
+      const fontFace = isHindi
+        ? `@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');`
+        : "";
+      const bodyFont = isHindi
+        ? `'Noto Sans Devanagari', 'Mangal', Arial, sans-serif`
+        : `'Times New Roman', Georgia, serif`;
+
+      const noticesHTML = Array.from(selectedForNotice).map(acNo => {
+        const npa = npaReport.find((n: any) => n.ACCOUNT_NO === acNo);
+        if (!npa) return "";
+        const refNo = refMap[acNo] || "";
+        const customerName = npa.CUSTOMER_NAME || "";
+        const addr1 = npa.ADDRESS1 || "";
+        const addr2 = npa.ADDRESS2 || "";
+        const addr3 = npa.ADDRESS3 || "";
+        const pinCode = npa.POSTCODE || npa.PIN || "";
+        const mobile = npa.MOBILE || npa.MOBILE_NO || "";
+        const loanSegment = npa.SYS || npa.ACCTDESC || npa.IRAC_DESC || "Loan";
+        const outstanding = formatINRFull(Math.abs(npa.OUTSTANDING || 0));
+        const npaDate = npa.NPA_DATE
+          ? (() => { const dt = new Date(npa.NPA_DATE); const dd = String(dt.getDate()).padStart(2,"0"); const mm = String(dt.getMonth()+1).padStart(2,"0"); return `${dd}/${mm}/${dt.getFullYear()}`; })()
+          : (npa.IRRGDT || "—");
+
+        if (isHindi) {
+          return `
+            <div class="notice">
+              <div class="header">
+                <h1>&#2349;&#2366;&#2352;&#2340;&#2368;&#2351; &#2360;&#2381;&#2335;&#2375;&#2335; &#2348;&#2376;&#2306;&#2325;</h1>
+                <h2>${branchName || "Branch"}</h2>
+                <p>&#2358;&#2366;&#2326;&#2366; &#2325;&#2379;&#2337;: ${branchCode || ""}</p>
+              </div>
+              <div class="address-block">
+                <p>&#2358;&#2381;&#2352;&#2368;/&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368;/&#2325;&#2369;&#2350;&#2366;&#2352;&#2368; <strong>${customerName}</strong></p>
+                ${addr1 ? `<p>${addr1}</p>` : ""}
+                ${addr2 ? `<p>${addr2}</p>` : ""}
+                ${addr3 ? `<p>${addr3}</p>` : ""}
+                ${pinCode ? `<p>PIN &#8211; ${pinCode}</p>` : ""}
+                ${mobile ? `<p>Mobile &#8211; ${mobile}</p>` : ""}
+              </div>
+              <div class="ref-line">
+                <span>&#2346;&#2340;&#2381;&#2352; &#2360;&#2306;&#2326;&#2381;&#2351;&#2366;: <strong>${refNo}</strong></span>
+                <span>&#2342;&#2367;&#2344;&#2366;&#2306;&#2325;: <strong>${printDate}</strong></span>
+              </div>
+              <p class="salutation">&#2350;&#2361;&#2379;&#2342;&#2351;&#2366;/&#2346;&#2381;&#2352;&#2367;&#2351; &#2350;&#2361;&#2379;&#2342;&#2351;,</p>
+              <p class="subject-line">&#2310;&#2346;&#2325;&#2366; ${loanSegment} &#2307;&#2339; &#2326;&#2366;&#2340;&#2366; &#2360;&#2306;&#2326;&#2381;&#2351;&#2366; ${acNo}</p>
+              <ol>
+                <li>&#2310;&#2346;&#2325;&#2375; &#2313;&#2346;&#2352;&#2381;&#2351;&#2369;&#2325;&#2381;&#2340; ${loanSegment} &#2307;&#2339; &#2326;&#2366;&#2340;&#2366; &#2342;&#2367;&#2344;&#2366;&#2306;&#2325; <strong>${npaDate}</strong> &#2360;&#2375; &#2309;&#2344;&#2367;&#2351;&#2350;&#2367;&#2340;/&#2309;&#2340;&#2367;&#2342;&#2375;&#2351; &#2361;&#2376; &#2324;&#2352; &#2311;&#2360; &#2346;&#2340;&#2381;&#2352; &#2325;&#2368; &#2340;&#2367;&#2925;&#2367; &#2340;&#2325; &#2325;&#2369;&#2354; &#2348;&#2325;&#2366;&#2351;&#2366; &#8377; <strong>${outstanding}</strong> &#2361;&#2376;&#2404;</li>
+                <li>&#2325;&#2371;&#2346;&#2351;&#2366; &#2309;&#2344;&#2367;&#2351;&#2350;&#2367;&#2340; &#2352;&#2366;&#2358;&#2367; &#2340;&#2369;&#2352;&#2306;&#2340; &#2332;&#2350;&#2366; &#2325;&#2352; &#2309;&#2346;&#2344;&#2375; &#2326;&#2366;&#2340;&#2375; &#2325;&#2379; &#2344;&#2367;&#2351;&#2350;&#2367;&#2340; &#2325;&#2352;&#2375;&#2306; &#2324;&#2352; &#2332;&#2367;&#2360;&#2360;&#2375; &#2310;&#2346;&#2325;&#2375; &#2325;&#2381;&#2352;&#2375;&#2337;&#2367;&#2335; &#2360;&#2381;&#2325;&#2379;&#2352; &#2346;&#2352; &#2346;&#2381;&#2352;&#2340;&#2367;&#2325;&#2370;&#2354; &#2346;&#2381;&#2352;&#2349;&#2366;&#2357; &#2344; &#2346;&#2396;&#2375;&#2404;</li>
+                <li>&#2332;&#2376;&#2360;&#2366; &#2325;&#2367; &#2310;&#2346; &#2332;&#2366;&#2344;&#2340;&#2375; &#2361;&#2376;&#2306;, &#2307;&#2339; &#2326;&#2366;&#2340;&#2375; &#2350;&#2375;&#2306; &#2309;&#2344;&#2367;&#2351;&#2350;&#2367;&#2340;&#2340;&#2366; &#2346;&#2352; &#2342;&#2306;&#2337;&#2366;&#2340;&#2381;&#2350;&#2325; &#2346;&#2381;&#2352;&#2349;&#2366;&#2352; &#2354;&#2327;&#2366;&#2351;&#2366; &#2332;&#2366;&#2340;&#2366; &#2361;&#2376; &#2324;&#2352; &#2348;&#2376;&#2306;&#2325; &#2325;&#2366;&#2344;&#2370;&#2344;&#2368; &#2325;&#2366;&#2352;&#2381;&#2352;&#2357;&#2366;&#2908; &#2358;&#2369;&#2352;&#2370; &#2325;&#2352;&#2344;&#2375; &#2325;&#2366; &#2349;&#2368; &#2309;&#2343;&#2367;&#2325;&#2366;&#2352; &#2361;&#2376;&#2404;</li>
+                <li>&#2351;&#2342;&#2367; &#2310;&#2346;&#2344;&#2375; &#2313;&#2346;&#2352;&#2381;&#2351;&#2369;&#2325;&#2381;&#2340; &#2307;&#2339; &#2326;&#2366;&#2340;&#2375; &#2325;&#2379; &#2344;&#2367;&#2351;&#2350;&#2367;&#2340; &#2348;&#2344;&#2366;&#2344;&#2375; &#2325;&#2375; &#2354;&#2367;&#2319; &#2352;&#2366;&#2358;&#2367; &#2346;&#2361;&#2354;&#2375; &#2361;&#2368; &#2332;&#2350;&#2366; &#2325;&#2352; &#2342;&#2368; &#2361;&#2379; &#2340;&#2379; &#2325;&#2371;&#2346;&#2351;&#2366; &#2311;&#2360; &#2360;&#2306;&#2342;&#2375;&#2358; &#2325;&#2379; &#2309;&#2344;&#2342;&#2375;&#2326;&#2366; &#2325;&#2352;&#2375;&#2306;&#2404;</li>
+              </ol>
+              <div class="signature">
+                <p>&#2349;&#2357;&#2342;&#2368;&#2351;,</p>
+                <p class="sig-gap"></p>
+                <p><strong>&#2358;&#2366;&#2326;&#2366; &#2346;&#2381;&#2352;&#2348;&#2306;&#2343;&#2325;</strong></p>
+                <p class="note">(&#2344;&#2379;&#2335; : &#2351;&#2361; &#2319;&#2325; &#2325;&#2306;&#2346;&#2381;&#2351;&#2370;&#2335;&#2352; &#2346;&#2381;&#2352;&#2339;&#2366;&#2354;&#2368; &#2332;&#2344;&#2367;&#2340; &#2346;&#2340;&#2381;&#2352; &#2361;&#2376;&#2404; &#2311;&#2360; &#2346;&#2352; &#2361;&#2360;&#2381;&#2340;&#2366;&#2325;&#2381;&#2359;&#2352; &#2325;&#2368; &#2310;&#2357;&#2358;&#2381;&#2351;&#2325;&#2340;&#2366; &#2344;&#2361;&#2368;&#2306; &#2361;&#2376;&#2404;)</p>
+              </div>
+            </div>`;
+        } else {
+          return `
+            <div class="notice">
+              <div class="header">
+                <h1>STATE BANK OF INDIA</h1>
+                <h2>${branchName || "Branch"}</h2>
+                <p>Branch Code: ${branchCode || ""}</p>
+              </div>
+              <div class="address-block">
+                <p>To,</p>
+                <p>Shri/Smt/Kum <strong>${customerName}</strong></p>
+                ${addr1 ? `<p>${addr1}</p>` : ""}
+                ${addr2 ? `<p>${addr2}</p>` : ""}
+                ${addr3 ? `<p>${addr3}</p>` : ""}
+                ${pinCode ? `<p>PIN &#8211; ${pinCode}</p>` : ""}
+                ${mobile ? `<p>Mobile &#8211; ${mobile}</p>` : ""}
+              </div>
+              <div class="ref-line">
+                <span>Letter No: <strong>${refNo}</strong></span>
+                <span>Dated: <strong>${printDate}</strong></span>
+              </div>
+              <p class="salutation">Madam/Dear Sir,</p>
+              <p class="subject-line">YOUR ${loanSegment} ACCOUNT NO. ${acNo}</p>
+              <ol>
+                <li>Your captioned <strong>${loanSegment}</strong> account is irregular/overdue since <strong>${npaDate}</strong> and total outstanding as on date of this letter is <strong>&#8377; ${outstanding}</strong>.</li>
+                <li>Please arrange to regularize your above account by depositing irregular amount immediately to avoid adverse impact on credit score.</li>
+                <li>As you are aware, irregularity in the loan account attracts applicable penal charges as well as Bank also has the right to initiate legal proceedings.</li>
+                <li>Please ignore if you have already deposited the amount for regularisation of the above loan account.</li>
+              </ol>
+              <div class="signature">
+                <p>Yours faithfully,</p>
+                <p class="sig-gap"></p>
+                <p><strong>Branch Manager</strong></p>
+                <p class="note">(N.B.: It is a computer system generated advice. Needs no signature)</p>
+              </div>
+            </div>`;
+        }
+      }).join("");
+
+      setTimeout(() => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) { toast.error("Please allow popups to print notices."); return; }
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8" />
+            <title>NPA Notices — ${printDate}</title>
+            <style>
+              ${fontFace}
+              @page { size: A4; margin: 1.8cm 2cm; }
+              *, *::before, *::after { box-sizing: border-box; }
+              body { font-family: ${bodyFont}; font-size: 12pt; line-height: 1.55; color: #000; margin: 0; padding: 0; }
+              .notice { page-break-after: always; padding: 0; }
+              .notice:last-child { page-break-after: auto; }
+              .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+              .header h1 { font-size: 15pt; font-weight: bold; margin: 0 0 4px 0; letter-spacing: 0.5px; }
+              .header h2 { font-size: 12pt; margin: 3px 0; }
+              .header p { font-size: 10pt; margin: 2px 0; }
+              .address-block { margin: 16px 0 12px 0; }
+              .address-block p { margin: 2px 0; }
+              .ref-line { display: flex; justify-content: space-between; margin: 14px 0; font-size: 11pt; }
+              .salutation { margin: 14px 0 6px 0; }
+              .subject-line { font-weight: bold; text-decoration: underline; margin: 6px 0 12px 0; }
+              ol { margin: 0 0 16px 0; padding-left: 22px; }
+              ol li { margin-bottom: 10px; text-align: justify; }
+              .signature { margin-top: 36px; }
+              .signature p { margin: 3px 0; }
+              .sig-gap { height: 44px; }
+              .note { font-size: 9.5pt; font-style: italic; margin-top: 6px; }
+            </style>
+          </head>
+          <body>${noticesHTML}</body>
+          </html>`);
+        printWindow.document.close();
+        setTimeout(() => printWindow.print(), 600);
+      }, 300);
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save Dak records or open print window.");
+    }
   }
 
   function exportCSV() {
@@ -360,9 +551,28 @@ export default function AssetQuality() {
               <Button variant="outline" size="sm" onClick={selectAllNPA}>
                 {selectedForNotice.size === filteredNPA.length ? "Deselect All" : "Select All"}
               </Button>
+              {/* Language toggle */}
+              <div className="flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setNoticeLang("en")}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition ${
+                    noticeLang === "en" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Languages className="w-3 h-3" /> EN
+                </button>
+                <button
+                  onClick={() => setNoticeLang("hi")}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition ${
+                    noticeLang === "hi" ? "bg-orange-500 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Languages className="w-3 h-3" /> &#2361;&#2367;
+                </button>
+              </div>
               {selectedForNotice.size > 0 && (
                 <Button size="sm" onClick={printNotices} className="bg-red-600 hover:bg-red-700 text-white">
-                  <Printer className="w-4 h-4 mr-1" /> Print Notices ({selectedForNotice.size})
+                  <Printer className="w-4 h-4 mr-1" /> Print Notices ({selectedForNotice.size}) &mdash; {noticeLang === "hi" ? "&#2361;&#2367;&#2306;&#2342;&#2368;" : "English"}
                 </Button>
               )}
             </div>
@@ -467,65 +677,8 @@ export default function AssetQuality() {
         </>
       )}
 
-      {/* Hidden Notice Print Template */}
-      <div ref={printRef} style={{ display: showNoticePreview ? "block" : "none", position: "absolute", left: "-9999px" }}>
-        {Array.from(selectedForNotice).map(acNo => {
-          const npa = npaReport.find((n: any) => n.ACCOUNT_NO === acNo);
-          if (!npa) return null;
-          return (
-            <div key={acNo} className="notice">
-              <div className="header">
-                <h1>STATE BANK OF INDIA</h1>
-                <h2>{branchName}</h2>
-                <p>Branch Code: {branchCode}</p>
-              </div>
-              <div className="ref-line">
-                <span>Ref: {branchCode}/NPA/{acNo}/{new Date().getFullYear()}</span>
-                <span>Date: {today}</span>
-              </div>
-              <div className="address-block">
-                <p><strong>To,</strong></p>
-                <p>{npa.CUSTOMER_NAME}</p>
-                {npa.FATHER_NAME && <p>S/o {npa.FATHER_NAME}</p>}
-                {npa.ADDRESS1 && <p>{npa.ADDRESS1}</p>}
-                {npa.ADDRESS2 && <p>{npa.ADDRESS2}</p>}
-                {npa.ADDRESS3 && <p>{npa.ADDRESS3}</p>}
-                {npa.POSTCODE && <p>PIN: {npa.POSTCODE}</p>}
-              </div>
-              <p className="subject">NOTICE FOR RECOVERY OF DUES — ACCOUNT NO: {acNo}</p>
-              <p className="body-text">Dear Sir/Madam,</p>
-              <p className="body-text">
-                It is observed that your above-mentioned loan account has been classified as <strong>Non-Performing Asset ({npa.IRAC_DESC})</strong> with
-                effect from <strong>{npa.NPA_DATE ? new Date(npa.NPA_DATE).toLocaleDateString("en-IN") : "N/A"}</strong>.
-              </p>
-              <table>
-                <tbody>
-                  <tr><th>Account Number</th><td>{acNo}</td></tr>
-                  <tr><th>Outstanding Amount</th><td>{formatINRFull(Math.abs(npa.OUTSTANDING || 0))}</td></tr>
-                  <tr><th>NPA Classification</th><td>{npa.IRAC_DESC}</td></tr>
-                  <tr><th>NPA Date</th><td>{npa.NPA_DATE ? new Date(npa.NPA_DATE).toLocaleDateString("en-IN") : "N/A"}</td></tr>
-                  <tr><th>Account Type</th><td>{npa.SYS}</td></tr>
-                </tbody>
-              </table>
-              <p className="body-text">
-                You are hereby called upon to pay the above-mentioned outstanding dues within <strong>15 days</strong> from the date of receipt of this notice,
-                failing which the Bank shall be constrained to initiate appropriate legal proceedings for recovery of its dues, including but not limited to
-                proceedings under the SARFAESI Act, 2002, and/or filing of suit before the Debt Recovery Tribunal.
-              </p>
-              <p className="body-text">
-                You are advised to contact the undersigned at the earliest to discuss the matter and arrange for immediate repayment.
-              </p>
-              <div className="signature">
-                <p>Yours faithfully,</p>
-                <p className="signature-line">_________________________</p>
-                <p><strong>Chief/Branch Manager</strong></p>
-                <p>State Bank of India</p>
-                <p>{branchName}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* printRef retained for potential future use */}
+      <div ref={printRef} style={{ display: "none" }} />
     </div>
   );
 }
