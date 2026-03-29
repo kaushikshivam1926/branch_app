@@ -94,6 +94,7 @@ interface TrackedAccount {
   exemptReason: string;   // Reason for exemption
   category: string;
   subCategory: string;
+  mobile: string;          // Mobile from Customer 360
   // Computed
   dpd: number;
   daysToNPA: number;
@@ -229,6 +230,7 @@ function calculateDPD(
 export default function NPATracking() {
   const [loanRecords, setLoanRecords] = useState<RawLoanRecord[]>([]);
   const [ccodRecords, setCcodRecords] = useState<RawCCODRecord[]>([]);
+  const [customerDim, setCustomerDim] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<RiskCategory | "ALL">("ALL");
   const [sortBy, setSortBy] = useState<SortField>("dpd");
@@ -242,12 +244,14 @@ export default function NPATracking() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [loans, ccod] = await Promise.all([
+      const [loans, ccod, custd] = await Promise.all([
         getAllRecords(STORES.LOAN_DATA) as Promise<RawLoanRecord[]>,
         getAllRecords(STORES.CCOD_DATA) as Promise<RawCCODRecord[]>,
+        getAllRecords(STORES.CUSTOMER_DIM),
       ]);
       setLoanRecords(loans || []);
       setCcodRecords(ccod || []);
+      setCustomerDim((custd as any[]) || []);
       setLastRefresh(new Date());
     } catch (e) {
       console.error("NPATracking: failed to load data", e);
@@ -263,6 +267,20 @@ export default function NPATracking() {
 
   const accounts = useMemo<TrackedAccount[]>(() => {
     const result: TrackedAccount[] = [];
+
+    // Build CIF → MobileNo from Customer 360
+    const cifToMobile: Record<string, string> = {};
+    for (const c of customerDim) {
+      if (c.CIF && c.MobileNo) cifToMobile[c.CIF] = c.MobileNo;
+    }
+    // Build account → MobileNo via CIF
+    const acToMobile: Record<string, string> = {};
+    for (const l of loanRecords) {
+      if (l.LoanKey && l.CIF && cifToMobile[l.CIF]) acToMobile[l.LoanKey] = cifToMobile[l.CIF];
+    }
+    for (const c of ccodRecords) {
+      if (c.LoanKey && c.CIF && cifToMobile[c.CIF]) acToMobile[c.LoanKey] = cifToMobile[c.CIF];
+    }
 
     // Term Loans
     loanRecords.forEach(r => {
@@ -326,6 +344,7 @@ export default function NPATracking() {
         exemptReason,
         category: r.Loan_Category ?? "",
         subCategory: r.Loan_SubCategory ?? "",
+        mobile: acToMobile[r.LoanKey] ?? "",
         dpd: effectiveDPD,
         daysToNPA,
         riskCategory,
@@ -392,6 +411,7 @@ export default function NPATracking() {
         exemptReason,
         category: r.Loan_Category ?? "",
         subCategory: r.Loan_SubCategory ?? "",
+        mobile: acToMobile[r.LoanKey] ?? "",
         dpd: effectiveDPD,
         daysToNPA,
         riskCategory,
@@ -400,7 +420,7 @@ export default function NPATracking() {
     });
 
     return result;
-  }, [loanRecords, ccodRecords, today]);
+  }, [loanRecords, ccodRecords, customerDim, today]);
 
   // ── Exempt Accounts (OD against Deposits + Staff OD) ─────────────────
   const exemptAccounts = useMemo(() => {
@@ -757,6 +777,7 @@ export default function NPATracking() {
                     <th className="p-3 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort("limit")}>
                       <div className="flex items-center gap-1">Facility & Balance {sortBy === "limit" && <ArrowUpDown className="w-3 h-3" />}</div>
                     </th>
+                    <th className="p-3">Mobile</th>
                     <th className="p-3">Stress Driver</th>
                     <th className="p-3 text-center cursor-pointer hover:bg-slate-100" onClick={() => toggleSort("dpd")}>
                       <div className="flex items-center justify-center gap-1">DPD {sortBy === "dpd" && <ArrowUpDown className="w-3 h-3" />}</div>
@@ -768,7 +789,7 @@ export default function NPATracking() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredAccounts.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-400 text-sm">
+                      <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">
                         No accounts in this risk category.
                       </td>
                     </tr>
@@ -800,6 +821,17 @@ export default function NPATracking() {
                             <div className="text-[11px] text-slate-500">
                               Lmt: {formatCurrency(acc.limit)}
                             </div>
+                          )}
+                        </td>
+
+                        {/* Mobile */}
+                        <td className="p-3">
+                          {acc.mobile ? (
+                            <a href={`tel:${acc.mobile}`} className="text-xs font-mono text-blue-600 hover:underline flex items-center gap-1">
+                              <span className="text-[11px]">&#128222;</span> {acc.mobile}
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-slate-300 italic">—</span>
                           )}
                         </td>
 

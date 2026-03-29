@@ -684,6 +684,7 @@ export default function AssetQuality() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Account No</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Customer</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Mobile</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Type</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">SMA Class</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">DPD</th>
@@ -695,7 +696,16 @@ export default function AssetQuality() {
                   {smaWatchlist.map(s => (
                     <tr key={s.acNo} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-2 px-3 font-mono text-xs text-gray-700">{s.acNo}</td>
-                      <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[200px]">{s.name}</td>
+                      <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[180px]">{s.name}</td>
+                      <td className="py-2 px-3">
+                        {mobileLookup[s.acNo] ? (
+                          <a href={`tel:${mobileLookup[s.acNo]}`} className="text-xs font-mono text-blue-700 hover:underline flex items-center gap-1">
+                            <span>&#128222;</span> {mobileLookup[s.acNo]}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-300 italic">—</span>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-xs text-gray-600">{s.type}</td>
                       <td className="py-2 px-3 text-center">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${smaColorMap[s.sma] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{s.sma}</span>
