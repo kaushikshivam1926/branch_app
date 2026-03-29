@@ -58,6 +58,7 @@ export default function AssetQuality() {
   const [loans, setLoans] = useState<any[]>([]);
   const [ccod, setCcod] = useState<any[]>([]);
   const [npaReport, setNpaReport] = useState<any[]>([]);
+  const [customerDim, setCustomerDim] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -79,10 +80,11 @@ export default function AssetQuality() {
       ]);
       if (lc === 0 && cc === 0 && nc === 0) { setHasData(false); setLoading(false); return; }
       setHasData(true);
-      const [ld, cd, nd] = await Promise.all([
-        getAllRecords(STORES.LOAN_DATA), getAllRecords(STORES.CCOD_DATA), getAllRecords(STORES.NPA_DATA)
+      const [ld, cd, nd, custd] = await Promise.all([
+        getAllRecords(STORES.LOAN_DATA), getAllRecords(STORES.CCOD_DATA),
+        getAllRecords(STORES.NPA_DATA), getAllRecords(STORES.CUSTOMER_DIM)
       ]);
-      setLoans(ld); setCcod(cd); setNpaReport(nd);
+      setLoans(ld); setCcod(cd); setNpaReport(nd); setCustomerDim(custd);
     } catch (e) { console.error(e); }
     setLoading(false);
   }
@@ -175,6 +177,29 @@ export default function AssetQuality() {
     return filtered.sort((a, b) => Math.abs(b.OUTSTANDING || 0) - Math.abs(a.OUTSTANDING || 0));
   }, [npaReport, searchTerm, iracFilter, typeFilter]);
 
+  // Mobile lookup: account number → MobileNo from Customer 360
+  // Strategy: LOAN_DATA/CCOD_DATA has CIF; CUSTOMER_DIM has CIF → MobileNo
+  const mobileLookup = useMemo(() => {
+    // Build CIF → MobileNo from Customer 360
+    const cifToMobile: Record<string, string> = {};
+    for (const c of customerDim) {
+      if (c.CIF && c.MobileNo) cifToMobile[c.CIF] = c.MobileNo;
+    }
+    // Build account → CIF from loan and CC/OD data
+    const acToMobile: Record<string, string> = {};
+    for (const l of loans) {
+      if (l.LoanKey && l.CIF && cifToMobile[l.CIF]) {
+        acToMobile[l.LoanKey] = cifToMobile[l.CIF];
+      }
+    }
+    for (const c of ccod) {
+      if (c.LoanKey && c.CIF && cifToMobile[c.CIF]) {
+        acToMobile[c.LoanKey] = cifToMobile[c.CIF];
+      }
+    }
+    return acToMobile;
+  }, [loans, ccod, customerDim]);
+
   // SMA watchlist — use Computed_SMA_Class (RBI IRAC norms); exclude NPA-exempt accounts
   const smaWatchlist = useMemo(() => {
     const smaLoansFiltered = loans.filter(l =>
@@ -261,11 +286,13 @@ export default function AssetQuality() {
         if (!npa) return "";
         const refNo = refMap[acNo] || "";
         const customerName = npa.CUSTOMER_NAME || "";
+        const fatherName = npa.FATHER_NAME || "";
         const addr1 = npa.ADDRESS1 || "";
         const addr2 = npa.ADDRESS2 || "";
         const addr3 = npa.ADDRESS3 || "";
         const pinCode = npa.POSTCODE || npa.PIN || "";
-        const mobile = npa.MOBILE || npa.MOBILE_NO || "";
+        // Mobile: prefer Customer 360 lookup, fallback to NPA file field
+        const mobile = mobileLookup[acNo] || npa.MOBILE || npa.MOBILE_NO || "";
         const loanSegment = npa.SYS || npa.ACCTDESC || npa.IRAC_DESC || "Loan";
         const outstanding = formatINRFull(Math.abs(npa.OUTSTANDING || 0));
         const npaDate = npa.NPA_DATE
@@ -282,11 +309,12 @@ export default function AssetQuality() {
               </div>
               <div class="address-block">
                 <p>&#2358;&#2381;&#2352;&#2368;/&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368;/&#2325;&#2369;&#2350;&#2366;&#2352;&#2368; <strong>${customerName}</strong></p>
+                ${fatherName ? `<p>&#2346;&#2367;&#2340;&#2366;/&#2346;&#2340;&#2367; &#2358;&#2381;&#2352;&#2368; ${fatherName}</p>` : ""}
                 ${addr1 ? `<p>${addr1}</p>` : ""}
                 ${addr2 ? `<p>${addr2}</p>` : ""}
                 ${addr3 ? `<p>${addr3}</p>` : ""}
                 ${pinCode ? `<p>PIN &#8211; ${pinCode}</p>` : ""}
-                ${mobile ? `<p>Mobile &#8211; ${mobile}</p>` : ""}
+                ${mobile ? `<p>&#2350;&#2379;&#2348;&#2366;&#2311;&#2354; &#8211; ${mobile}</p>` : ""}
               </div>
               <div class="ref-line">
                 <span>&#2346;&#2340;&#2381;&#2352; &#2360;&#2306;&#2326;&#2381;&#2351;&#2366;: <strong>${refNo}</strong></span>
@@ -318,6 +346,7 @@ export default function AssetQuality() {
               <div class="address-block">
                 <p>To,</p>
                 <p>Shri/Smt/Kum <strong>${customerName}</strong></p>
+                ${fatherName ? `<p>S/o, W/o, D/o <strong>${fatherName}</strong></p>` : ""}
                 ${addr1 ? `<p>${addr1}</p>` : ""}
                 ${addr2 ? `<p>${addr2}</p>` : ""}
                 ${addr3 ? `<p>${addr3}</p>` : ""}
@@ -588,6 +617,7 @@ export default function AssetQuality() {
                     <th className="py-3 px-3 w-8"><input type="checkbox" checked={selectedForNotice.size === filteredNPA.length && filteredNPA.length > 0} onChange={selectAllNPA} /></th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Account No</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Customer</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Mobile</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Outstanding</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">NPA Date</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">IRAC</th>
@@ -603,6 +633,15 @@ export default function AssetQuality() {
                       <td className="py-2 px-3">
                         <p className="text-gray-700 font-medium">{n.CUSTOMER_NAME}</p>
                         {n.FATHER_NAME && <p className="text-xs text-gray-400">S/o {n.FATHER_NAME}</p>}
+                      </td>
+                      <td className="py-2 px-3">
+                        {mobileLookup[n.ACCOUNT_NO] ? (
+                          <a href={`tel:${mobileLookup[n.ACCOUNT_NO]}`} className="text-xs font-mono text-blue-700 hover:underline flex items-center gap-1">
+                            <span>&#128222;</span> {mobileLookup[n.ACCOUNT_NO]}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-300 italic">—</span>
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right font-medium text-red-700">{formatINRFull(Math.abs(n.OUTSTANDING || 0))}</td>
                       <td className="py-2 px-3 text-xs text-gray-600">{n.NPA_DATE ? new Date(n.NPA_DATE).toLocaleDateString("en-IN") : "-"}</td>
