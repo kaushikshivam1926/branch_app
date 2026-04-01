@@ -763,24 +763,17 @@ export async function processCCODBalance(csvText: string): Promise<number> {
     if (p.ProductName) loanProductByName[p.ProductName.trim().toUpperCase()] = p;
   }
 
-  // ── Load Deposit Shadow AND Loan Shadow for Acct_Type + Int_cat lookup ──
-  // CC/OD accounts may appear in either shadow file. We check both to maximise
-  // the chance of finding the product code for each account.
-  const [depositShadowRecords, loanShadowRecords] = await Promise.all([
-    getAllRecords(STORES.DEPOSIT_SHADOW),
-    getAllRecords(STORES.LOAN_SHADOW),
-  ]);
+  // ── Load Deposit Shadow for ActType + IntCat lookup ──
+  // CC/OD accounts appear in the Deposit Shadow file (they are OD/CC type accounts in CBS).
+  // The Deposit Shadow stores ActType and IntCat for each account; we combine them as
+  // "ActType-IntCat" to form the ProductCode, then look that up in the Loan Product Mapping.
+  // Key normalisation: CCOD ACCTNO may have leading zeros (raw from CBS), but DEPOSIT_SHADOW
+  // stores AcNo after trimLeadingZeros. We trim ACCTNO before lookup.
+  const depositShadowRecords = await getAllRecords(STORES.DEPOSIT_SHADOW);
   const depositShadowByAcNo: Record<string, any> = {};
   for (const ds of depositShadowRecords) {
     if (ds.AcNo) {
       depositShadowByAcNo[ds.AcNo.trim()] = ds;
-    }
-  }
-  // Loan Shadow also has Acct_Type + Int_cat; build a parallel lookup
-  const loanShadowByAcNo: Record<string, any> = {};
-  for (const ls of loanShadowRecords) {
-    if (ls.AcNo) {
-      loanShadowByAcNo[ls.AcNo.trim()] = ls;
     }
   }
 
@@ -834,40 +827,15 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       let productCode = "";
       let staffFlag = "Non-Staff";
 
-      // ── STEP 1: Derive product code from available sources ──
-      // Priority order:
-      //   1. Acct_Type + Int_cat directly in the CCOD balance row (if CBS exports them)
-      //   2. Deposit Shadow lookup (AcNo-keyed, leading-zero normalised)
-      //   3. Loan Shadow lookup (AcNo-keyed, leading-zero normalised)
-      // IMPORTANT: CCOD ACCTNO may have leading zeros (raw from CBS), but shadow files
-      // store AcNo after trimLeadingZeros. Normalise before lookup.
+      // ── STEP 1: Derive product code via Deposit Shadow lookup ──
+      // CCOD ACCTNO may have leading zeros (raw from CBS).
+      // DEPOSIT_SHADOW stores AcNo after trimLeadingZeros, so normalise before lookup.
       const loanKeyNorm = loanKey.replace(/^0+/, "") || loanKey;
-
-      // Source 1: direct columns in CCOD row
-      const rowActType = (r.Acct_Type || r.ActType || "").trim();
-      const rowIntCat = (r.Int_cat || r.IntCat || "").trim();
-      if (rowActType && rowIntCat) {
-        productCode = `${rowActType}-${rowIntCat}`;
-      }
-
-      // Source 2: Deposit Shadow
-      if (!productCode) {
-        const shadowRecord = depositShadowByAcNo[loanKeyNorm] || depositShadowByAcNo[loanKey];
-        if (shadowRecord) {
-          const actType = (shadowRecord.ActType || "").trim();
-          const intCat = (shadowRecord.IntCat || "").trim();
-          if (actType && intCat) productCode = `${actType}-${intCat}`;
-        }
-      }
-
-      // Source 3: Loan Shadow (CC/OD accounts also appear in Loan Shadow)
-      if (!productCode) {
-        const lsRecord = loanShadowByAcNo[loanKeyNorm] || loanShadowByAcNo[loanKey];
-        if (lsRecord) {
-          const actType = (lsRecord.Acct_Type || "").trim();
-          const intCat = (lsRecord.Int_cat || "").trim();
-          if (actType && intCat) productCode = `${actType}-${intCat}`;
-        }
+      const shadowRecord = depositShadowByAcNo[loanKeyNorm] || depositShadowByAcNo[loanKey];
+      if (shadowRecord) {
+        const actType = (shadowRecord.ActType || "").trim();
+        const intCat = (shadowRecord.IntCat || "").trim();
+        if (actType && intCat) productCode = `${actType}-${intCat}`;
       }
 
       // ── STEP 2: Look up product code in Loan Product Category Mapping ──
