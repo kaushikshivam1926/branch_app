@@ -200,18 +200,31 @@ export async function processProductMapping(csvText: string): Promise<number> {
 export async function processLoanProductMapping(csvText: string): Promise<number> {
   const rows = parseCSV(csvText);
   const records = rows
-    .filter((r) => r.ProductCode && r.ProductCode.trim() !== "")
-    .map((r) => ({
-      ProductCode: r.ProductCode.trim(),
-      ProductName: r.ProductName || "",
-      Category: r.Category || "",
-      SubCategory: r.SubCategory || "",
-      Segment: r.Segment || "",
-      Priority: r.Priority || "No",
-      Secured: r.Secured || "",
-      Scheme: r.Scheme || "None",
-      RiskWeight: r.RiskWeight || "100",
-    }));
+    .map((r) => {
+      // Support two formats:
+      // Format A: has a pre-built ProductCode column (e.g. "6551-2020")
+      // Format B: has separate Acct_Type and Int_cat columns → derive ProductCode as "Acct_Type-Int_cat"
+      let productCode = (r.ProductCode || "").trim();
+      if (!productCode) {
+        const acctType = (r.Acct_Type || r.ActType || "").trim();
+        const intCat = (r.Int_cat || r.IntCat || "").trim();
+        if (acctType && intCat) productCode = `${acctType}-${intCat}`;
+      }
+      if (!productCode) return null;
+      return {
+        ProductCode: productCode,
+        ProductName: r.ProductName || r.Cat_Type_Name || "",
+        Category: r.Category || "",
+        SubCategory: r.SubCategory || "",
+        Segment: r.Segment || "",
+        Priority: r.Priority || "No",
+        Secured: r.Secured || "",
+        Scheme: r.Scheme || "None",
+        RiskWeight: r.RiskWeight || "100",
+        StaffFlag: r.StaffFlag || "No",
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
 
   await clearStore(STORES.LOAN_PRODUCT_MAPPING);
   await putRecords(STORES.LOAN_PRODUCT_MAPPING, records);
@@ -750,14 +763,25 @@ export async function processCCODBalance(csvText: string): Promise<number> {
     if (p.ProductName) loanProductByName[p.ProductName.trim().toUpperCase()] = p;
   }
 
-  // ── PRIMARY: Load Deposit Shadow to fetch Acct_Type + Int_cat for CC/OD accounts ──
-  // CC/OD accounts exist in the Deposit Shadow file (they are OD/CC type accounts)
-  // but their balances come from the CC/OD Balance file (which is more current).
-  // We use Deposit Shadow only for product code derivation.
-  const depositShadowRecords = await getAllRecords(STORES.DEPOSIT_SHADOW);
+  // ── Load Deposit Shadow AND Loan Shadow for Acct_Type + Int_cat lookup ──
+  // CC/OD accounts may appear in either shadow file. We check both to maximise
+  // the chance of finding the product code for each account.
+  const [depositShadowRecords, loanShadowRecords] = await Promise.all([
+    getAllRecords(STORES.DEPOSIT_SHADOW),
+    getAllRecords(STORES.LOAN_SHADOW),
+  ]);
   const depositShadowByAcNo: Record<string, any> = {};
   for (const ds of depositShadowRecords) {
-    if (ds.AcNo) depositShadowByAcNo[ds.AcNo.trim()] = ds;
+    if (ds.AcNo) {
+      depositShadowByAcNo[ds.AcNo.trim()] = ds;
+    }
+  }
+  // Loan Shadow also has Acct_Type + Int_cat; build a parallel lookup
+  const loanShadowByAcNo: Record<string, any> = {};
+  for (const ls of loanShadowRecords) {
+    if (ls.AcNo) {
+      loanShadowByAcNo[ls.AcNo.trim()] = ls;
+    }
   }
 
   const records = rows
@@ -810,18 +834,39 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       let productCode = "";
       let staffFlag = "Non-Staff";
 
-      // ── STEP 1: Look up account in Deposit Shadow to get Acct_Type + Int_cat ──
-      // The Deposit Shadow file contains the product type codes for CC/OD accounts.
-      // These are the same codes used in the Loan Product Category Mapping.
-      // IMPORTANT: CCOD ACCTNO may have leading zeros (raw from CBS), but DEPOSIT_SHADOW
-      // AcNo is stored after trimLeadingZeros. Normalise before lookup.
+      // ── STEP 1: Derive product code from available sources ──
+      // Priority order:
+      //   1. Acct_Type + Int_cat directly in the CCOD balance row (if CBS exports them)
+      //   2. Deposit Shadow lookup (AcNo-keyed, leading-zero normalised)
+      //   3. Loan Shadow lookup (AcNo-keyed, leading-zero normalised)
+      // IMPORTANT: CCOD ACCTNO may have leading zeros (raw from CBS), but shadow files
+      // store AcNo after trimLeadingZeros. Normalise before lookup.
       const loanKeyNorm = loanKey.replace(/^0+/, "") || loanKey;
-      const shadowRecord = depositShadowByAcNo[loanKeyNorm] || depositShadowByAcNo[loanKey];
-      if (shadowRecord) {
-        const actType = (shadowRecord.ActType || "").trim();
-        const intCat = (shadowRecord.IntCat || "").trim();
-        if (actType && intCat) {
-          productCode = `${actType}-${intCat}`;
+
+      // Source 1: direct columns in CCOD row
+      const rowActType = (r.Acct_Type || r.ActType || "").trim();
+      const rowIntCat = (r.Int_cat || r.IntCat || "").trim();
+      if (rowActType && rowIntCat) {
+        productCode = `${rowActType}-${rowIntCat}`;
+      }
+
+      // Source 2: Deposit Shadow
+      if (!productCode) {
+        const shadowRecord = depositShadowByAcNo[loanKeyNorm] || depositShadowByAcNo[loanKey];
+        if (shadowRecord) {
+          const actType = (shadowRecord.ActType || "").trim();
+          const intCat = (shadowRecord.IntCat || "").trim();
+          if (actType && intCat) productCode = `${actType}-${intCat}`;
+        }
+      }
+
+      // Source 3: Loan Shadow (CC/OD accounts also appear in Loan Shadow)
+      if (!productCode) {
+        const lsRecord = loanShadowByAcNo[loanKeyNorm] || loanShadowByAcNo[loanKey];
+        if (lsRecord) {
+          const actType = (lsRecord.Acct_Type || "").trim();
+          const intCat = (lsRecord.Int_cat || "").trim();
+          if (actType && intCat) productCode = `${actType}-${intCat}`;
         }
       }
 
@@ -1312,6 +1357,8 @@ export function detectFileType(fileName: string, headers: string[]): string | nu
   if (headerStr.includes("bnkno") && headerStr.includes("loan_arrears") && headerStr.includes("emi_due")) return "loan-shadow";
   if (headerStr.includes("productcode") && headerStr.includes("category") && headerStr.includes("secured")) return "loan-product-mapping";
   if (headerStr.includes("productcode") && headerStr.includes("category") && headerStr.includes("salaryflag")) return "product-mapping";
+  // Loan product mapping may also have Acct_Type + Int_cat columns instead of a pre-built ProductCode
+  if ((headerStr.includes("acct_type") || headerStr.includes("acttype")) && (headerStr.includes("int_cat") || headerStr.includes("intcat")) && headerStr.includes("category")) return "loan-product-mapping";
 
   return null;
 }
