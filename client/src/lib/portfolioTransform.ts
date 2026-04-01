@@ -401,7 +401,13 @@ export async function processDepositShadow(csvText: string): Promise<number> {
 
   // DEPOSIT_DATA: store only non-CC/OD rows for deposit analytics
   // (CC/OD accounts are classified as loans, not deposits)
-  const depositOnlyRecords = allRows.filter((rec: any) => !ccodAccountSet.has(rec.AcNo));
+  // IMPORTANT: ccodAccountSet contains raw ACCTNO (may have leading zeros), but
+  // rec.AcNo in DEPOSIT_SHADOW is stored after trimLeadingZeros. Check both forms.
+  const depositOnlyRecords = allRows.filter((rec: any) => {
+    const acNo = rec.AcNo || "";
+    const acNoRaw = acNo.padStart(12, "0"); // re-pad to match CBS raw format
+    return !ccodAccountSet.has(acNo) && !ccodAccountSet.has(acNoRaw);
+  });
   await clearStore(STORES.DEPOSIT_DATA);
   await putRecords(STORES.DEPOSIT_DATA, depositOnlyRecords);
 
@@ -807,7 +813,10 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       // ── STEP 1: Look up account in Deposit Shadow to get Acct_Type + Int_cat ──
       // The Deposit Shadow file contains the product type codes for CC/OD accounts.
       // These are the same codes used in the Loan Product Category Mapping.
-      const shadowRecord = depositShadowByAcNo[loanKey];
+      // IMPORTANT: CCOD ACCTNO may have leading zeros (raw from CBS), but DEPOSIT_SHADOW
+      // AcNo is stored after trimLeadingZeros. Normalise before lookup.
+      const loanKeyNorm = loanKey.replace(/^0+/, "") || loanKey;
+      const shadowRecord = depositShadowByAcNo[loanKeyNorm] || depositShadowByAcNo[loanKey];
       if (shadowRecord) {
         const actType = (shadowRecord.ActType || "").trim();
         const intCat = (shadowRecord.IntCat || "").trim();

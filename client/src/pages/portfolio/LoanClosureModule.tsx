@@ -702,32 +702,74 @@ export default function LoanClosureModule() {
     setSearching(true);
     setSearchError("");
     try {
-      const allLoans: LoanDataRecord[] = await getAllRecords(STORES.LOAN_DATA);
       const q = searchInput.trim().replace(/^0+/, "");
-      const match = allLoans.find(l =>
+
+      // ── Search LOAN_DATA first ──────────────────────────────────────────────
+      const allLoans: LoanDataRecord[] = await getAllRecords(STORES.LOAN_DATA);
+      const loanMatch = allLoans.find(l =>
         l.LoanKey === searchInput.trim() ||
         l.LoanKey.replace(/^0+/, "") === q
       );
-      if (!match) {
-        setSearchError(`No loan account found for "${searchInput.trim()}". Please check the account number.`);
-        setSearching(false);
+
+      if (loanMatch) {
+        const addr = buildAddress(loanMatch);
+        setDetails(prev => ({
+          ...prev,
+          accountNo: loanMatch.LoanKey,
+          accountType: accountType,
+          borrowerName: loanMatch.CUSTNAME || "",
+          borrowerTitle: "Mr.",
+          cif: loanMatch.CIF || "",
+          loanType: loanMatch.ACCTDESC || "",
+          loanCategory: (loanMatch.Loan_Category as string) || "",
+          sanctionAmount: loanMatch.LIMIT || 0,
+          address: addr,
+          mobile: loanMatch.Shadow_MobileNo ? `+91 ${loanMatch.Shadow_MobileNo.replace(/^\+91[-\s]?/, "")}` : "",
+        }));
+        setStep(3);
         return;
       }
-      const addr = buildAddress(match);
-      setDetails(prev => ({
-        ...prev,
-        accountNo: match.LoanKey,
-        accountType: accountType,
-        borrowerName: match.CUSTNAME || "",
-        borrowerTitle: "Mr.",
-        cif: match.CIF || "",
-        loanType: match.ACCTDESC || "",
-        loanCategory: (match.Loan_Category as string) || "",
-        sanctionAmount: match.LIMIT || 0,
-        address: addr,
-        mobile: match.Shadow_MobileNo ? `+91 ${match.Shadow_MobileNo.replace(/^\+91[-\s]?/, "")}` : "",
-      }));
-      setStep(3);
+
+      // ── Fallback: Search CCOD_DATA (CC/OD, Overdraft, Cash Credit accounts) ──
+      const allCCOD: any[] = await getAllRecords(STORES.CCOD_DATA);
+      const ccodMatch = allCCOD.find(c =>
+        c.LoanKey === searchInput.trim() ||
+        (c.LoanKey || "").replace(/^0+/, "") === q
+      );
+
+      if (ccodMatch) {
+        // Build address from CCOD record — CCOD may not have shadow address fields;
+        // try to get them from LOAN_DATA shadow or Customer 360 via CIF
+        const custDim: any[] = await getAllRecords(STORES.CUSTOMER_DIM);
+        const cust = custDim.find(c => c.CIF === ccodMatch.CIF);
+        const addr = [
+          cust?.Address1 || "",
+          cust?.Address2 || "",
+          cust?.Address3 || "",
+          cust?.City || "",
+          cust?.State || "",
+        ].filter(Boolean).join(", ");
+        const mobile = cust?.MobileNo
+          ? `+91 ${cust.MobileNo.replace(/^\+91[-\s]?/, "")}`
+          : "";
+        setDetails(prev => ({
+          ...prev,
+          accountNo: ccodMatch.LoanKey,
+          accountType: accountType,
+          borrowerName: ccodMatch.CUSTNAME || "",
+          borrowerTitle: "Mr.",
+          cif: ccodMatch.CIF || "",
+          loanType: ccodMatch.ACCTDESC || "",
+          loanCategory: (ccodMatch.Loan_Category as string) || "CC/OD",
+          sanctionAmount: ccodMatch.LIMIT || 0,
+          address: addr,
+          mobile,
+        }));
+        setStep(3);
+        return;
+      }
+
+      setSearchError(`No account found for "${searchInput.trim()}". Please check the account number.`);
     } catch (err) {
       setSearchError("Error reading database. Please ensure data is uploaded.");
     } finally {
@@ -741,13 +783,38 @@ export default function LoanClosureModule() {
     if (!cifSearchInput.trim()) return;
     setCifSearching(true);
     try {
-      const allLoans: LoanDataRecord[] = await getAllRecords(STORES.LOAN_DATA);
       const q = cifSearchInput.trim().toLowerCase();
-      const results = allLoans.filter(l =>
+      const [allLoans, allCCOD]: [LoanDataRecord[], any[]] = await Promise.all([
+        getAllRecords(STORES.LOAN_DATA),
+        getAllRecords(STORES.CCOD_DATA),
+      ]);
+      const loanResults = allLoans.filter(l =>
         (l.CIF || "").toLowerCase().includes(q) ||
         (l.CUSTNAME || "").toLowerCase().includes(q)
-      ).slice(0, 8);
-      setCifSearchResults(results);
+      );
+      // Map CCOD records to same shape as LoanDataRecord for display
+      const ccodResults: LoanDataRecord[] = allCCOD
+        .filter(c =>
+          (c.CIF || "").toLowerCase().includes(q) ||
+          (c.CUSTNAME || "").toLowerCase().includes(q)
+        )
+        .map(c => ({
+          LoanKey: c.LoanKey,
+          CIF: c.CIF || "",
+          CUSTNAME: c.CUSTNAME || "",
+          ACCTDESC: c.ACCTDESC || "",
+          LIMIT: c.LIMIT || 0,
+          INSTALAMT: 0,
+          INTRATE: c.INTRATE || 0,
+          SANCTDT: "",
+          Maturity_Dt: "",
+          Shadow_Add1: "", Shadow_Add2: "", Shadow_Add3: "", Shadow_Add4: "", Shadow_PostCode: "",
+          Shadow_MobileNo: "",
+          Loan_Category: c.Loan_Category || "CC/OD",
+          ProductCode: c.ProductCode || "",
+        }));
+      const combined = [...loanResults, ...ccodResults].slice(0, 8);
+      setCifSearchResults(combined);
     } catch {
       setCifSearchResults([]);
     } finally {
