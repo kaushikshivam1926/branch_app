@@ -24,6 +24,7 @@ import {
   processLoanBalance,
   processCCODBalance,
   processNPAReport,
+  reprocessCCODClassification,
   buildCustomerDimension,
   detectFileType,
   FILE_TYPE_LABELS,
@@ -51,6 +52,8 @@ export default function DataUpload() {
   const [uploads, setUploads] = useState<UploadStatus[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [buildingCustomers, setBuildingCustomers] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
+  const [reprocessResult, setReprocessResult] = useState<{ total: number; resolved: number; unresolved: number; unmappedCodes: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -260,6 +263,25 @@ export default function DataUpload() {
     setBuildingCustomers(false);
   }
 
+  async function handleReprocessCCOD() {
+    setReprocessing(true);
+    setReprocessResult(null);
+    try {
+      const result = await reprocessCCODClassification();
+      setReprocessResult(result);
+      await buildCustomerDimension();
+      await loadStatus();
+      if (result.unresolved === 0) {
+        toast.success(`CC/OD re-classified: ${result.resolved} of ${result.total} accounts resolved`);
+      } else {
+        toast.warning(`CC/OD re-classified: ${result.resolved} resolved, ${result.unresolved} still unresolved`);
+      }
+    } catch (err: any) {
+      toast.error("Re-process failed: " + err.message);
+    }
+    setReprocessing(false);
+  }
+
   const statusColor = (count: number) => (count > 0 ? "text-green-600" : "text-orange-500");
   const statusBg = (count: number) => (count > 0 ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200");
 
@@ -368,6 +390,17 @@ export default function DataUpload() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleReprocessCCOD}
+                disabled={reprocessing}
+                className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                title="Re-classify CC/OD accounts using the already-stored Deposit Shadow and Loan Product Mapping. Run this after uploading the Deposit Shadow if CC/OD accounts show wrong categories."
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${reprocessing ? "animate-spin" : ""}`} />
+                Re-classify CC/OD
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleClearAllData}
                 className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
               >
@@ -411,9 +444,42 @@ export default function DataUpload() {
               );
             })}
           </div>
+
+          {/* Re-process CCOD result panel */}
+          {reprocessResult && (
+            <div className={`mt-3 p-3 rounded-lg border text-sm ${
+              reprocessResult.unresolved === 0
+                ? "bg-green-50 border-green-200"
+                : "bg-amber-50 border-amber-200"
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="w-4 h-4 text-blue-600" />
+                <span className="font-semibold text-gray-700">CC/OD Re-classification Result</span>
+              </div>
+              <div className="flex gap-4 text-xs mb-2">
+                <span className="text-gray-600">Total: <strong>{reprocessResult.total}</strong></span>
+                <span className="text-green-700">Resolved: <strong>{reprocessResult.resolved}</strong></span>
+                <span className={reprocessResult.unresolved > 0 ? "text-amber-700" : "text-gray-400"}>
+                  Unresolved: <strong>{reprocessResult.unresolved}</strong>
+                </span>
+              </div>
+              {reprocessResult.unmappedCodes.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-amber-700 mb-1">Unmapped product codes (add these to Loan Product Mapping):</p>
+                  <div className="flex flex-wrap gap-1">
+                    {reprocessResult.unmappedCodes.map((code, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-mono">{code}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {reprocessResult.unresolved === 0 && (
+                <p className="text-xs text-green-700">All CC/OD accounts successfully classified. Refresh the Loans Portfolio to see updated categories.</p>
+              )}
+            </div>
+          )}
         </div>
       )}
-
       {/* Upload History */}
       {uploadLogs.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">

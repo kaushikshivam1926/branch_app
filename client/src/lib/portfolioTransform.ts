@@ -1407,3 +1407,184 @@ export const FILE_TYPES_WITH_UPLOAD_DATE = [
   "product-mapping",
   "loan-product-mapping",
 ];
+
+// ============================================================
+// Re-process CCOD Classification (without re-uploading the file)
+// ============================================================
+// Reads already-stored CCOD_DATA records and re-runs the product code
+// derivation using the current DEPOSIT_SHADOW and LOAN_PRODUCT_MAPPING stores.
+// Call this after uploading/updating the Deposit Shadow or Loan Product Mapping.
+export async function reprocessCCODClassification(): Promise<{
+  total: number;
+  resolved: number;
+  unresolved: number;
+  unmappedCodes: string[];
+}> {
+  // Load current CCOD records
+  const ccodRecords = await getAllRecords(STORES.CCOD_DATA);
+  if (ccodRecords.length === 0) {
+    return { total: 0, resolved: 0, unresolved: 0, unmappedCodes: [] };
+  }
+
+  // Load Loan Product Mapping
+  const loanProductMapping = await getAllRecords(STORES.LOAN_PRODUCT_MAPPING);
+  const loanProductByCode: Record<string, any> = {};
+  const loanProductByName: Record<string, any> = {};
+  for (const p of loanProductMapping) {
+    if (p.ProductCode) loanProductByCode[p.ProductCode.trim()] = p;
+    if (p.ProductName) loanProductByName[p.ProductName.trim().toUpperCase()] = p;
+  }
+
+  // Load Deposit Shadow
+  const depositShadowRecords = await getAllRecords(STORES.DEPOSIT_SHADOW);
+  const depositShadowByAcNo: Record<string, any> = {};
+  for (const ds of depositShadowRecords) {
+    if (ds.AcNo) depositShadowByAcNo[ds.AcNo.trim()] = ds;
+  }
+
+  const BUILTIN_CCOD_PRODUCT_MAP: Record<string, { Category: string; SubCategory: string; Segment: string; Priority: string; Secured: string }> = {
+    "1029-1431": { Category: "Gold Loan", SubCategory: "CSP Silver OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "1094-1441": { Category: "Gold Loan", SubCategory: "Capital Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "1096-1431": { Category: "Gold Loan", SubCategory: "SGS Plus Silver OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "1096-1441": { Category: "Gold Loan", SubCategory: "SGS Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "1097-1441": { Category: "Gold Loan", SubCategory: "PSP Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "1098-1441": { Category: "Gold Loan", SubCategory: "CGS Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "5011-1301": { Category: "CC/OD", SubCategory: "Current Account OD", Segment: "General", Priority: "Medium", Secured: "No" },
+    "6040-4011": { Category: "MSME", SubCategory: "Current Account OD", Segment: "General", Priority: "Medium", Secured: "No" },
+    "6059-1001": { Category: "Personal Loan", SubCategory: "Overdraft - Staff", Segment: "Staff", Priority: "High", Secured: "No" },
+    "6059-5001": { Category: "Personal Loan", SubCategory: "Overdraft - Staff", Segment: "Staff", Priority: "High", Secured: "No" },
+    "6500-2020": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "6551-2021": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "6551-2078": { Category: "Gold Loan", SubCategory: "Liquid Gold Loan OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "6551-2158": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+    "6551-2258": { Category: "Personal Loan", SubCategory: "OD Against Mutual Funds", Segment: "General", Priority: "Medium", Secured: "Yes" },
+  };
+
+  let resolved = 0;
+  let unresolved = 0;
+  const unmappedCodeSet = new Set<string>();
+
+  const updatedRecords = ccodRecords.map((rec: any) => {
+    const loanKey = (rec.LoanKey || "").trim();
+    const loanKeyNorm = loanKey.replace(/^0+/, "") || loanKey;
+    const acctDesc = (rec.ACCTDESC || "").trim();
+    const acctDescUpper = acctDesc.toUpperCase();
+
+    let productCode = "";
+    let loanCategory = "CC/OD";
+    let loanSubCategory = rec.Loan_SubCategory || "";
+    let loanSegment = "General";
+    let loanPriority = "Medium";
+    let loanSecured = "";
+    let loanScheme = "None";
+    let loanRiskWeight = "100";
+    let productName = acctDesc;
+    let staffFlag = "Non-Staff";
+
+    // Step 1: Deposit Shadow lookup
+    const shadowRecord = depositShadowByAcNo[loanKeyNorm] || depositShadowByAcNo[loanKey];
+    if (shadowRecord) {
+      const actType = (shadowRecord.ActType || "").trim();
+      const intCat = (shadowRecord.IntCat || "").trim();
+      if (actType && intCat) productCode = `${actType}-${intCat}`;
+    }
+
+    // Step 2: Loan Product Mapping lookup
+    const productMappingEntry = productCode
+      ? (loanProductByCode[productCode] || (BUILTIN_CCOD_PRODUCT_MAP[productCode]
+          ? { ...BUILTIN_CCOD_PRODUCT_MAP[productCode], ProductName: acctDesc, Scheme: "None", RiskWeight: "100", StaffFlag: BUILTIN_CCOD_PRODUCT_MAP[productCode].Segment === "Staff" ? "Yes" : "No" }
+          : null))
+      : null;
+
+    if (productMappingEntry) {
+      loanCategory = productMappingEntry.Category || "CC/OD";
+      loanSubCategory = productMappingEntry.SubCategory || "";
+      loanSegment = productMappingEntry.Segment || "General";
+      loanPriority = productMappingEntry.Priority || "Medium";
+      loanSecured = productMappingEntry.Secured || "";
+      loanScheme = productMappingEntry.Scheme || "None";
+      loanRiskWeight = productMappingEntry.RiskWeight || "100";
+      productName = productMappingEntry.ProductName || acctDesc;
+      if (productMappingEntry.StaffFlag === "Yes" || loanSegment === "Staff") staffFlag = "Staff";
+      resolved++;
+    } else {
+      // Step 3: ACCTDESC fallback
+      const exactMatch = loanProductByName[acctDescUpper];
+      if (exactMatch) {
+        loanCategory = exactMatch.Category || "CC/OD";
+        loanSubCategory = exactMatch.SubCategory || "";
+        loanSegment = exactMatch.Segment || "General";
+        loanPriority = exactMatch.Priority || "Medium";
+        loanSecured = exactMatch.Secured || "";
+        loanScheme = exactMatch.Scheme || "None";
+        loanRiskWeight = exactMatch.RiskWeight || "100";
+        productName = exactMatch.ProductName || acctDesc;
+        productCode = exactMatch.ProductCode || productCode;
+        if (exactMatch.StaffFlag === "Yes" || loanSegment === "Staff") staffFlag = "Staff";
+        resolved++;
+      } else {
+        // Keyword fallback
+        let keywordMatched = false;
+        if (acctDescUpper.includes("MAXGAIN") || acctDescUpper.includes("HL MAXGAIN")) {
+          loanCategory = "Home Loan"; loanSubCategory = "Maxgain OD"; keywordMatched = true;
+        } else if (acctDescUpper.includes("MSME") || acctDescUpper.includes("CC-SBF") || acctDescUpper.includes("MUDRA")) {
+          loanCategory = "MSME"; loanSubCategory = acctDescUpper.includes("MUDRA") ? "MUDRA Cash Credit" : "Cash Credit"; keywordMatched = true;
+        } else if (acctDescUpper.includes("OD BANK") || acctDescUpper.includes("OD-LOAN AG DEP") || acctDescUpper.includes("OD AGAINST DEP")) {
+          loanCategory = "Personal Loan"; loanSubCategory = "OD Against Deposits"; keywordMatched = true;
+        } else if (acctDescUpper.includes("OD-LON AGAINST FD") || acctDescUpper.includes("OD AGAINST FD")) {
+          loanCategory = "Personal Loan"; loanSubCategory = "OD Against Fixed Deposit"; keywordMatched = true;
+        } else if (acctDescUpper.includes("STAFF")) {
+          loanCategory = "Staff Loan"; loanSubCategory = "Overdraft - Staff"; staffFlag = "Staff"; keywordMatched = true;
+        } else if (acctDescUpper.includes("GOLD") || acctDescUpper.includes("SB PSP") || acctDescUpper.includes("SB CSP")) {
+          loanCategory = "Gold Loan"; loanSubCategory = "Gold Loan - OD"; keywordMatched = true;
+        }
+        if (keywordMatched) resolved++;
+        else {
+          unresolved++;
+          if (productCode) unmappedCodeSet.add(productCode);
+          else unmappedCodeSet.add(`[no-code] ${acctDesc}`);
+        }
+      }
+    }
+
+    // Re-compute NPA exemption based on updated category
+    const isExempt = (
+      loanSubCategory === "OD Against Deposits" ||
+      loanSubCategory === "OD Against Fixed Deposit" ||
+      loanCategory === "Staff Loan" ||
+      loanSubCategory === "Overdraft - Staff" ||
+      staffFlag === "Staff"
+    );
+
+    return {
+      ...rec,
+      Loan_Category: loanCategory,
+      Loan_SubCategory: loanSubCategory,
+      Loan_Segment: loanSegment,
+      Loan_Priority: loanPriority,
+      Loan_Secured: loanSecured,
+      Loan_Scheme: loanScheme,
+      Loan_RiskWeight: loanRiskWeight,
+      Product_Name: productName,
+      Product_Code: productCode,
+      Staff_Flag: staffFlag,
+      Computed_NPA_Exempt: isExempt,
+      Computed_NPA_Exempt_Reason: (
+        loanSubCategory === "OD Against Deposits" || loanSubCategory === "OD Against Fixed Deposit"
+      ) ? "OD against Bank's Deposit — Exempt from NPA classification"
+        : (loanCategory === "Staff Loan" || loanSubCategory === "Overdraft - Staff" || staffFlag === "Staff")
+        ? "Staff Overdraft — Exempt from NPA classification"
+        : "",
+    };
+  });
+
+  await clearStore(STORES.CCOD_DATA);
+  await putRecords(STORES.CCOD_DATA, updatedRecords);
+
+  return {
+    total: ccodRecords.length,
+    resolved,
+    unresolved,
+    unmappedCodes: Array.from(unmappedCodeSet),
+  };
+}
