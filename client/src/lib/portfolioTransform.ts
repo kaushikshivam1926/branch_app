@@ -773,7 +773,12 @@ export async function processCCODBalance(csvText: string): Promise<number> {
   const depositShadowByAcNo: Record<string, any> = {};
   for (const ds of depositShadowRecords) {
     if (ds.AcNo) {
-      depositShadowByAcNo[ds.AcNo.trim()] = ds;
+      // Store under both the raw AcNo and the leading-zero-trimmed form so
+      // CCOD ACCTNO (which may carry leading zeros from CBS) always finds a match.
+      const rawKey = ds.AcNo.trim();
+      const normKey = trimLeadingZeros(rawKey);
+      depositShadowByAcNo[rawKey] = ds;
+      if (normKey !== rawKey) depositShadowByAcNo[normKey] = ds;
     }
   }
 
@@ -833,9 +838,16 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       const loanKeyNorm = loanKey.replace(/^0+/, "") || loanKey;
       const shadowRecord = depositShadowByAcNo[loanKeyNorm] || depositShadowByAcNo[loanKey];
       if (shadowRecord) {
-        const actType = (shadowRecord.ActType || "").trim();
-        const intCat = (shadowRecord.IntCat || "").trim();
-        if (actType && intCat) productCode = `${actType}-${intCat}`;
+        // Priority 1: use pre-built ProductCode from shadow record if present
+        const shadowProductCode = (shadowRecord.ProductCode || "").trim();
+        if (shadowProductCode) {
+          productCode = shadowProductCode;
+        } else {
+          // Priority 2: derive from ActType + IntCat
+          const actType = (shadowRecord.ActType || "").trim();
+          const intCat = (shadowRecord.IntCat || "").trim();
+          if (actType && intCat) productCode = `${actType}-${intCat}`;
+        }
       }
 
       // ── STEP 2: Look up product code in Loan Product Category Mapping ──
