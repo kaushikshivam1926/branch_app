@@ -74,16 +74,22 @@ export default function BranchOverview() {
         getAllRecords(STORES.CUSTOMER_DIM),
       ]);
 
-      // Deposit metrics (excluding duplicates with CC/OD)
-      const activeDeposits = deposits.filter((d: any) => d.Dormancy_Flag !== "Closed");
+      // Build a set of CCOD account numbers (trimmed) for deduplication
+      const ccodAcNoSet = new Set(ccod.map((c: any) => (c.LoanKey || "").replace(/^0+/, "")));
+
+      // Deposit metrics — exclude deposit records that are also in CCOD (they are loans, not deposits)
+      const activeDeposits = deposits.filter((d: any) =>
+        d.Dormancy_Flag !== "Closed" &&
+        !ccodAcNoSet.has((d.AcNo || d.AccountNo || "").replace(/^0+/, ""))
+      );
       let totalDepositBalance = activeDeposits.reduce((sum: number, d: any) => sum + (d.CurrentBalance || 0), 0);
-      
-      // Add positive balances from CC/OD accounts (cross-product logic)
+
+      // Add positive balances from CC/OD accounts (cross-product CASA logic per deduplication rule)
       const ccodPositiveBalance = ccod
         .filter((c: any) => (c.CurrentBalance || 0) > 0)
         .reduce((sum: number, c: any) => sum + c.CurrentBalance, 0);
       totalDepositBalance += ccodPositiveBalance;
-      
+
       const casaCategories = ["Regular Savings", "Wealth Account", "Current", "Salary", "Savings Plus", "NRI Savings", "NRI Current", "Government Accounts"];
       const termCategories = ["Term Deposit", "Recurring Deposit", "Term Deposit (NRO)", "Term Deposit (NRE)", "Term Deposit (RFC/FCNB)", "Recurring Deposit (NRE)", "Recurring Deposit (NRO)", "MOD", "PPF", "Sukanya Samriddhi", "Mahila Samman"];
       let casaBalance = activeDeposits.filter((d: any) => casaCategories.includes(d.Category)).reduce((sum: number, d: any) => sum + (d.CurrentBalance || 0), 0);
@@ -110,7 +116,7 @@ export default function BranchOverview() {
         .reduce((sum: number, c: any) => sum + Math.abs(c.CurrentBalance), 0);
       const totalAdvances = totalLoanOutstanding + totalCCODBalance;
 
-      // Loan category breakdown
+      // Loan category breakdown — use mapped Loan_Category for both Term Loans and CC/OD
       const loanCatMap: Record<string, { balance: number; count: number }> = {};
       for (const l of loans) {
         const cat = (l as any).Loan_Category || "Other";
@@ -118,40 +124,66 @@ export default function BranchOverview() {
         loanCatMap[cat].balance += Math.abs(l.OUTSTAND || 0);
         loanCatMap[cat].count += 1;
       }
-      // Add CC/OD as category
-      if (ccod.length > 0) {
-        loanCatMap["CC/OD"] = { balance: totalCCODBalance, count: ccod.length };
+      // Bucket CC/OD by mapped Loan_Category (not all under one "CC/OD" bucket)
+      for (const c of ccod) {
+        if ((c.CurrentBalance || 0) >= 0) continue; // skip positive-balance (credit) CC/OD
+        const cat = (c as any).Loan_Category || "CC/OD";
+        if (!loanCatMap[cat]) loanCatMap[cat] = { balance: 0, count: 0 };
+        loanCatMap[cat].balance += Math.abs(c.CurrentBalance || 0);
+        loanCatMap[cat].count += 1;
       }
       const loanCategories = Object.entries(loanCatMap)
         .map(([name, v]) => ({ name, ...v }))
         .sort((a, b) => b.balance - a.balance);
 
-      // Asset quality
-      const npaLoans = loans.filter((l: any) => l.SMA_CLASS === "NPA" || (l.NEWIRAC && !["00", "01", ""].includes(l.NEWIRAC)));
-      const npaCCOD = ccod.filter((c: any) => c.SMA_CLASS === "NPA" || (c.NEWIRAC && !["00", "01", "0", ""].includes(c.NEWIRAC)));
+      // Asset quality — use Computed_SMA_Class (RBI IRAC-compliant) and exclude NPA-exempt accounts
+      const npaLoans = loans.filter((l: any) =>
+        !l.Computed_NPA_Exempt &&
+        (l.Computed_SMA_Class === "NPA" || l.SMA_CLASS === "NPA" ||
+          (l.NEWIRAC && !["00", "01", ""].includes(l.NEWIRAC)))
+      );
+      const npaCCOD = ccod.filter((c: any) =>
+        !c.Computed_NPA_Exempt &&
+        (c.Computed_SMA_Class === "NPA" || c.SMA_CLASS === "NPA" ||
+          (c.NEWIRAC && !["00", "01", "0", ""].includes(c.NEWIRAC)))
+      );
       const totalNPAAmount = npaLoans.reduce((s: number, l: any) => s + Math.abs(l.OUTSTAND || 0), 0) +
         npaCCOD.reduce((s: number, c: any) => s + Math.abs(c.CurrentBalance || 0), 0);
       const grossNPARatio = totalAdvances > 0 ? (totalNPAAmount / totalAdvances) * 100 : 0;
 
-      // SMA distribution
+      // SMA distribution — use Computed_SMA_Class (RBI IRAC-compliant), include both Term Loans and CC/OD
       const smaMap: Record<string, { count: number; amount: number }> = {};
       for (const l of loans) {
-        const sma = (l as any).SMA_CLASS || "";
+        const sma = (l as any).Computed_SMA_Class || (l as any).SMA_CLASS || "";
         if (sma && sma !== "") {
           if (!smaMap[sma]) smaMap[sma] = { count: 0, amount: 0 };
           smaMap[sma].count += 1;
           smaMap[sma].amount += Math.abs(l.OUTSTAND || 0);
         }
       }
+      for (const c of ccod) {
+        if (c.Computed_NPA_Exempt) continue; // skip exempt accounts from SMA distribution
+        const sma = (c as any).Computed_SMA_Class || (c as any).SMA_CLASS || "";
+        if (sma && sma !== "") {
+          if (!smaMap[sma]) smaMap[sma] = { count: 0, amount: 0 };
+          smaMap[sma].count += 1;
+          smaMap[sma].amount += Math.abs(c.CurrentBalance || 0);
+        }
+      }
       const smaDistribution = Object.entries(smaMap)
         .map(([cls, v]) => ({ class: cls, ...v }))
         .sort((a, b) => {
-          const order: Record<string, number> = { STD: 0, SMA0: 1, SMA1: 2, SMA2: 3, NPA: 4 };
+          const order: Record<string, number> = { STD: 0, "SMA-0": 1, SMA0: 1, "SMA-1": 2, SMA1: 2, "SMA-2": 3, SMA2: 3, NPA: 4 };
           return (order[a.class] ?? 5) - (order[b.class] ?? 5);
         });
 
-      const smaAccounts = loans.filter((l: any) => ["SMA0", "SMA1", "SMA2"].includes(l.SMA_CLASS)).length;
-      const smaAmount = loans.filter((l: any) => ["SMA0", "SMA1", "SMA2"].includes(l.SMA_CLASS)).reduce((s: number, l: any) => s + Math.abs(l.OUTSTAND || 0), 0);
+      const smaBuckets = ["SMA-0", "SMA-1", "SMA-2", "SMA0", "SMA1", "SMA2"];
+      const smaAccounts =
+        loans.filter((l: any) => smaBuckets.includes(l.Computed_SMA_Class || l.SMA_CLASS)).length +
+        ccod.filter((c: any) => !c.Computed_NPA_Exempt && smaBuckets.includes(c.Computed_SMA_Class || c.SMA_CLASS)).length;
+      const smaAmount =
+        loans.filter((l: any) => smaBuckets.includes(l.Computed_SMA_Class || l.SMA_CLASS)).reduce((s: number, l: any) => s + Math.abs(l.OUTSTAND || 0), 0) +
+        ccod.filter((c: any) => !c.Computed_NPA_Exempt && smaBuckets.includes(c.Computed_SMA_Class || c.SMA_CLASS)).reduce((s: number, c: any) => s + Math.abs(c.CurrentBalance || 0), 0);
 
       // Customer metrics
       const hniCustomers = customers.filter((c: any) => c.HNI_Category === "HNI").length;
