@@ -175,10 +175,10 @@
     }
   }
 }
-/* Print Styles for Charges Return Report */
+/* Print Styles for RLMS Supplementer — zero margin for full-bleed curve */
 @media print {
   @page {
-    margin: 1cm;
+    margin: 0;
   }
 
   /* Page breaks between sheets */
@@ -190,6 +190,9 @@
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
+    /* Required so Chrome prints SVG fills and the print container's bg-white */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Hide all page elements except report content */
@@ -199,14 +202,16 @@
     display: none !important;
   }
 
-  /* Remove all backgrounds and gradients */
-  * {
-    background: white !important;
-    background-image: none !important;
-    background-color: white !important;
-  }
+  /*
+   * REMOVED: "* { background: white !important }" — This caused the
+   * content wrapper (z-index:10) to render a white layer covering the
+   * absolutely-positioned decorative SVG elements (z-index:0) in Chrome
+   * print output. Chrome renders white CSS backgrounds even in economy
+   * mode, so the white layer would always paint over the curve/watermark.
+   * The working HTML reference does not use this rule.
+   */
 
-  /* Except for table headers and specific styled elements */
+  /* Table headers preserve their subtle gray background */
   thead,
   .bg-gray-100,
   .bg-gray-50 {

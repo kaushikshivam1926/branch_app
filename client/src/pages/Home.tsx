@@ -170,31 +170,45 @@ export default function Home() {
           paddingTop: '0px'
         }}
       >
-        <div className="max-w-7xl mx-auto flex items-center gap-4">
-          {/* SBI Logo */}
-          <div className="flex-shrink-0">
-            <img 
-              src={sbiLogoUrl} 
-              alt="State Bank of India" 
-              className="h-28 w-auto"
-              style={{ filter: "brightness(0) invert(1)" }}
-            />
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* SBI Logo */}
+            <div className="flex-shrink-0">
+              <img 
+                src={sbiLogoUrl} 
+                alt="State Bank of India" 
+                className="h-28 w-auto"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
+            </div>
+            
+            {/* App Title & Branch Name */}
+            <div className="flex flex-col justify-center">
+              <h1 
+                className="text-white font-semibold leading-tight"
+                style={{ fontSize: "1.3rem" }}
+              >
+                Loan Recovery Notice Generator
+              </h1>
+              <p 
+                className="text-white/90"
+                style={{ fontSize: "0.85rem" }}
+              >
+                {branchName}
+              </p>
+            </div>
           </div>
-          
-          {/* Bank Name */}
-          <div className="flex flex-col justify-center">
-            <h1 
-              className="text-white font-semibold leading-tight"
-              style={{ fontSize: "1.3rem" }}
-            >
-              State Bank of India
-            </h1>
-            <p 
-              className="text-white/90"
-              style={{ fontSize: "0.85rem" }}
-            >
-              {branchName}
-            </p>
+
+          <div>
+            <Link href="/">
+              <Button
+                variant="outline"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/40 gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Home
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -202,19 +216,8 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1 py-8 px-6">
         <div className="max-w-6xl mx-auto">
-          {/* Back Button & Title */}
+          {/* Title & Description */}
           <div className="mb-6">
-            <Link href="/">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="gap-2 mb-4 hover:bg-white/50"
-                style={{ color: "#4e1a74" }}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Home
-              </Button>
-            </Link>
             <h2 
               className="text-2xl font-semibold mb-2"
               style={{ color: "#4e1a74" }}

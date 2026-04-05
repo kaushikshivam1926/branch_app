@@ -9,7 +9,6 @@ import {
   putRecords,
   clearStore,
   getAllRecords,
-  addUploadLog,
   setSetting,
 } from "./portfolioDb";
 
@@ -84,6 +83,69 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * Compute RBI IRAC-compliant SMA/NPA classification based on Days Past Due (DPD)
+ * 
+ * RBI IRAC Norms (Para 31, 42):
+ * - SMA-0: 1-30 days overdue
+ * - SMA-1: 31-60 days overdue
+ * - SMA-2: 61-90 days overdue
+ * - NPA: >90 days overdue
+ *   - Substandard: NPA for ≤ 12 months (91-365 days)
+ *   - Doubtful-1 (D1): NPA for > 12-24 months (366-730 days)
+ *   - Doubtful-2 (D2): NPA for > 24-36 months (731-1095 days)
+ *   - Doubtful-3 (D3): NPA for > 36 months (>1095 days)
+ * 
+ * @param dpd Days Past Due (for Term Loans) or Days since Out of Order (for CC/OD)
+ * @param iracCode NEW_IRAC code from CBS (if available, used as override)
+ * @returns { smaClass, npaSubCategory, isNPA }
+ */
+function computeRBIClassification(dpd: number, iracCode?: string): {
+  smaClass: string;
+  npaSubCategory: string;
+  isNPA: boolean;
+} {
+  // Hard lock: If IRAC code indicates NPA (≥03), override DPD-based classification
+  const iracNum = iracCode ? parseInt(iracCode, 10) : 0;
+  if (iracNum >= 3) {
+    // IRAC 03 = Substandard, 04 = Doubtful, 05 = D1, 06 = D2, 07 = D3, 08 = Loss
+    if (iracNum === 3 || iracNum === 4) return { smaClass: "NPA", npaSubCategory: "Substandard", isNPA: true };
+    if (iracNum === 5) return { smaClass: "NPA", npaSubCategory: "Doubtful-1 (D1)", isNPA: true };
+    if (iracNum === 6) return { smaClass: "NPA", npaSubCategory: "Doubtful-2 (D2)", isNPA: true };
+    if (iracNum === 7) return { smaClass: "NPA", npaSubCategory: "Doubtful-3 (D3)", isNPA: true };
+    if (iracNum === 8) return { smaClass: "NPA", npaSubCategory: "Loss", isNPA: true };
+  }
+
+  // DPD-based classification
+  if (dpd === 0) return { smaClass: "STD", npaSubCategory: "", isNPA: false };
+  if (dpd >= 1 && dpd <= 30) return { smaClass: "SMA-0", npaSubCategory: "", isNPA: false };
+  if (dpd >= 31 && dpd <= 60) return { smaClass: "SMA-1", npaSubCategory: "", isNPA: false };
+  if (dpd >= 61 && dpd <= 90) return { smaClass: "SMA-2", npaSubCategory: "", isNPA: false };
+  
+  // NPA (>90 days)
+  if (dpd > 90 && dpd <= 365) return { smaClass: "NPA", npaSubCategory: "Substandard", isNPA: true };
+  if (dpd > 365 && dpd <= 730) return { smaClass: "NPA", npaSubCategory: "Doubtful-1 (D1)", isNPA: true };
+  if (dpd > 730 && dpd <= 1095) return { smaClass: "NPA", npaSubCategory: "Doubtful-2 (D2)", isNPA: true };
+  if (dpd > 1095) return { smaClass: "NPA", npaSubCategory: "Doubtful-3 (D3)", isNPA: true };
+
+  return { smaClass: "STD", npaSubCategory: "", isNPA: false };
+}
+
+/**
+ * Calculate Days Past Due (DPD) from overdue date
+ * @param overdueDate Date when account became overdue (YYYY-MM-DD format)
+ * @returns Number of days past due, or 0 if no overdue date
+ */
+function calculateDPD(overdueDate: string | null): number {
+  if (!overdueDate) return 0;
+  const od = new Date(overdueDate);
+  if (isNaN(od.getTime())) return 0;
+  const today = new Date();
+  const diffMs = today.getTime() - od.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
+
 // ============================================================
 // Indian Currency Formatter
 // ============================================================
@@ -124,17 +186,11 @@ export async function processProductMapping(csvText: string): Promise<number> {
       WealthFlag: r.WealthFlag || "No",
       SeniorCitizen: r.SeniorCitizen || "No",
       NRIFlag: r.NRIFlag || "No",
+      StaffFlag: r.StaffFlag || "No",
     }));
 
   await clearStore(STORES.PRODUCT_MAPPING);
   await putRecords(STORES.PRODUCT_MAPPING, records);
-  
-  await addUploadLog({
-    fileType: "product-mapping",
-    fileName: "Deposit_Product_Category_Mapping.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -159,12 +215,6 @@ export async function processLoanProductMapping(csvText: string): Promise<number
 
   await clearStore(STORES.LOAN_PRODUCT_MAPPING);
   await putRecords(STORES.LOAN_PRODUCT_MAPPING, records);
-  await addUploadLog({
-    fileType: "loan-product-mapping",
-    fileName: "Loan_Product_Category_Mapping.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -187,13 +237,10 @@ export async function processDepositShadow(csvText: string): Promise<number> {
   // First pass: build CIF aggregation for HNI
   const cifTotals: Record<string, number> = {};
 
-  const records = rows
-    .filter((r) => {
-      // Exclude accounts that exist in CC/OD Balance file (deduplication)
-      const acNo = trimLeadingZeros(r.AcNo || "");
-      return !ccodAccountSet.has(acNo);
-    })
-    .map((r) => {
+  // Process ALL rows (including CC/OD accounts) for the shadow lookup
+  // CC/OD accounts need their Acct_Type + Int_cat to be available for product code derivation
+  // in processCCODBalance. DEPOSIT_SHADOW stores all rows; DEPOSIT_DATA stores only non-CC/OD.
+  const allRows = rows.map((r) => {
     const acNo = trimLeadingZeros(r.AcNo || "");
     const cif = trimLeadingZeros(r.CIFNo || "");
     const currentBalance = parseNum(r.Curr_Bal);
@@ -231,6 +278,14 @@ export async function processDepositShadow(csvText: string): Promise<number> {
     const nriFlag = pm.NRIFlag === "Yes" ? "NRI"
       : ((prodDesc.toUpperCase().includes("NRE") || prodDesc.toUpperCase().includes("NRO") || prodDesc.toUpperCase().includes("RFC") || prodDesc.toUpperCase().includes("FCNB")) ? "NRI" : "Resident");
 
+    // Senior Citizen flag
+    const seniorCitizenFlag = pm.SeniorCitizen === "Yes" ? "Senior Citizen"
+      : ((prodDesc.toUpperCase().includes("SENIOR") || (r.Acct_Desc || "").toUpperCase().includes("SENIOR")) ? "Senior Citizen" : "Non-Senior");
+
+    // Staff flag
+    const staffFlag = pm.StaffFlag === "Yes" ? "Staff"
+      : ((prodDesc.toUpperCase().includes("STAFF") || (r.Acct_Desc || "").toUpperCase().includes("STAFF")) ? "Staff" : "Non-Staff");
+
     // VIP flag
     const vipFlag = (r.VIP_Flag || "").toUpperCase() === "Y" ? "VIP" : "Non-VIP";
 
@@ -266,8 +321,8 @@ export async function processDepositShadow(csvText: string): Promise<number> {
     else if (acCloseDt) dormancyFlag = "Closed";
     else if (status === "03" || status === "19") dormancyFlag = "Dormant/Inoperative";
 
-    // CIF total aggregation
-    if (cif) {
+    // CIF total aggregation — only count non-CC/OD accounts as deposits
+    if (cif && !ccodAccountSet.has(acNo)) {
       cifTotals[cif] = (cifTotals[cif] || 0) + currentBalance;
     }
 
@@ -319,6 +374,8 @@ export async function processDepositShadow(csvText: string): Promise<number> {
       Salary_Account_Flag: salaryFlag,
       Wealth_Client_Flag: wealthFlag,
       NRI_Client_Flag: nriFlag,
+      SeniorCitizen_Flag: seniorCitizenFlag,
+      Staff_Flag: staffFlag,
       Deposit_Value_Band: valueBand,
       Maturity_Bucket: maturityBucket,
       Dormancy_Flag: dormancyFlag,
@@ -329,7 +386,7 @@ export async function processDepositShadow(csvText: string): Promise<number> {
   });
 
   // Second pass: set HNI category based on CIF totals
-  for (const rec of records) {
+  for (const rec of allRows) {
     const total = cifTotals[rec.CIF] || 0;
     rec.CIF_Total_Deposit = total;
     if (total >= 10000000) rec.HNI_Category = "Ultra HNI";
@@ -337,16 +394,19 @@ export async function processDepositShadow(csvText: string): Promise<number> {
     else rec.HNI_Category = "Regular";
   }
 
+  // DEPOSIT_SHADOW: store ALL rows (including CC/OD accounts) so that
+  // processCCODBalance can look up Acct_Type + Int_cat for product code derivation.
+  await clearStore(STORES.DEPOSIT_SHADOW);
+  await putRecords(STORES.DEPOSIT_SHADOW, allRows);
+
+  // DEPOSIT_DATA: store only non-CC/OD rows for deposit analytics
+  // (CC/OD accounts are classified as loans, not deposits)
+  const depositOnlyRecords = allRows.filter((rec: any) => !ccodAccountSet.has(rec.AcNo));
   await clearStore(STORES.DEPOSIT_DATA);
-  await putRecords(STORES.DEPOSIT_DATA, records);
+  await putRecords(STORES.DEPOSIT_DATA, depositOnlyRecords);
+
   await setSetting("deposit-shadow-date", todayISO());
-  await addUploadLog({
-    fileType: "deposit-shadow",
-    fileName: "DEP_Shadow_file.csv",
-    recordCount: records.length,
-    status: "success",
-  });
-  return records.length;
+  return depositOnlyRecords.length;
 }
 
 // ============================================================
@@ -410,12 +470,6 @@ export async function processLoanShadow(csvText: string): Promise<number> {
   await clearStore(STORES.LOAN_SHADOW);
   await putRecords(STORES.LOAN_SHADOW, records);
   await setSetting("loan-shadow-date", todayISO());
-  await addUploadLog({
-    fileType: "loan-shadow",
-    fileName: "LON_Shadow_file.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -486,14 +540,23 @@ export async function processLoanBalance(csvText: string): Promise<number> {
     const monthlyInterest = outstand && intRate ? outstand * (intRate / 1200) : null;
     const monthlyPrincipal = instalamt && monthlyInterest != null ? instalamt - monthlyInterest : null;
 
+    // ── RBI IRAC Classification (Computed from DPD or IRAC code) ──────────────
+    // For Term Loans: Use IRRGDT (Irregular Date) as overdue date
+    // For CC/OD: This will be handled separately in CCOD processing
+    const dpd = calculateDPD(irrgDt);
+    const rbiClassification = computeRBIClassification(dpd, newIrac || shadowNewIRAC);
+    const computedSMAClass = rbiClassification.smaClass;
+    const computedNPASubCategory = rbiClassification.npaSubCategory;
+    const computedIsNPA = rbiClassification.isNPA;
+
     // Risk weight
     let riskWeight = 0.95;
-    const effectiveSMA = smaClass || shadowSMAClass;
+    const effectiveSMA = computedSMAClass; // Use computed SMA instead of CSV value
     const effectiveIRAC = newIrac || shadowNewIRAC;
     if (effectiveSMA === "STD") riskWeight = 0.95;
-    else if (effectiveSMA === "SMA0") riskWeight = 0.85;
-    else if (effectiveSMA === "SMA1") riskWeight = 0.65;
-    else if (effectiveSMA === "SMA2") riskWeight = 0.35;
+    else if (effectiveSMA === "SMA-0") riskWeight = 0.85;
+    else if (effectiveSMA === "SMA-1") riskWeight = 0.65;
+    else if (effectiveSMA === "SMA-2") riskWeight = 0.35;
     else if (effectiveIRAC === "05") riskWeight = 0.10;
     else if (effectiveIRAC === "06" || effectiveIRAC === "08") riskWeight = 0.05;
 
@@ -582,10 +645,27 @@ export async function processLoanBalance(csvText: string): Promise<number> {
       NEWIRAC: newIrac,
       OLDIRAC: oldIrac,
       ARRCOND: (r.ARRCOND || "").trim(),
-      SMA_CLASS: smaClass,
+      SMA_CLASS: smaClass, // Original CSV value (kept for reference)
       SMA_DATE: smaDate,
       SMA_CODE: (r.SMA_CODE_INCIPIENT_STRESS || "").trim(),
       SMA_ARREAR_CONDITION: (r.SMA_ARREAR_CONDITION || "").trim(),
+      // ── RBI IRAC Computed Fields ──
+      // NPA Exemption Rule: Staff Loans (Segment_Cd=306 or Staff category) are exempt
+      // from NPA classification per RBI IRAC norms — advances to bank's own staff.
+      Computed_SMA_Class: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? (computedSMAClass === "NPA" ? "STD" : computedSMAClass)
+        : computedSMAClass,
+      Computed_NPA_SubCategory: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? ""
+        : computedNPASubCategory,
+      Computed_Is_NPA: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? false
+        : computedIsNPA,
+      Computed_DPD: dpd,
+      Computed_NPA_Exempt: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306"),
+      Computed_NPA_Exempt_Reason: (loanCategory === "Staff Loan" || loanSegment === "Staff" || shadowSegmentCd === "306")
+        ? "Staff Loan — Exempt from NPA classification"
+        : "",
       STRESS: (r.STRESS || "").trim(),
       RA: (r.RA || "").trim(),
       RA_DATE: raDate,
@@ -627,6 +707,7 @@ export async function processLoanBalance(csvText: string): Promise<number> {
       Remaining_Tenure_Percent: remainingTenurePct,
       Seasoning_Ratio: seasoningRatio,
       Forecast_Bucket: forecastBucket,
+      Staff_Flag: (loanSegment === "Staff" || shadowSegmentCd === "306") ? "Staff" : "Non-Staff",
       Loan_Category: loanCategory,
       Loan_SubCategory: loanSubCategory,
       Loan_Segment: loanSegment,
@@ -644,12 +725,6 @@ export async function processLoanBalance(csvText: string): Promise<number> {
   await clearStore(STORES.LOAN_DATA);
   await putRecords(STORES.LOAN_DATA, records);
   await setSetting("loan-balance-date", todayISO());
-  await addUploadLog({
-    fileType: "loan-balance",
-    fileName: "LoansBalanceFile.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -659,10 +734,31 @@ export async function processLoanBalance(csvText: string): Promise<number> {
 export async function processCCODBalance(csvText: string): Promise<number> {
   const rows = parseCSV(csvText);
 
+  // Load loan product mapping for CC/OD category lookup
+  const loanProductMapping = await getAllRecords(STORES.LOAN_PRODUCT_MAPPING);
+  // Build lookup by ProductCode (primary) AND by ProductName (fallback for ACCTDESC matching)
+  const loanProductByCode: Record<string, any> = {};
+  const loanProductByName: Record<string, any> = {};
+  for (const p of loanProductMapping) {
+    if (p.ProductCode) loanProductByCode[p.ProductCode.trim()] = p;
+    if (p.ProductName) loanProductByName[p.ProductName.trim().toUpperCase()] = p;
+  }
+
+  // ── PRIMARY: Load Deposit Shadow to fetch Acct_Type + Int_cat for CC/OD accounts ──
+  // CC/OD accounts exist in the Deposit Shadow file (they are OD/CC type accounts)
+  // but their balances come from the CC/OD Balance file (which is more current).
+  // We use Deposit Shadow only for product code derivation.
+  const depositShadowRecords = await getAllRecords(STORES.DEPOSIT_SHADOW);
+  const depositShadowByAcNo: Record<string, any> = {};
+  for (const ds of depositShadowRecords) {
+    const normalizedAcNo = trimLeadingZeros((ds.AcNo || "").trim());
+    if (normalizedAcNo) depositShadowByAcNo[normalizedAcNo] = ds;
+  }
+
   const records = rows
     .filter((r) => (r.ACCTNO || "").trim() !== "")
     .map((r) => {
-      const loanKey = (r.ACCTNO || "").trim();
+      const loanKey = trimLeadingZeros((r.ACCTNO || "").trim());
       const cif = (r.CUSTNUMBER || "").trim();
       const currentBalance = parseNum(r.ACCTBAL);
       const limit = parseNum(r.LIMIT);
@@ -687,11 +783,155 @@ export async function processCCODBalance(csvText: string): Promise<number> {
       if (irregamt > 0) irregularFlag = "Irregular";
       else if (currentBalance != null && dp != null && Math.abs(currentBalance) > dp && dp > 0) irregularFlag = "Overdrawn";
 
+      // ── RBI IRAC Classification for CC/OD (Computed from Out of Order Date) ─────
+      // For CC/OD: IRRGDT represents the "Out of Order" date (when account became irregular)
+      const irrgDt = parseDate(r.IRRGDT);
+      const dpd = calculateDPD(irrgDt);
+      const rbiClassification = computeRBIClassification(dpd, newIrac);
+      const computedSMAClass = rbiClassification.smaClass;
+      const computedNPASubCategory = rbiClassification.npaSubCategory;
+      const computedIsNPA = rbiClassification.isNPA;
+
+      const acctDesc = (r.ACCTDESC || "").trim();
+      const acctDescUpper = acctDesc.toUpperCase();
+      let loanCategory = "CC/OD";
+      let loanSubCategory = "";
+      let loanSegment = "General";
+      let loanPriority = "Medium";
+      let loanSecured = "";
+      let loanScheme = "None";
+      let loanRiskWeight = "100";
+      let productName = acctDesc;
+      let productCode = "";
+      let staffFlag = "Non-Staff";
+
+      // ── STEP 1: Look up account in Deposit Shadow to get Acct_Type + Int_cat ──
+      // The Deposit Shadow file contains the product type codes for CC/OD accounts.
+      // These are the same codes used in the Loan Product Category Mapping.
+      const shadowRecord = depositShadowByAcNo[loanKey];
+      if (shadowRecord) {
+        const shadowProductCode = (shadowRecord.ProductCode || "").trim();
+        if (shadowProductCode) {
+          productCode = shadowProductCode;
+        } else {
+          const actType = (shadowRecord.ActType || "").trim();
+          const intCat = (shadowRecord.IntCat || "").trim();
+          if (actType && intCat) {
+            productCode = `${actType}-${intCat}`;
+          }
+        }
+      }
+
+      // ── STEP 2: Look up product code in Loan Product Category Mapping ──
+      // Also check a built-in fallback table for common CC/OD product codes
+      // that may not yet be in the user's uploaded mapping file.
+      const BUILTIN_CCOD_PRODUCT_MAP: Record<string, { Category: string; SubCategory: string; Segment: string; Priority: string; Secured: string }> = {
+        "1029-1431": { Category: "Gold Loan", SubCategory: "CSP Silver OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1094-1441": { Category: "Gold Loan", SubCategory: "Capital Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1096-1431": { Category: "Gold Loan", SubCategory: "SGS Plus Silver OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1096-1441": { Category: "Gold Loan", SubCategory: "SGS Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1097-1441": { Category: "Gold Loan", SubCategory: "PSP Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "1098-1441": { Category: "Gold Loan", SubCategory: "CGS Plus Gold OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "5011-1301": { Category: "CC/OD", SubCategory: "Current Account OD", Segment: "General", Priority: "Medium", Secured: "No" },
+        "6040-4011": { Category: "MSME", SubCategory: "Current Account OD", Segment: "General", Priority: "Medium", Secured: "No" },
+        "6059-1001": { Category: "Personal Loan", SubCategory: "Overdraft - Staff", Segment: "Staff", Priority: "High", Secured: "No" },
+        "6059-5001": { Category: "Personal Loan", SubCategory: "Overdraft - Staff", Segment: "Staff", Priority: "High", Secured: "No" },
+        "6500-2020": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2021": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2078": { Category: "Gold Loan", SubCategory: "Liquid Gold Loan OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2158": { Category: "Home Loan", SubCategory: "Maxgain OD", Segment: "General", Priority: "High", Secured: "Yes" },
+        "6551-2258": { Category: "Personal Loan", SubCategory: "OD Against Mutual Funds", Segment: "General", Priority: "Medium", Secured: "Yes" },
+      };
+      const productMappingEntry = productCode
+        ? (loanProductByCode[productCode] || (BUILTIN_CCOD_PRODUCT_MAP[productCode]
+            ? { ...BUILTIN_CCOD_PRODUCT_MAP[productCode], ProductName: acctDesc, Scheme: "None", RiskWeight: "100", StaffFlag: BUILTIN_CCOD_PRODUCT_MAP[productCode].Segment === "Staff" ? "Yes" : "No" }
+            : null))
+        : null;
+
+      if (productMappingEntry) {
+        // Primary path: product code found in loan product mapping
+        loanCategory = productMappingEntry.Category || "CC/OD";
+        loanSubCategory = productMappingEntry.SubCategory || "";
+        loanSegment = productMappingEntry.Segment || "General";
+        loanPriority = productMappingEntry.Priority || "Medium";
+        loanSecured = productMappingEntry.Secured || "";
+        loanScheme = productMappingEntry.Scheme || "None";
+        loanRiskWeight = productMappingEntry.RiskWeight || "100";
+        productName = productMappingEntry.ProductName || acctDesc;
+        // Staff flag from product mapping
+        if (productMappingEntry.StaffFlag === "Yes" || loanSegment === "Staff") {
+          staffFlag = "Staff";
+        }
+      } else {
+        // ── STEP 3: Fallback — match ACCTDESC against ProductName in loan product mapping ──
+        // Used when the account is not found in Deposit Shadow or product code has no mapping entry.
+        const exactMatch = loanProductByName[acctDescUpper];
+        if (exactMatch) {
+          loanCategory = exactMatch.Category || "CC/OD";
+          loanSubCategory = exactMatch.SubCategory || "";
+          loanSegment = exactMatch.Segment || "General";
+          loanPriority = exactMatch.Priority || "Medium";
+          loanSecured = exactMatch.Secured || "";
+          loanScheme = exactMatch.Scheme || "None";
+          loanRiskWeight = exactMatch.RiskWeight || "100";
+          productName = exactMatch.ProductName || acctDesc;
+          productCode = exactMatch.ProductCode || productCode;
+          if (exactMatch.StaffFlag === "Yes" || loanSegment === "Staff") staffFlag = "Staff";
+        } else {
+          // Partial ProductName match (ACCTDESC contains ProductName or vice versa)
+          let bestMatch: any = null;
+          let bestLen = 0;
+          for (const [pname, pm] of Object.entries(loanProductByName)) {
+            if (acctDescUpper.includes(pname) || pname.includes(acctDescUpper)) {
+              if (pname.length > bestLen) {
+                bestLen = pname.length;
+                bestMatch = pm;
+              }
+            }
+          }
+          if (bestMatch) {
+            loanCategory = bestMatch.Category || "CC/OD";
+            loanSubCategory = bestMatch.SubCategory || "";
+            loanSegment = bestMatch.Segment || "General";
+            loanPriority = bestMatch.Priority || "Medium";
+            loanSecured = bestMatch.Secured || "";
+            loanScheme = bestMatch.Scheme || "None";
+            loanRiskWeight = bestMatch.RiskWeight || "100";
+            productName = bestMatch.ProductName || acctDesc;
+            productCode = bestMatch.ProductCode || productCode;
+            if (bestMatch.StaffFlag === "Yes" || loanSegment === "Staff") staffFlag = "Staff";
+          } else {
+            // Keyword fallback
+            if (acctDescUpper.includes("MAXGAIN") || acctDescUpper.includes("HL MAXGAIN")) {
+              loanCategory = "Home Loan"; loanSubCategory = "Maxgain OD";
+            } else if (acctDescUpper.includes("HOME TOPUP") || acctDescUpper.includes("INSTA-HOME")) {
+              loanCategory = "Home Loan"; loanSubCategory = "Home Top-up OD";
+            } else if (acctDescUpper.includes("MSME") || acctDescUpper.includes("CC-SBF") || acctDescUpper.includes("MUDRA")) {
+              loanCategory = "MSME"; loanSubCategory = acctDescUpper.includes("MUDRA") ? "MUDRA Cash Credit" : "Cash Credit";
+            } else if (acctDescUpper.includes("OD BANK") || acctDescUpper.includes("OD-LOAN AG DEP") || acctDescUpper.includes("OD AGAINST DEP")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "OD Against Deposits";
+            } else if (acctDescUpper.includes("OD-LON AGAINST FD") || acctDescUpper.includes("OD-LOAN AGAINST FD") || acctDescUpper.includes("OD AGAINST FD")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "OD Against Fixed Deposit";
+            } else if (acctDescUpper.includes("FESTIVAL") || acctDescUpper.includes("OD FESTIVAL")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "Festival Overdraft";
+            } else if (acctDescUpper.includes("OD PERSONAL") || acctDescUpper.includes("OD-PERSONAL")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
+            } else if (acctDescUpper.includes("STAFF")) {
+              loanCategory = "Staff Loan"; loanSubCategory = "Overdraft - Staff"; staffFlag = "Staff";
+            } else if (acctDescUpper.includes("GOLD") || acctDescUpper.includes("SB PSP") || acctDescUpper.includes("SB CSP") || acctDescUpper.includes("SB SGSP") || acctDescUpper.includes("SB CGSP")) {
+              loanCategory = "Gold Loan"; loanSubCategory = "Gold Loan - OD";
+            } else if (acctDescUpper.includes("MC-OD") || acctDescUpper.includes("E-COMMERCE") || acctDescUpper.includes("ECOMM")) {
+              loanCategory = "Personal Loan"; loanSubCategory = "Overdraft";
+            }
+          }
+        }
+      }
+
       return {
         LoanKey: loanKey,
         CIF: cif,
         CUSTNAME: (r.CUSTNAME || "").trim(),
-        ACCTDESC: (r.ACCTDESC || "").trim(),
+        ACCTDESC: acctDesc,
         INTRATE: intRate,
         LIMIT: limit,
         DP: dp,
@@ -715,27 +955,73 @@ export async function processCCODBalance(csvText: string): Promise<number> {
         WRITE_OFF_FLAG: (r.WRITE_OFF_FLAG || "").trim(),
         WRITE_OFF_AMT: writeOffAmt,
         WRITE_OFF_DATE: parseDate(r.WRITE_OFF_DATE),
-        SMA_CLASS: smaClass,
+        SMA_CLASS: smaClass, // Original CSV value (kept for reference)
         SMA_DATE: parseDate(r.SMA_DATE),
         SMA_ARREAR_CONDITION: (r.SMA_ARREAR_CONDITION || "").trim(),
+        // ── RBI IRAC Computed Fields ──
+        // NPA Exemption Rules (RBI IRAC norms):
+        //  1. OD against Bank's own Deposits — secured by bank's own deposits; not treated as NPA.
+        //  2. OD to Bank Staff — advances to bank's own employees; not treated as NPA.
+        // These are identified by Loan_SubCategory or Loan_Category / Staff_Flag.
+        Computed_SMA_Class: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ) ? (computedSMAClass === "NPA" ? "STD" : computedSMAClass)
+          : computedSMAClass,
+        Computed_NPA_SubCategory: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ) ? "" : computedNPASubCategory,
+        Computed_Is_NPA: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ) ? false : computedIsNPA,
+        Computed_DPD: dpd,
+        Computed_NPA_Exempt: (
+          loanSubCategory === "OD Against Deposits" ||
+          loanSubCategory === "OD Against Fixed Deposit" ||
+          loanCategory === "Staff Loan" ||
+          loanSubCategory === "Overdraft - Staff" ||
+          staffFlag === "Staff"
+        ),
+        Computed_NPA_Exempt_Reason: (
+          loanSubCategory === "OD Against Deposits" || loanSubCategory === "OD Against Fixed Deposit"
+        ) ? "OD against Bank's Deposit — Exempt from NPA classification"
+          : (loanCategory === "Staff Loan" || loanSubCategory === "Overdraft - Staff" || staffFlag === "Staff")
+          ? "Staff Overdraft — Exempt from NPA classification"
+          : "",
         // Computed
         Utilization: utilization,
         DP_Gap: dpGap,
         Irregular_Flag: irregularFlag,
         Exposure_Type: "CC/OD",
-        Loan_Category: "CC/OD",
+        // Category from Loan Product Category Mapping
+        // (product code fetched from Deposit Shadow → Acct_Type-Int_cat → Loan Product Mapping)
+        Loan_Category: loanCategory,
+        Loan_SubCategory: loanSubCategory,
+        Loan_Segment: loanSegment,
+        Loan_Priority: loanPriority,
+        Loan_Secured: loanSecured,
+        Loan_Scheme: loanScheme,
+        Loan_RiskWeight: loanRiskWeight,
+        Product_Name: productName,
+        Product_Code: productCode,
+        Staff_Flag: staffFlag,
       };
     });
 
   await clearStore(STORES.CCOD_DATA);
   await putRecords(STORES.CCOD_DATA, records);
   await setSetting("ccod-balance-date", todayISO());
-  await addUploadLog({
-    fileType: "ccod-balance",
-    fileName: "CC_OD_Balance_File.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -780,12 +1066,6 @@ export async function processNPAReport(csvText: string): Promise<number> {
   await clearStore(STORES.NPA_DATA);
   await putRecords(STORES.NPA_DATA, records);
   await setSetting("npa-report-date", todayISO());
-  await addUploadLog({
-    fileType: "npa-report",
-    fileName: "Listof_NPA_Accounts.csv",
-    recordCount: records.length,
-    status: "success",
-  });
   return records.length;
 }
 
@@ -822,6 +1102,8 @@ export async function buildCustomerDimension(): Promise<number> {
         NRI_Client_Flag: "Resident",
         Wealth_Client_Flag: "Non-Wealth",
         Salary_Account_Flag: "Non-Salary",
+        SeniorCitizen_Flag: "Non-Senior",
+        Staff_Flag: "Non-Staff",
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
@@ -851,6 +1133,8 @@ export async function buildCustomerDimension(): Promise<number> {
     if (dep.NRI_Client_Flag === "NRI") c.NRI_Client_Flag = "NRI";
     if (dep.Wealth_Client_Flag === "Wealth") c.Wealth_Client_Flag = "Wealth";
     if (dep.Salary_Account_Flag === "Salary") c.Salary_Account_Flag = "Salary";
+    if (dep.SeniorCitizen_Flag === "Senior Citizen") c.SeniorCitizen_Flag = "Senior Citizen";
+    if (dep.Staff_Flag === "Staff") c.Staff_Flag = "Staff";
     if (!c.CustName && dep.CustName) c.CustName = dep.CustName;
     if (!c.MobileNo && dep.MobileNo) c.MobileNo = dep.MobileNo;
   }
@@ -867,6 +1151,8 @@ export async function buildCustomerDimension(): Promise<number> {
         NRI_Client_Flag: "Resident",
         Wealth_Client_Flag: "Non-Wealth",
         Salary_Account_Flag: "Non-Salary",
+        SeniorCitizen_Flag: "Non-Senior",
+        Staff_Flag: "Non-Staff",
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
@@ -894,6 +1180,7 @@ export async function buildCustomerDimension(): Promise<number> {
       c.DepositCount += 1;
     }
     if (!c.CustName && loan.CUSTNAME) c.CustName = loan.CUSTNAME;
+    if (loan.Staff_Flag === "Staff") c.Staff_Flag = "Staff";
     // Check NPA
     if (loan.NEWIRAC && loan.NEWIRAC !== "00" && loan.NEWIRAC !== "01") {
       c.NPACount += 1;
@@ -913,6 +1200,8 @@ export async function buildCustomerDimension(): Promise<number> {
         NRI_Client_Flag: "Resident",
         Wealth_Client_Flag: "Non-Wealth",
         Salary_Account_Flag: "Non-Salary",
+        SeniorCitizen_Flag: "Non-Senior",
+        Staff_Flag: "Non-Staff",
         TotalDeposits: 0,
         TotalLoans: 0,
         TotalCCOD: 0,
@@ -943,6 +1232,8 @@ export async function buildCustomerDimension(): Promise<number> {
       c.CCODCount += 1; // Zero balance
     }
     if (!c.CustName && cc.CUSTNAME) c.CustName = cc.CUSTNAME;
+    // Propagate Staff flag from CC/OD record (set during CC/OD processing via Loan Product Mapping)
+    if (cc.Staff_Flag === "Staff") c.Staff_Flag = "Staff";
     // Check NPA
     if (cc.NEWIRAC && cc.NEWIRAC !== "00" && cc.NEWIRAC !== "01" && cc.NEWIRAC !== "0") {
       c.NPACount += 1;
@@ -958,18 +1249,32 @@ export async function buildCustomerDimension(): Promise<number> {
     c.TotalRelationshipValue = Math.abs(c.TotalDeposits) + Math.abs(c.TotalLoans) + Math.abs(c.TotalCCOD);
     c.NetExposure = c.TotalDeposits - c.TotalLoans - c.TotalCCOD;
 
-    // HNI from deposits
-    if (c.TotalDeposits >= 10000000) c.HNI_Category = "Ultra HNI";
-    else if (c.TotalDeposits >= 2500000) c.HNI_Category = "HNI";
+    // HNI from total relationship value
+    if (c.TotalRelationshipValue >= 10000000) c.HNI_Category = "Ultra HNI";
+    else if (c.TotalRelationshipValue >= 2500000) c.HNI_Category = "HNI";
     else c.HNI_Category = "Regular";
 
-    // Customer segment
-    if (c.HNI_Category === "Ultra HNI") c.CustomerSegment = "Ultra HNI";
-    else if (c.HNI_Category === "HNI") c.CustomerSegment = "HNI";
-    else if (c.NRI_Client_Flag === "NRI") c.CustomerSegment = "NRI";
-    else if (c.Wealth_Client_Flag === "Wealth") c.CustomerSegment = "Wealth";
-    else if (c.Salary_Account_Flag === "Salary") c.CustomerSegment = "Salary";
-    else c.CustomerSegment = "Regular";
+    // Multi-flag system: a customer can have multiple flags
+    const flags: string[] = [];
+    // Flag 1 & 2: HNI tiers based on total relationship value
+    if (c.HNI_Category === "Ultra HNI") flags.push("Ultra HNI");
+    else if (c.HNI_Category === "HNI") flags.push("HNI");
+    // Flag 3: Wealth
+    if (c.Wealth_Client_Flag === "Wealth") flags.push("Wealth");
+    // Flag 4: Salary
+    if (c.Salary_Account_Flag === "Salary") flags.push("Salary");
+    // Flag 5: Senior Citizen
+    if (c.SeniorCitizen_Flag === "Senior Citizen") flags.push("Senior Citizen");
+    // Flag 6: NRI
+    if (c.NRI_Client_Flag === "NRI") flags.push("NRI");
+    // Flag 7: Staff
+    if (c.Staff_Flag === "Staff") flags.push("Staff");
+    // Flag 8: Regular (only if no other flag assigned)
+    if (flags.length === 0) flags.push("Regular");
+
+    c.CustomerFlags = flags;
+    // Keep CustomerSegment for backward compatibility (primary/highest flag)
+    c.CustomerSegment = flags[0];
 
     return c;
   });
@@ -1017,3 +1322,70 @@ export const FILE_TYPE_LABELS: Record<string, string> = {
   "product-mapping": "Deposit Product Category Mapping",
   "loan-product-mapping": "Loan Product Category Mapping",
 };
+
+// ============================================================
+// File Date & Branch Code Extraction
+// ============================================================
+
+/**
+ * Extract YYYYMMDD date from standardized filename
+ * Standard format: YYYYMMDD appears in filenames like:
+ * - 20251016_MiscReports_Listof_NPA_Accounts_lond2572.csv
+ * - 20251016_weeklyreports_dep_shadow_12345.csv
+ * Returns null if no valid date found
+ */
+export function extractFileDateFromName(fileName: string): string | null {
+  // Match YYYYMMDD pattern (8 consecutive digits)
+  const match = fileName.match(/(\d{8})/);
+  if (!match) return null;
+
+  const dateStr = match[1];
+  const year = dateStr.substring(0, 4);
+  const month = dateStr.substring(4, 6);
+  const day = dateStr.substring(6, 8);
+
+  // Validate date
+  const date = new Date(`${year}-${month}-${day}`);
+  if (isNaN(date.getTime())) return null;
+
+  // Return ISO format (YYYY-MM-DD)
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Extract 5-digit branch code from filename
+ * Standard format: Branch code appears at the end like:
+ * - 20251016_MiscReports_Listof_NPA_Accounts_lond2572.csv (branch code: 02572)
+ * - 20251016_weeklyreports_dep_shadow_12345.csv (branch code: 12345)
+ * Returns null if no valid 5-digit code found
+ */
+export function extractBranchCodeFromName(fileName: string): string | null {
+  // Match 5-digit number (usually at end, before .csv)
+  const match = fileName.match(/(\d{5})/);
+  if (!match) return null;
+
+  const branchCode = match[1];
+  // Validate it's a reasonable branch code (not all zeros)
+  if (branchCode === '00000') return null;
+
+  return branchCode;
+}
+
+/**
+ * File types that have dates in their standardized filenames (YYYYMMDD format)
+ */
+export const FILE_TYPES_WITH_DATE_IN_NAME = [
+  "deposit-shadow",
+  "loan-shadow",
+  "loan-balance",
+  "ccod-balance",
+  "npa-report",
+];
+
+/**
+ * File types that use upload timestamp as file date (no date in filename)
+ */
+export const FILE_TYPES_WITH_UPLOAD_DATE = [
+  "product-mapping",
+  "loan-product-mapping",
+];

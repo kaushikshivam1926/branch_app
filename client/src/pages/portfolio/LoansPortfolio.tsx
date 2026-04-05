@@ -75,9 +75,14 @@ export default function LoansPortfolio() {
       catMap[cat].count += 1;
     }
     if (ccod.length > 0) {
-      // Only count negative balance CC/OD accounts in loan categories
+      // Include negative-balance CC/OD accounts under mapped loan categories
       const negativeCCOD = ccod.filter(c => (c.CurrentBalance || 0) < 0);
-      catMap["CC/OD"] = { balance: totalCCODBalance, count: negativeCCOD.length };
+      for (const c of negativeCCOD) {
+        const cat = c.Loan_Category || "CC/OD";
+        if (!catMap[cat]) catMap[cat] = { balance: 0, count: 0 };
+        catMap[cat].balance += Math.abs(c.CurrentBalance || 0);
+        catMap[cat].count += 1;
+      }
     }
     const loanCategories = Object.entries(catMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.balance - a.balance);
 
@@ -168,7 +173,7 @@ export default function LoansPortfolio() {
   const allAccounts = useMemo(() => {
     const combined = [
       ...loans.map(l => ({ ...l, _type: "Term Loan", _outstanding: Math.abs(l.OUTSTAND || 0), _name: l.CUSTNAME, _acNo: l.LoanKey, _cif: l.CIF, _sma: l.SMA_CLASS, _category: l.Loan_Category, _subCategory: l.Loan_SubCategory, _segment: l.Loan_Segment })),
-      ...ccod.map(c => ({ ...c, _type: "CC/OD", _outstanding: Math.abs(c.CurrentBalance || 0), _name: c.CUSTNAME, _acNo: c.LoanKey, _cif: c.CIF, _sma: c.SMA_CLASS, _category: "CC/OD", _subCategory: "-", _segment: c.Segment || "General" })),
+      ...ccod.map(c => ({ ...c, _type: "CC/OD", _outstanding: Math.abs(c.CurrentBalance || 0), _name: c.CUSTNAME, _acNo: c.LoanKey, _cif: c.CIF, _sma: c.SMA_CLASS, _category: c.Loan_Category || "CC/OD", _subCategory: c.Loan_SubCategory || "-", _segment: c.Loan_Segment || "General" })),
     ];
     let filtered = combined;
     if (searchTerm) {
@@ -186,16 +191,17 @@ export default function LoansPortfolio() {
   const uniqueCategories = useMemo(() => {
     const cats = new Set<string>();
     loans.forEach(l => cats.add(l.Loan_Category || "Other"));
-    if (ccod.length > 0) cats.add("CC/OD");
+    ccod.forEach(c => cats.add(c.Loan_Category || "CC/OD"));
     return ["All", ...Array.from(cats)];
   }, [loans, ccod]);
 
   const uniqueSubCategories = useMemo(() => {
     const subCats = new Set<string>();
     loans.forEach(l => { if (l.Loan_SubCategory) subCats.add(l.Loan_SubCategory); });
+    ccod.forEach(c => { if (c.Loan_SubCategory) subCats.add(c.Loan_SubCategory); });
     const sorted = Array.from(subCats).sort();
     return ["All", ...sorted];
-  }, [loans]);
+  }, [loans, ccod]);
 
   function exportCSV() {
     const headers = ["Account No", "CIF", "Customer Name", "Type", "Category", "Sub-Category", "Segment", "Outstanding", "Int Rate", "SMA Class", "IRAC", "EMI", "EMIs Overdue"];
@@ -429,7 +435,7 @@ export default function LoansPortfolio() {
                       <td className="py-2 px-3 text-gray-600 text-xs">{a._cif}</td>
                       <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[180px]">{a._name}</td>
                       <td className="py-2 px-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a._type === "CC/OD" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>{a._type}</span></td>
-                      <td className="py-2 px-3 text-gray-600 text-xs truncate max-w-[150px]" title={a.ProductName || a.ACCTDESC || "-"}>{a.ProductName || a.ACCTDESC || "-"}</td>
+                      <td className="py-2 px-3 text-gray-600 text-xs truncate max-w-[150px]" title={a.ProductName || a.Product_Name || a.ACCTDESC || "-"}>{a.ProductName || a.Product_Name || a.ACCTDESC || "-"}</td>
                       <td className="py-2 px-3 text-gray-600 text-xs">{a._category || "-"}</td>
                       <td className="py-2 px-3 text-gray-600 text-xs">{a._subCategory || "-"}</td>
                       <td className="py-2 px-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a._segment === "Staff" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}`}>{a._segment || "General"}</span></td>

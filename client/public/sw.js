@@ -1,16 +1,19 @@
 // SBI Branch Application Catalogue — Service Worker
 // Cache-first strategy for complete offline functionality
-// Version: 2.0
+// Optimized for code-split bundles (separate JS/CSS files)
+// Version: 3.0
 
-const CACHE_NAME = 'sbi-branch-app-v2';
+const CACHE_NAME = 'sbi-branch-app-v3';
 const OFFLINE_FALLBACK = '/index.html';
 
 // Core assets to pre-cache on install
+// Note: JS/CSS bundles will be auto-cached on first visit via fetch handler
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/images/sbi-logo.png',
+  '/favicon.png',
+  '/apple-touch-icon.png',
   '/sample-accounts.csv'
 ];
 
@@ -44,7 +47,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests and cross-origin analytics/tracking
+  // Skip non-GET requests and cross-origin tracking
   if (request.method !== 'GET') return;
   if (url.hostname !== self.location.hostname && url.pathname.includes('umami')) return;
 
@@ -56,7 +59,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For all other requests — cache-first strategy
+  // For JS/CSS bundles and other resources — cache-first strategy
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
@@ -74,12 +77,13 @@ self.addEventListener('fetch', (event) => {
 
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
+          // Cache JS, CSS, images, and other assets
           cache.put(request, responseToCache);
         });
 
         return response;
       }).catch(() => {
-        // Network failed — return offline fallback for HTML
+        // Network failed — return offline fallback for navigation
         if (request.headers.get('accept')?.includes('text/html')) {
           return caches.match(OFFLINE_FALLBACK);
         }

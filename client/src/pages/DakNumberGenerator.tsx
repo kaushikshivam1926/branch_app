@@ -1,8 +1,29 @@
 /**
  * Dak Number Generator (Letter Dak Management System)
  * 
- * Converted from standalone HTML to React component
- * Maintains SBI branding and offline localStorage functionality
+ * UI for viewing and managing Dak/Letter reference numbers.
+ * 
+ * ⚠️  IMPORTANT: Reference number GENERATION has been centralized in refNumberEngine.ts
+ * 
+ * This component is now a VIEW/ADMIN INTERFACE ONLY:
+ * - Displays previously generated reference numbers
+ * - Allows viewing, editing, and deleting records
+ * - Shows Dak record history and statistics
+ * 
+ * DEPRECATION NOTICE:
+ * - generateSerial() and buildRef() functions preserved for backward compatibility but DEPRECATED
+ * - DO NOT use these functions for new reference number generation
+ * - USE: generateReferenceNumber() or generateMultipleReferenceNumbers() from refNumberEngine.ts
+ * - DO NOT: Manually create DakRecords and save them to storage
+ * 
+ * All apps must use the centralized Reference Number Generation Engine at:
+ *   @/lib/refNumberEngine.ts
+ * 
+ * Benefits of centralization:
+ * ✓ Single source of truth for reference number format
+ * ✓ Consistent serial numbering across all applications
+ * ✓ Format changes propagate instantly to all apps
+ * ✓ Atomic transactions (generation + DB save) prevent issues
  */
 
 import { sbiLogoUrl } from '@/lib/assets';
@@ -13,8 +34,9 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
+import { generateReferenceNumber, getNextReferencePreview } from '@/lib/refNumberEngine';
 import { useBranch } from "@/contexts/BranchContext";
 
 const ADMIN_PASSWORD = "Sbi@12345";
@@ -34,33 +56,39 @@ interface DakRecord {
   remarks: string;
 }
 
+const MONTH_ABBRS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
 function getTodayInfo() {
   const now = new Date();
   const d = String(now.getDate()).padStart(2, "0");
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const y = now.getFullYear();
+  const monthAbbr = MONTH_ABBRS[now.getMonth()];
 
   const fyStart = now.getMonth() + 1 >= 4 ? y : y - 1;
   const fyEnd = fyStart + 1;
 
   return {
-    dateDisplay: `${d}-${m}-${y}`,
+    dateDisplay: `${d}/${m}/${y}`,
     monthNo: m,
-    fyLabel: `${fyStart}-${String(fyEnd).slice(-2)}`
+    monthAbbr,
+    monthDisplay: `${m} / ${monthAbbr}`,
+    fyLabel: `${String(fyStart).slice(-2)}-${String(fyEnd).slice(-2)}`
   };
 }
 
 async function loadRecords(): Promise<DakRecord[]> {
   try {
-    const data = await loadData("sbi-dak-records");
+    // Use unified storage key "dak-records" for consistency with refNumberEngine
+    const data = await loadData("dak-records");
     if (data) return data;
     
     // Fallback to localStorage for migration
     const localData = localStorage.getItem(STORAGE_KEY);
     if (localData) {
       const parsed = JSON.parse(localData);
-      // Migrate to IndexedDB
-      await saveData("sbi-dak-records", parsed);
+      // Migrate to IndexedDB using unified key
+      await saveData("dak-records", parsed);
       return parsed;
     }
     return [];
@@ -71,7 +99,8 @@ async function loadRecords(): Promise<DakRecord[]> {
 
 async function saveRecordsToStorage(records: DakRecord[]) {
   try {
-    await saveData("sbi-dak-records", records);
+    // Use unified storage key "dak-records" for consistency with refNumberEngine
+    await saveData("dak-records", records);
   } catch (error) {
     console.error("Failed to save records:", error);
     // Fallback to localStorage
@@ -79,15 +108,20 @@ async function saveRecordsToStorage(records: DakRecord[]) {
   }
 }
 
+/**
+ * DEPRECATED: Do not use local generation functions
+ * Use generateReferenceNumber() from refNumberEngine.ts instead
+ * These functions are kept for backward compatibility during migration
+ */
 function generateSerial(records: DakRecord[], fy: string): string {
   const sameFy = records.filter(r => r.financialYear === fy);
-  if (!sameFy.length) return "0001";
+  if (!sameFy.length) return "001";
   const max = Math.max(...sameFy.map(r => parseInt(r.serialNo)));
-  return String(max + 1).padStart(4, "0");
+  return String(max + 1).padStart(3, "0");
 }
 
-function buildRef(fy: string, month: string, serial: string, branchCode: string): string {
-  return `SBI/${branchCode}/${fy}/${month}/${serial}`;
+function buildRef(fy: string, monthAbbr: string, serial: string, branchCode: string): string {
+  return `SBI/${branchCode}/${fy}/${monthAbbr}/${serial}`;
 }
 
 function generateSlipHTML(record: DakRecord): string {
@@ -128,7 +162,7 @@ function generateSlipHTML(record: DakRecord): string {
         <div class="row"><span class="label">Reference No:</span> ${record.refNo}</div>
         <div class="row"><span class="label">Date:</span> ${record.dateDisplay}</div>
         <div class="row"><span class="label">Financial Year:</span> ${record.financialYear}</div>
-        <div class="row"><span class="label">Month:</span> ${record.monthNo}</div>
+        <div class="row"><span class="label">Month:</span> ${record.monthNo} / ${MONTH_ABBRS[parseInt(record.monthNo) - 1]}</div>
         <div class="row"><span class="label">Letter Type:</span> ${record.letterType}</div>
         <div class="row"><span class="label">Destination:</span> ${record.letterDestination}</div>
         <div class="row"><span class="label">Recipient:</span> ${record.recipientDetails}</div>
@@ -164,17 +198,55 @@ export default function DakNumberGenerator() {
   const [searchText, setSearchText] = useState("");
   const [showEntriesTable, setShowEntriesTable] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(new Date().getMonth()); // 0-based
+  const [copied, setCopied] = useState(false);
 
-  // Load records on mount
+  // Derived selected month info
+  const selectedMonthNo = String(selectedMonthIdx + 1).padStart(2, "0");
+  const selectedMonthAbbr = MONTH_ABBRS[selectedMonthIdx];
+  const selectedMonthDisplay = `${selectedMonthNo} / ${selectedMonthAbbr}`;
+
+  // Recompute FY based on selected month (April = new FY)
+  const now = new Date();
+  const selectedFyStart = selectedMonthIdx + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+  const selectedFyLabel = `${String(selectedFyStart).slice(-2)}-${String(selectedFyStart + 1).slice(-2)}`;
+
+  // Load records on mount and compute next reference using centralized engine
   useEffect(() => {
     const initRecords = async () => {
       const loadedRecords = await loadRecords();
       setRecords(loadedRecords);
-      const serial = generateSerial(loadedRecords, today.fyLabel);
-      setRefNo(buildRef(today.fyLabel, today.monthNo, serial, branchCode));
+      
+      // Use centralized engine preview to get the next reference number (no database save)
+      try {
+        const refNo = await getNextReferencePreview(branchCode, selectedFyLabel, selectedMonthNo);
+        setRefNo(refNo);
+      } catch (error) {
+        console.error("Error generating reference number preview:", error);
+        // Fallback to local generation
+        const serial = generateSerial(loadedRecords, selectedFyLabel);
+        setRefNo(buildRef(selectedFyLabel, selectedMonthAbbr, serial, branchCode));
+      }
     };
     initRecords();
-  }, [today.fyLabel, today.monthNo, branchCode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchCode]);
+
+  // Recompute ref when selected month changes using centralized engine
+  useEffect(() => {
+    const updateRef = async () => {
+      try {
+        const refNo = await getNextReferencePreview(branchCode, selectedFyLabel, selectedMonthNo);
+        setRefNo(refNo);
+      } catch (error) {
+        console.error("Error generating reference number preview:", error);
+        const serial = generateSerial(records, selectedFyLabel);
+        setRefNo(buildRef(selectedFyLabel, selectedMonthAbbr, serial, branchCode));
+      }
+    };
+    updateRef();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonthIdx, branchCode]);
 
   const handleSave = async () => {
     if (!letterType || !letterDestination || !recipientDetails || !subject) {
@@ -194,32 +266,37 @@ export default function DakNumberGenerator() {
       setStatus({ message: "Entry updated successfully.", type: "success" });
       setEditingId(null);
     } else {
-      // Create new record
-      const serial = generateSerial(records, today.fyLabel);
-      const ref = buildRef(today.fyLabel, today.monthNo, serial, branchCode);
-
-      const record: DakRecord = {
-        id: Date.now(),
-        refNo: ref,
-        serialNo: serial,
-        financialYear: today.fyLabel,
-        monthNo: today.monthNo,
-        dateDisplay: today.dateDisplay,
-        letterType,
-        letterDestination,
-        recipientDetails,
-        subject,
-        remarks
-      };
-
-      const newRecords = [...records, record];
-      setRecords(newRecords);
-      await saveRecordsToStorage(newRecords);
-      setStatus({ message: "Saved successfully.", type: "success" });
-      
-      // Generate next reference
-      const nextSerial = generateSerial(newRecords, today.fyLabel);
-      setRefNo(buildRef(today.fyLabel, today.monthNo, nextSerial, branchCode));
+      // Create new record using centralized engine to prevent duplicate serials
+      try {
+        const result = await generateReferenceNumber({
+          branchCode,
+          financialYear: selectedFyLabel,
+          monthNo: selectedMonthNo,
+          dateDisplay: today.dateDisplay,
+          letterType,
+          letterDestination,
+          recipientDetails,
+          subject,
+          remarks
+        });
+        
+        // Record was already saved by engine, reload from database to sync
+        const updatedRecords = await loadRecords();
+        setRecords(updatedRecords);
+        setStatus({ message: "Saved successfully.", type: "success" });
+        
+        // Generate preview of next reference using centralized engine preview (no save)
+        try {
+          const nextRefNo = await getNextReferencePreview(branchCode, selectedFyLabel, selectedMonthNo);
+          setRefNo(nextRefNo);
+        } catch (error) {
+          console.error("Error generating next reference preview:", error);
+        }
+      } catch (error) {
+        console.error("Error saving reference number:", error);
+        setStatus({ message: "Failed to save reference number.", type: "error" });
+        return;
+      }
     }
 
     // Reset form
@@ -230,7 +307,7 @@ export default function DakNumberGenerator() {
     setRemarks("");
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setLetterType("");
     setLetterDestination("");
     setRecipientDetails("");
@@ -238,8 +315,31 @@ export default function DakNumberGenerator() {
     setRemarks("");
     setStatus({ message: "", type: "" });
     setEditingId(null);
-    const serial = generateSerial(records, today.fyLabel);
-    setRefNo(buildRef(today.fyLabel, today.monthNo, serial, branchCode));
+    
+    // Generate next reference preview using centralized engine (no save)
+    try {
+      const nextRefNo = await getNextReferencePreview(branchCode, selectedFyLabel, selectedMonthNo);
+      setRefNo(nextRefNo);
+    } catch (error) {
+      console.error("Error generating reference preview:", error);
+    }
+  };
+
+  const handleCopyRef = () => {
+    navigator.clipboard.writeText(refNo).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement("textarea");
+      el.value = refNo;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const handlePrintSlip = () => {
@@ -363,8 +463,17 @@ export default function DakNumberGenerator() {
             </h1>
           </div>
 
-          {/* Admin Login/Logout Button */}
-          <div className="ml-auto">
+          {/* Back to Home and Admin Login/Logout Buttons */}
+          <div className="ml-auto flex items-center gap-3">
+            <Link href="/">
+              <Button
+                variant="outline"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/40 gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Home
+              </Button>
+            </Link>
             {!isAdminLoggedIn ? (
               <Button
                 onClick={() => setShowLoginModal(true)}
@@ -391,19 +500,6 @@ export default function DakNumberGenerator() {
       {/* Main Content */}
       <main className="flex-1 py-6 px-6">
         <div className="max-w-5xl mx-auto">
-          {/* Back Button */}
-          <Link href="/">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="gap-2 mb-4 hover:bg-white/50"
-              style={{ color: "#4e1a74" }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </Button>
-          </Link>
-
           {/* Entry Form Card */}
           <Card 
             className="p-5 mb-5"
@@ -423,13 +519,28 @@ export default function DakNumberGenerator() {
                 <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
                   Reference Number
                 </label>
-                <input 
-                  type="text" 
-                  value={refNo}
-                  readOnly
-                  className="w-full px-3 py-2 rounded-md border text-sm"
-                  style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
-                />
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={refNo}
+                    readOnly
+                    className="flex-1 px-3 py-2 rounded-md border text-sm font-mono"
+                    style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
+                  />
+                  <button
+                    onClick={handleCopyRef}
+                    title={copied ? "Copied!" : "Copy reference number"}
+                    className="flex items-center justify-center px-3 py-2 rounded-md border text-sm transition-all"
+                    style={{
+                      backgroundColor: copied ? "#d1fae5" : "#ffffff",
+                      borderColor: copied ? "#6ee7b7" : "#d0d7de",
+                      color: copied ? "#065f46" : "#4e1a74",
+                      minWidth: "40px"
+                    }}
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
@@ -437,7 +548,7 @@ export default function DakNumberGenerator() {
                 </label>
                 <input 
                   type="text" 
-                  value={today.fyLabel}
+                  value={selectedFyLabel}
                   readOnly
                   className="w-full px-3 py-2 rounded-md border text-sm"
                   style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
@@ -446,14 +557,24 @@ export default function DakNumberGenerator() {
               <div>
                 <label className="block text-sm font-semibold mb-1" style={{ color: "#6c757d" }}>
                   Month
+                  <span className="ml-2 text-xs font-normal" style={{ color: "#4e1a74" }}>(override allowed)</span>
                 </label>
-                <input 
-                  type="text" 
-                  value={today.monthNo}
-                  readOnly
-                  className="w-full px-3 py-2 rounded-md border text-sm"
-                  style={{ backgroundColor: "#f8fafc", borderColor: "#d0d7de" }}
-                />
+                <select
+                  value={selectedMonthIdx}
+                  onChange={(e) => setSelectedMonthIdx(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-md border text-sm bg-white font-medium"
+                  style={{ borderColor: selectedMonthIdx !== new Date().getMonth() ? "#4e1a74" : "#d0d7de",
+                           boxShadow: selectedMonthIdx !== new Date().getMonth() ? "0 0 0 2px rgba(78,26,116,0.15)" : "none" }}
+                >
+                  {MONTH_ABBRS.map((abbr, idx) => (
+                    <option key={abbr} value={idx}>
+                      {String(idx + 1).padStart(2, "0")} / {abbr}
+                    </option>
+                  ))}
+                </select>
+                {selectedMonthIdx !== new Date().getMonth() && (
+                  <p className="text-xs mt-1" style={{ color: "#b45309" }}>⚠ Month overridden from current month</p>
+                )}
               </div>
             </div>
 

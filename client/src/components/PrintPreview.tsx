@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Printer } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
+import { loadData, saveData } from "@/lib/db";
 import type { NoticeTemplate, TemplateElement } from "./TemplateDesigner";
 
 interface LoanAccount {
@@ -25,15 +26,127 @@ interface PrintPreviewProps {
   onClose: () => void;
 }
 
+interface DakRecord {
+  id: number;
+  refNo: string;
+  serialNo: string;
+  financialYear: string;
+  monthNo: string;
+  dateDisplay: string;
+  letterType: string;
+  letterDestination: string;
+  recipientDetails: string;
+  subject: string;
+  remarks: string;
+}
+
+const DAK_STORAGE_KEY = "dak-records";  // Unified key used by refNumberEngine
+
+function getTodayInfo() {
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, "0");
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const y = now.getFullYear();
+
+  const fyStart = now.getMonth() + 1 >= 4 ? y : y - 1;
+  const fyEnd = fyStart + 1;
+
+  return {
+    dateDisplay: `${d}-${m}-${y}`,
+    monthNo: m,
+    // Format: YY-YY (e.g., "25-26") - matches DakNumberGenerator and refNumberEngine
+    fyLabel: `${String(fyStart).slice(-2)}-${String(fyEnd).slice(-2)}`,
+  };
+}
+
+function generateSerial(records: DakRecord[], fy: string): string {
+  const sameFy = records.filter(r => r.financialYear === fy);
+  if (!sameFy.length) return "0001";
+  const max = Math.max(...sameFy.map(r => parseInt(r.serialNo || "0", 10)));
+  return String(max + 1).padStart(4, "0");
+}
+
+function buildRef(fy: string, month: string, serial: string, branchCode: string): string {
+  return `SBI/${branchCode}/${fy}/${month}/${serial}`;
+}
+
+async function loadUnifiedDakRecords(): Promise<DakRecord[]> {
+  // Uses unified key from refNumberEngine for consistency across all apps
+  const records = (await loadData(DAK_STORAGE_KEY)) || [];
+  return Array.isArray(records) ? records : [];
+}
+
 export default function PrintPreview({ account, accounts, template, onClose }: PrintPreviewProps) {
   const { branchCode } = useBranch();
   const printRef = useRef<HTMLDivElement>(null);
-  const [letterRefNo, setLetterRefNo] = useState("");
+  const hasPreparedDakRecords = useRef(false);
   const [letterDate, setLetterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [accountRefMap, setAccountRefMap] = useState<Record<string, string>>({});
+  const [isPreparingRefs, setIsPreparingRefs] = useState(true);
+
+  const targetAccounts = account ? [account] : (accounts || []);
+
+  useEffect(() => {
+    const prepareDakRecords = async () => {
+      if (hasPreparedDakRecords.current) {
+        setIsPreparingRefs(false);
+        return;
+      }
+
+      if (!targetAccounts.length) {
+        setIsPreparingRefs(false);
+        hasPreparedDakRecords.current = true;
+        return;
+      }
+
+      setIsPreparingRefs(true);
+
+      try {
+        const existingRecords = await loadUnifiedDakRecords();
+        const { dateDisplay, monthNo, fyLabel } = getTodayInfo();
+
+        const currentSerial = parseInt(generateSerial(existingRecords, fyLabel), 10);
+        const refsByAccount: Record<string, string> = {};
+
+        const newRecords: DakRecord[] = targetAccounts.map((acc, idx) => {
+          const serial = String(currentSerial + idx).padStart(4, "0");
+          const refNo = buildRef(fyLabel, monthNo, serial, branchCode);
+          refsByAccount[acc.account_no] = refNo;
+
+          const recipientDetails = [acc.customer_name, acc.address1, acc.address2, acc.address3]
+            .filter(Boolean)
+            .join(", ");
+
+          return {
+            id: Date.now() + idx,
+            refNo,
+            serialNo: serial,
+            financialYear: fyLabel,
+            monthNo,
+            dateDisplay,
+            letterType: "Notices",
+            letterDestination: "Customer",
+            recipientDetails,
+            subject: `Loan Recovery Notice - A/C ${acc.account_no}`,
+            remarks: `Outstanding: ${acc.outstanding || "N/A"}`,
+          };
+        });
+
+        await saveData(DAK_STORAGE_KEY, [...existingRecords, ...newRecords]);
+        setAccountRefMap(refsByAccount);
+        hasPreparedDakRecords.current = true;
+      } catch (error) {
+        console.error("Failed to prepare Dak records for notices:", error);
+      } finally {
+        setIsPreparingRefs(false);
+      }
+    };
+
+    prepareDakRecords();
+  }, [branchCode, targetAccounts]);
 
   const replaceFieldValues = (content: string, acc: LoanAccount): string => {
-    const today = new Date();
-    const refNo = `SBI/${branchCode}/${today.getFullYear()}-${(today.getFullYear() + 1).toString().slice(-2)}/LRN/${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    const refNo = accountRefMap[acc.account_no] || "";
     
     return content
       .replace(/{{ref_no}}/g, refNo)
@@ -53,14 +166,9 @@ export default function PrintPreview({ account, accounts, template, onClose }: P
       })}`);
   };
 
-  useEffect(() => {
-    // Generate letter reference number
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    setLetterRefNo(`LRN-${timestamp}-${random}`);
-  }, []);
-
   const handlePrint = () => {
+    if (isPreparingRefs) return;
+
     const printWindow = window.open("", "_blank");
     if (printWindow && printRef.current) {
       printWindow.document.write(printRef.current.innerHTML);
@@ -189,7 +297,7 @@ export default function PrintPreview({ account, accounts, template, onClose }: P
           {/* Letter Reference and Date */}
           <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between" }}>
             <div>
-              <strong>Letter Reference No.:</strong> {letterRefNo}
+              <strong>Letter Reference No.:</strong> {accountRefMap[acc.account_no] || "Generating..."}
             </div>
             <div>
               <strong>Letter Date:</strong> {new Date(letterDate).toLocaleDateString('en-IN')}
@@ -312,9 +420,10 @@ export default function PrintPreview({ account, accounts, template, onClose }: P
           <Button
             onClick={handlePrint}
             className="gap-2 bg-blue-600 hover:bg-blue-700"
+            disabled={isPreparingRefs}
           >
             <Printer className="w-4 h-4" />
-            Print
+            {isPreparingRefs ? "Preparing References..." : "Print"}
           </Button>
           <Button
             onClick={onClose}

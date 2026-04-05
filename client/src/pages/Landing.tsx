@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { db, loadData, saveData } from "@/lib/db";
 import { exportAllData as exportAllIndexedDB, importAllData as importAllIndexedDB, downloadBackup } from "@/lib/dataBackup";
+import { INDIAN_STATES_UTS } from "@/lib/indianStates";
 
 type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee" | "FileEdit" | "BarChart3";
 
@@ -181,11 +182,17 @@ export default function Landing() {
   const [password, setPassword] = useState("");
   const [appCards, setAppCards] = useState<AppCard[]>([]);
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
-  const [branchCode, setBranchCode] = useState("13042");
-  const [branchName, setBranchName] = useState("PBB New Market Branch");
+  const [branchCode, setBranchCode] = useState("99999");
+  const [branchName, setBranchName] = useState("Enter Banch in Admin portal");
   const [showBranchConfig, setShowBranchConfig] = useState(false);
   const [tempBranchCode, setTempBranchCode] = useState("");
   const [tempBranchName, setTempBranchName] = useState("");
+  const [tempAddress1, setTempAddress1] = useState("");
+  const [tempAddress2, setTempAddress2] = useState("");
+  const [tempState, setTempState] = useState("");
+  const [tempPinCode, setTempPinCode] = useState("");
+  const [stateSearch, setStateSearch] = useState("");
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
 
   // Favourites bar state
   const [favouriteIds, setFavouriteIds] = useState<string[]>([]);
@@ -388,8 +395,8 @@ export default function Landing() {
     try {
       const config = await loadData("sbi-branch-config");
       if (config) {
-        setBranchCode(config.branchCode || "13042");
-        setBranchName(config.branchName || "PBB New Market Branch");
+        setBranchCode(config.branchCode || "99999");
+        setBranchName(config.branchName || "Enter Banch in Admin portal");
       }
     } catch (error) {
       console.error("Failed to load branch config:", error);
@@ -405,10 +412,26 @@ export default function Landing() {
       alert("Branch Name must be between 1 and 30 characters");
       return;
     }
+    if (!tempAddress1) {
+      alert("Address 1 is required");
+      return;
+    }
+    if (!tempState) {
+      alert("State is required");
+      return;
+    }
+    if (!tempPinCode || !/^\d{6}$/.test(tempPinCode)) {
+      alert("PIN Code must be exactly 6 digits");
+      return;
+    }
     
     const config = {
       branchCode: tempBranchCode,
-      branchName: tempBranchName
+      branchName: tempBranchName,
+      address1: tempAddress1,
+      address2: tempAddress2,
+      state: tempState,
+      pinCode: tempPinCode
     };
     
     try {
@@ -418,6 +441,11 @@ export default function Landing() {
       setShowBranchConfig(false);
       setTempBranchCode("");
       setTempBranchName("");
+      setTempAddress1("");
+      setTempAddress2("");
+      setTempState("");
+      setTempPinCode("");
+      setStateSearch("");
       alert("Branch configuration saved successfully!");
     } catch (error) {
       console.error("Failed to save branch config:", error);
@@ -453,7 +481,6 @@ export default function Landing() {
     if (password === "Sbi@12345") {
       setIsAdmin(true);
       setShowLoginModal(false);
-      setPassword("");
     } else {
       alert("Incorrect password");
     }
@@ -585,9 +612,22 @@ export default function Landing() {
             {isAdmin && (
               <>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setTempBranchCode(branchCode);
                     setTempBranchName(branchName);
+                    // Load address fields from database
+                    try {
+                      const config = await loadData("sbi-branch-config");
+                      if (config) {
+                        setTempAddress1(config.address1 || "");
+                        setTempAddress2(config.address2 || "");
+                        setTempState(config.state || "");
+                        setTempPinCode(config.pinCode || "");
+                        setStateSearch(config.state || "");
+                      }
+                    } catch (error) {
+                      console.error("Failed to load branch config:", error);
+                    }
                     setShowBranchConfig(true);
                   }}
                   className="flex items-center gap-2 bg-purple-600/80 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
@@ -929,17 +969,18 @@ export default function Landing() {
       {/* Branch Configuration Modal */}
       {showBranchConfig && (
         <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto"
           onClick={() => setShowBranchConfig(false)}
         >
           <div 
-            className="bg-white rounded-xl p-6 w-96 shadow-2xl"
+            className="bg-white rounded-xl p-6 w-96 shadow-2xl my-8"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-semibold mb-4" style={{ color: "#4e1a74" }}>
               Branch Configuration
             </h3>
             
+            {/* Branch Code */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Branch Code <span className="text-red-500">*</span>
@@ -960,6 +1001,7 @@ export default function Landing() {
               <p className="text-xs text-gray-500 mt-1">Must be exactly 5 digits</p>
             </div>
             
+            {/* Branch Name */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Branch Name <span className="text-red-500">*</span>
@@ -979,6 +1021,100 @@ export default function Landing() {
               />
               <p className="text-xs text-gray-500 mt-1">{tempBranchName.length}/30 characters</p>
             </div>
+
+            {/* Address 1 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address 1 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={tempAddress1}
+                onChange={(e) => setTempAddress1(e.target.value)}
+                maxLength={50}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                placeholder="Enter street address"
+              />
+              <p className="text-xs text-gray-500 mt-1">{tempAddress1.length}/50 characters</p>
+            </div>
+
+            {/* Address 2 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address 2
+              </label>
+              <input
+                type="text"
+                value={tempAddress2}
+                onChange={(e) => setTempAddress2(e.target.value)}
+                maxLength={50}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                placeholder="Enter area, locality (optional)"
+              />
+              <p className="text-xs text-gray-500 mt-1">{tempAddress2.length}/50 characters</p>
+            </div>
+
+            {/* State */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                State <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={stateSearch}
+                  onChange={(e) => {
+                    setStateSearch(e.target.value);
+                    setShowStateDropdown(true);
+                  }}
+                  onFocus={() => setShowStateDropdown(true)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  placeholder="Search or select state"
+                />
+                {showStateDropdown && (
+                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 shadow-lg z-10 max-h-48 overflow-y-auto">
+                    {INDIAN_STATES_UTS.filter((s) =>
+                      s.toLowerCase().includes(stateSearch.toLowerCase())
+                    ).map((state) => (
+                      <div
+                        key={state}
+                        onClick={() => {
+                          setTempState(state);
+                          setStateSearch(state);
+                          setShowStateDropdown(false);
+                        }}
+                        className={`px-4 py-2 cursor-pointer hover:bg-purple-100 ${
+                          tempState === state ? "bg-purple-200 font-semibold" : ""
+                        }`}
+                      >
+                        {state}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* PIN Code */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                PIN Code <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={tempPinCode}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (/^\d{0,6}$/.test(value)) {
+                    setTempPinCode(value);
+                  }
+                }}
+                maxLength={6}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                placeholder="Enter 6-digit PIN code"
+              />
+              <p className="text-xs text-gray-500 mt-1">Must be exactly 6 digits</p>
+            </div>
             
             <div className="flex gap-3">
               <button
@@ -992,6 +1128,12 @@ export default function Landing() {
                   setShowBranchConfig(false);
                   setTempBranchCode("");
                   setTempBranchName("");
+                  setTempAddress1("");
+                  setTempAddress2("");
+                  setTempState("");
+                  setTempPinCode("");
+                  setStateSearch("");
+                  setShowStateDropdown(false);
                 }}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >

@@ -105,9 +105,8 @@ export default function BranchOverview() {
       // Loan metrics (excluding positive CC/OD balances)
       const totalLoanOutstanding = loans.reduce((sum: number, l: any) => sum + Math.abs(l.OUTSTAND || 0), 0);
       // Only count negative balances (debit) in CC/OD as loan exposure
-      const totalCCODBalance = ccod
-        .filter((c: any) => (c.CurrentBalance || 0) < 0)
-        .reduce((sum: number, c: any) => sum + Math.abs(c.CurrentBalance), 0);
+      const negativeCCOD = ccod.filter((c: any) => (c.CurrentBalance || 0) < 0);
+      const totalCCODBalance = negativeCCOD.reduce((sum: number, c: any) => sum + Math.abs(c.CurrentBalance), 0);
       const totalAdvances = totalLoanOutstanding + totalCCODBalance;
 
       // Loan category breakdown
@@ -118,9 +117,12 @@ export default function BranchOverview() {
         loanCatMap[cat].balance += Math.abs(l.OUTSTAND || 0);
         loanCatMap[cat].count += 1;
       }
-      // Add CC/OD as category
-      if (ccod.length > 0) {
-        loanCatMap["CC/OD"] = { balance: totalCCODBalance, count: ccod.length };
+      // Bucket CC/OD accounts under their mapped Loan_Category (same as LoansPortfolio)
+      for (const c of negativeCCOD) {
+        const cat = (c as any).Loan_Category || "CC/OD";
+        if (!loanCatMap[cat]) loanCatMap[cat] = { balance: 0, count: 0 };
+        loanCatMap[cat].balance += Math.abs((c as any).CurrentBalance || 0);
+        loanCatMap[cat].count += 1;
       }
       const loanCategories = Object.entries(loanCatMap)
         .map(([name, v]) => ({ name, ...v }))
@@ -181,7 +183,7 @@ export default function BranchOverview() {
         totalLoanOutstanding,
         totalLoanAccounts: loans.length,
         totalCCODBalance,
-        totalCCODAccounts: ccod.length,
+        totalCCODAccounts: negativeCCOD.length,
         totalAdvances,
         avgLoanSize: loans.length > 0 ? totalLoanOutstanding / loans.length : 0,
         totalNPAAccounts: npa.length,

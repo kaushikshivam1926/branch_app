@@ -1,36 +1,51 @@
 # Standalone Deployment Guide
 
 ## Overview
-This application can be deployed as a **standalone offline application** that works by simply opening `index.html` in a web browser (Edge, Chrome, Firefox, etc.) without requiring any server, Python, Node.js, or other software installation.
+This application can be deployed as a **standalone offline application** that works by simply opening `index.html` in a web browser (Edge, Chrome, Firefox, Safari, etc.) without requiring any server, Python, Node.js, or other software installation.
 
 ## What You Need
-1. `index.html` - Single HTML file with all JavaScript and CSS inlined (2.1MB)
-2. `images/` folder - Contains all image assets (SBI logo, etc.)
+1. `index.html` - Single HTML file with all JavaScript, CSS, and critical assets inlined (~2-3MB)
+2. `images/` folder - Contains image assets (SBI logo, etc.)
+3. Nothing else - no server, no node_modules, no additional setup
 
 ## Deployment Steps
 
-### Method 1: Download from Code Panel (Recommended)
-1. In Manus Management UI, go to **Code** panel
-2. Click **"Download all files"**
-3. Extract the zip file
-4. Look for `index.html` and `images/` folder in the root
-5. Copy both to your desired location
-6. Double-click `index.html` to open
+### For End Users: Accessing the App
 
-### Method 2: Download from GitHub
-1. Go to your GitHub repository
-2. Click **Code** → **Download ZIP**
-3. Extract the zip file
-4. Look for `index.html` and `images/` folder in the root
-5. Copy both to your desired location
-6. Double-click `index.html` to open
+**Setup (one-time):**
+1. Receive `index.html` and `images/` folder (via email, USB drive, download, etc.)
+2. **IMPORTANT**: Keep them in the same folder
+3. Double-click `index.html` (or right-click → Open with → [your browser])
+4. Bookmark it for quick access next time
 
-## Important Notes
+**Using the App:**
+- ✅ Works completely offline
+- ✅ All data stored locally in browser (IndexedDB)
+- ✅ No account needed
+- ✅ No internet required
 
-### File Structure
+### For Developers: Building the Standalone Version
+
+To create a deployment-ready standalone build:
+
+```bash
+# Run the standalone build script
+./build-standalone.sh
+
+# Or manually:
+BUILD_MODE=deployment pnpm run build
+cp dist/public/index.html deployment/
+cp -r dist/public/images deployment/
 ```
-your-folder/
-├── index.html          (Must be in same folder as images/)
+
+This generates:
+- **deployment/index.html** - Complete app in single file (~2-3MB)
+- **deployment/images/** - All image assets
+
+## File Structure for Deployment
+```
+your-deployment-folder/
+├── index.html          (MUST be in same folder as images/)
 └── images/
     ├── sbi-logo.png
     └── ... (other images)
@@ -38,66 +53,129 @@ your-folder/
 
 **CRITICAL**: The `images/` folder MUST be in the same directory as `index.html`. Do not separate them.
 
-### Browser Compatibility
-- ✅ Microsoft Edge (Recommended)
-- ✅ Google Chrome
-- ✅ Mozilla Firefox
-- ✅ Safari
+## Browser Compatibility
+- ✅ Microsoft Edge (Recommended - most reliable file:// access)
+- ✅ Google Chrome (fully supported)
+- ✅ Mozilla Firefox (fully supported)
+- ✅ Safari (fully supported)
 
-### Data Storage
-- All data (BGL Master, Charge Entries, Reports, etc.) is stored in **browser's IndexedDB**
-- Data is specific to each browser and PC
-- To backup data, use the app's export functionality (if available)
-- Clearing browser data will delete all stored information
+## Data Storage & User Privacy
+- All data stored in **browser's IndexedDB** (not in files)
+- Data is **specific to each browser and computer**
+- Clearing browser cache/cookies will delete app data
+- Users can export data for backup (feature in app if implemented)
 
-### Offline Capability
-- ✅ Works 100% offline - no internet required
+## Offline Capability
+- ✅ 100% offline - zero internet required
 - ✅ No server needed
 - ✅ No installation required
-- ✅ Can be copied to USB drive and used on any PC
+- ✅ Can be copied to USB drive/network share
+- ✅ Works on any Windows/Mac/Linux computer with a browser
 
-### Updating to New Version
-1. Download the new version (index.html + images/)
-2. **Backup your data first** (export from the app if possible)
-3. Replace old files with new ones
-4. Open in browser - your data should persist (stored in browser, not files)
+## Updating to New Version
+1. Developers: Create new build with `./build-standalone.sh`
+2. Users: Download new `index.html` and `images/` folder
+3. Users: **Backup existing data first** (if possible)
+4. Users: Replace old files with new ones
+5. Users: Open in browser - **data persists** (stored in browser, not files)
 
-### Troubleshooting
+### User Data Persistence
+⚠️ Important: User data is stored in the browser's IndexedDB, NOT in the HTML/image files. So:
+- ✅ Users can safely replace index.html without losing data (different file format)
+- ✅ Data follows them across sessions (unless browser cache is cleared)
+- ❌ Clearing browser data/cache will erase all stored information
 
-**Problem**: Old version still showing after update
-**Solution**: 
+## Troubleshooting
+
+### Problem: Old version still showing after update
+**Solution:**
 1. Close all browser windows
-2. Press `Ctrl + Shift + Delete` (Windows) or `Cmd + Shift + Delete` (Mac)
-3. Clear "Cached images and files"
-4. Reopen index.html
+2. Clear browser cache:
+   - Windows: Press `Ctrl + Shift + Delete` → Clear "Cached images and files"
+   - Mac: In app menu → Settings → Privacy → Clear browsing data → Check "Cached images and files"
+3. Delete old `index.html` file
+4. Copy new `index.html` to folder
+5. Open new index.html in browser
 
-**Problem**: Images not showing
-**Solution**: 
-- Verify `images/` folder is in the same directory as `index.html`
-- Check that folder name is exactly `images` (lowercase, no spaces)
+### Problem: Images not showing
+**Solution:**
+- Verify `images/` folder is in same directory as `index.html`
+- Check folder name is exactly `images` (lowercase, no spaces)
+- Ensure all image files are intact in the images/ folder
 
-**Problem**: Data disappeared
-**Solution**:
-- Data is stored per browser - make sure you're using the same browser
+### Problem: App won't load at all
+**Solution:**
+1. Try a different browser
+2. Make sure you're opening `index.html` (double-click or right-click → Open with)
+3. Try copying files to a different folder
+4. Check that images/ folder hasn't been moved or renamed
+
+### Problem: Data disappeared
+**Solution:**
+- Data is stored per browser - verify you're using the same browser
 - Check if browser data was cleared
-- Unfortunately, if IndexedDB was cleared, data cannot be recovered unless backed up
+- Restore from backup if available
+- Unfortunately, if IndexedDB was cleared without backup, data cannot be recovered
 
-## Building Standalone Version (For Developers)
-
-If you're modifying the source code and need to rebuild:
-
-```bash
-# Run the standalone build script
-./build-standalone.sh
-
-# Or manually:
-pnpm run build
-cp dist/public/index.html .
-sed -i 's|/images/|images/|g' index.html
-cp -r dist/public/images .
-```
+### Problem: Getting browser security warnings
+**Solution:**
+- This is normal when opening local files (file:// protocol)
+- Click "Allow" or "Allow blocked content" when prompted
+- Some browsers (especially Chrome) have stricter security - try Edge or Firefox instead
 
 ## Technical Details
+
+### Build Configuration
+The app uses Vite for building with two modes:
+
+**Development Build** (default):
+```bash
+pnpm build
+```
+- Creates code-split bundles (separate JS/CSS files)
+- Smaller index.html (~360KB)
+- Better caching for developers
+- Requires HTTP server (can't use file://)
+
+**Deployment Build**:
+```bash
+BUILD_MODE=deployment pnpm build
+```
+- Uses `viteSingleFile` plugin to inline all code
+- Creates single index.html (~2-3MB)
+- Works offline via file:// protocol
+- Users can double-click to run
+
+### Service Worker (Offline Caching)
+The app includes a service worker for offline functionality:
+- Pre-caches critical assets on first load
+- Automatically caches new assets when accessed
+- Provides offline fallback pages
+- Cache version: `sbi-branch-app-v3`
+
+### Why Single File for File:// Access?
+Browsers block loading external JS/CSS files from `file://` URLs for security reasons. The single-file approach inlines everything into the HTML document, bypassing this restriction. The service worker is still registered but primarily helps with offline caching and navigation.
+
+## Performance Notes
+
+**File Size:**
+- Single-file deployment: ~2-3MB (includes all code, styles, and essential assets)
+- This is normal for a full React application with UI library
+- First load downloads entire file once, then cached by browser
+- Subsequent opens are instant (loaded from cache)
+
+**Browser Compatibility:**
+- Works better in Edge/Chrome for file:// access
+- Firefox and Safari may have additional prompts
+- Modern browsers (2020+) recommended
+
+## Support & Questions
+
+If users encounter issues:
+1. Try a different browser
+2. Ensure the complete `index.html` and `images/` folder are present
+3. Try clearing browser cache (Ctrl/Cmd + Shift + Delete)
+4. Consult the "Troubleshooting" section above
 
 - **Build Tool**: Vite with `vite-plugin-singlefile`
 - **Framework**: React 19

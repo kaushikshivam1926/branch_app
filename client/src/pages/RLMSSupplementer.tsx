@@ -14,6 +14,10 @@ import * as pdfjsLib from "pdfjs-dist";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { sbiLogoUrl } from "@/lib/assets";
 import { toast } from "sonner";
+import { useBranch } from "@/contexts/BranchContext";
+import { Button } from "@/components/ui/button";
+import { Home } from "lucide-react";
+import { useLocation } from "wouter";
 
 // Configure PDF.js worker — use local package worker so the build is offline-capable
 // pdfjs-dist v5+ ships the worker as an ES module; Vite inlines it via ?url import
@@ -23,7 +27,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 // ─── SVG Graphics for Print Templates ───────────────────────────────────────
 
 const SbiRlmsLogo = () => (
-  <svg viewBox="0 0 220 35" className="h-10" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 220 35" className="h-6" xmlns="http://www.w3.org/2000/svg">
     <g transform="matrix(0.8 0 0 0.8 0 3.8)">
       <g transform="translate(-33.915775,-175.709)">
         <g transform="translate(0.13229192,-0.13228808)">
@@ -40,7 +44,7 @@ const SbiRlmsLogo = () => (
 );
 
 const SbiStandardLogo = () => (
-  <svg viewBox="0 0 85 35" className="h-10" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 85 35" className="h-6" xmlns="http://www.w3.org/2000/svg">
     <g transform="matrix(0.8 0 0 0.8 0 3.8)">
       <g transform="translate(-33.915775,-175.709)">
         <g transform="translate(0.13229192,-0.13228808)">
@@ -54,9 +58,17 @@ const SbiStandardLogo = () => (
   </svg>
 );
 
+// Base64 data URIs ensure SVG colours survive the browser's print colour-stripping
+const WATERMARK_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMzQuNCAzNC40IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0zMy43ODM0ODMsLTE3NS44NDEzKSI+CiAgICA8cGF0aCBkPSJtIDUwLjkxODM0OSwxNzUuODQxMjkgYyAtOS40NjMzMDYsMCAtMTcuMTM0ODY2LDcuNjg5MzYgLTE3LjEzNDg2NiwxNy4xNzQzOCAwLDguODkyMzQgNi43NDI1NjYsMTYuMjA1ODQgMTUuMzgxMzY0LDE3LjA4NTE0IHYgLTEyLjQ3NTg0IGMgLTEuODU2NzI0LC0wLjcwODI0IC0zLjE3OTUsLTIuNTA2NjYgLTMuMTc5NSwtNC42MDkzIDAsLTIuNzIwNzYgMi4yMTIyNjQsLTQuOTM0MzIgNC45MzQzMDIsLTQuOTM0MzIgMi43MTk0NTQsMCA0LjkzNDI2NiwyLjIxMzU2IDQuOTM0MjY2LDQuOTM0MzIgMCwyLjEwMjY0IC0xLjMyNTMxNiwzLjkwMDcyIC0zLjE4MjA0LDQuNjA5MyB2IDEyLjQ3NTg0IGMgOC42NDAwNjYsLTAuODc5MyAxNS4zODI2MzIsLTguMTkyOCAxNS4zODI2MzIsLTE3LjA4NTE0IDAsLTkuNDg1MDIgLTcuNjcxNTY0LC0xNy4xNzQzOCAtMTcuMTM0ODU4LC0xNy4xNzQzOCIgZmlsbD0iIzAwYjVlZiIvPgogIDwvZz4KPC9zdmc+';
+const CURVE_URI = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNIDAgMCBDIDYwIDAgMTAwIDQwIDEwMCAxMDAgTCAxMDAgMCBaIiBmaWxsPSIjMDBBOUUwIi8+Cjwvc3ZnPg==';
+
 const Watermark = () => (
-  <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 0 }}>
-    <svg viewBox="0 0 34.4 34.4" className="w-[450px] h-[450px] opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
+  <div
+    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+    style={{ zIndex: 0, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
+  >
+    {/* Inline SVG — fill attribute always prints; print-color-adjust:exact on wrapper for safety */}
+    <svg viewBox="0 0 34.4 34.4" style={{ width: '450px', height: '450px', opacity: 0.06 }} xmlns="http://www.w3.org/2000/svg">
       <g transform="translate(-33.783483,-175.8413)">
         <path d="m 50.918349,175.84129 c -9.463306,0 -17.134866,7.68936 -17.134866,17.17438 0,8.89234 6.742566,16.20584 15.381364,17.08514 v -12.47584 c -1.856724,-0.70824 -3.1795,-2.50666 -3.1795,-4.6093 0,-2.72076 2.212264,-4.93432 4.934302,-4.93432 2.719454,0 4.934266,2.21356 4.934266,4.93432 0,2.10264 -1.325316,3.90072 -3.18204,4.6093 v 12.47584 c 8.640066,-0.8793 15.382632,-8.1928 15.382632,-17.08514 0,-9.48502 -7.671564,-17.17438 -17.134858,-17.17438" fill="#00b5ef"/>
       </g>
@@ -65,8 +77,12 @@ const Watermark = () => (
 );
 
 const TopRightCurve = () => (
-  <div className="absolute top-0 right-0 w-[220px] h-[220px] pointer-events-none" style={{ zIndex: 0 }}>
-    <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <div
+    className="absolute top-0 right-0 pointer-events-none"
+    style={{ zIndex: 0, width: '220px', height: '220px', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}
+  >
+    {/* Inline SVG — fill attribute always prints; print-color-adjust:exact on wrapper for safety */}
+    <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', display: 'block' }} preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M 0 0 C 60 0 100 40 100 100 L 100 0 Z" fill="#00A9E0"/>
     </svg>
   </div>
@@ -125,206 +141,224 @@ type DataModel = typeof initialData;
 type ReadOnlyMap = Partial<Record<keyof DataModel, boolean>>;
 
 // ─── PDF Coordinate Map ───────────────────────────────────────────────────────
-// Calibrated from actual SBI RLMS PL-1 Application Form (6 pages, 595x842 pts each)
-// Coordinates measured using pdfminer.six from the actual form PDF.
-// Each entry: { page: 0-indexed page, x: left-x of VALUE cell, y: baseline-y of VALUE cell,
+// Manually marked coordinates from actual PDF expected to be uploaded
+// Each entry: { page: 0-indexed page, x: left-x of VALUE cell, y: center-y of VALUE cell,
 //              width: cell width, height: cell height }
-// Extraction: looks for text items whose baseline y falls within [y, y+height] and x within [x, x+width]
+// Extraction: looks for text items within the bounding box [x, x+width] and [y-height, y]
 // Overlay: writes manually-entered text at (x + X_OFFSET, y + Y_OFFSET) on the original PDF
 
-// Configurable offsets for text placement on the output PDF (tune if text is misaligned)
+// Configurable offsets for text placement on the output PDF
 const TEXT_X_OFFSET = 2;   // pts to shift right from the field x coordinate
-const TEXT_Y_OFFSET = 1;   // pts to shift up from the field baseline y coordinate
+const TEXT_Y_OFFSET = -10; // pts to shift down from the field y coordinate
 
 const PDF_COORDINATES: Record<string, { page: number; x: number; y: number; width: number; height: number }> = {
-  // ── PAGE 0: Personal & KYC Details ──────────────────────────────────────────
-  // Source: CoordinateMapforPDFOverlayvf.docx (user-tested, verified)
-  salutation:              { page: 0, x: 161, y: 595, width: 125, height: 30 },
-  gender:                  { page: 0, x: 161, y: 565, width: 125, height: 15 },
-  maritalStatus:           { page: 0, x: 161, y: 550, width: 125, height: 25 },
-  dependents:              { page: 0, x: 161, y: 525, width: 125, height: 15 },
-  fatherName:              { page: 0, x: 161, y: 510, width: 125, height: 15 },
-  nationality:             { page: 0, x: 161, y: 485, width: 125, height: 25 },
-  category:                { page: 0, x: 161, y: 470, width: 125, height: 15 },
-  disabilityType:          { page: 0, x: 161, y: 455, width: 125, height: 15 },
-  education:               { page: 0, x: 161, y: 440, width: 125, height: 25 },
-  name:                    { page: 0, x: 435, y: 595, width: 125, height: 30 },
-  dob:                     { page: 0, x: 435, y: 565, width: 125, height: 15 },
-  spouseName:              { page: 0, x: 435, y: 550, width: 125, height: 25 },
-  dependentChildren:       { page: 0, x: 435, y: 525, width: 125, height: 15 },
-  motherMaidenName:        { page: 0, x: 435, y: 510, width: 125, height: 15 },
-  residentialStatus:       { page: 0, x: 435, y: 485, width: 125, height: 25 },
-  religion:                { page: 0, x: 435, y: 470, width: 125, height: 15 },
-  placeOfBirth:            { page: 0, x: 435, y: 455, width: 125, height: 15 },
-  qualifyingYear:          { page: 0, x: 435, y: 440, width: 125, height: 25 },
-  pan:                     { page: 0, x: 161, y: 415, width: 125, height: 15 },
-  passportNo:              { page: 0, x: 161, y: 400, width: 125, height: 15 },
-  drivingLicenseNo:        { page: 0, x: 161, y: 385, width: 125, height: 15 },
-  voterId:                 { page: 0, x: 161, y: 370, width: 125, height: 15 },
-  aadhaarNo:               { page: 0, x: 435, y: 415, width: 125, height: 15 },
-  passportValidUpto:       { page: 0, x: 400, y: 540, width: 125, height: 15 },
-  dlValidUpto:             { page: 0, x: 435, y: 385, width: 125, height: 30 },
-  // Address (page 0)
-  houseOwnership:          { page: 0, x: 161, y: 320, width: 125, height: 25 },
-  addressProofType:        { page: 0, x: 161, y: 295, width: 125, height: 30 },
-  presentHouseNo:          { page: 0, x: 161, y: 265, width: 125, height: 30 },
-  presentLandmark:         { page: 0, x: 161, y: 235, width: 125, height: 25 },
-  presentDistrict:         { page: 0, x: 161, y: 210, width: 125, height: 15 },
-  presentState:            { page: 0, x: 161, y: 195, width: 125, height: 15 },
-  primaryMobile:           { page: 0, x: 161, y: 180, width: 125, height: 15 },
-  landline:                { page: 0, x: 161, y: 165, width: 125, height: 15 },
-  isPermanentSame:         { page: 0, x: 161, y: 150, width: 125, height: 25 },
-  presentStayDuration:     { page: 0, x: 435, y: 320, width: 125, height: 25 },
-  addressProofNo:          { page: 0, x: 435, y: 295, width: 125, height: 15 },
-  addressProofDate:        { page: 0, x: 435, y: 280, width: 125, height: 15 },
-  presentStreet:           { page: 0, x: 435, y: 265, width: 125, height: 30 },
-  presentCity:             { page: 0, x: 435, y: 235, width: 125, height: 25 },
-  presentPin:              { page: 0, x: 435, y: 210, width: 125, height: 15 },
-  presentCountry:          { page: 0, x: 435, y: 195, width: 125, height: 15 },
-  secondaryMobile:         { page: 0, x: 435, y: 180, width: 125, height: 15 },
-  personalEmail:           { page: 0, x: 435, y: 165, width: 125, height: 40 },
-  permanentHouseNo:        { page: 0, x: 161, y: 110, width: 125, height: 25 },
-  permanentLandmark:       { page: 0, x: 161, y: 85,  width: 125, height: 25 },
-  permanentDistrict:       { page: 0, x: 161, y: 60,  width: 125, height: 15 },
-  permanentStreet:         { page: 0, x: 435, y: 110, width: 125, height: 25 },
-  permanentCity:           { page: 0, x: 435, y: 85,  width: 125, height: 25 },
-  permanentPin:            { page: 0, x: 435, y: 60,  width: 125, height: 15 },
+  // Personal & KYC
+  salutation: { page: 0, x: 161, y: 595, width: 125, height: 27 },
+  gender: { page: 0, x: 161, y: 563, width: 125, height: 12 },
+  maritalStatus: { page: 0, x: 161, y: 548, width: 125, height: 25 },
+  dependents: { page: 0, x: 161, y: 526, width: 125, height: 15 },
+  fatherName: { page: 0, x: 161, y: 503, width: 125, height: 12 },
+  nationality: { page: 0, x: 161, y: 485, width: 125, height: 12 },
+  category: { page: 0, x: 161, y: 470, width: 125, height: 12 },
+  disabilityType: { page: 0, x: 161, y: 453, width: 125, height: 12 },
+  education: { page: 0, x: 161, y: 440, width: 125, height: 18 },
 
-  // ── PAGE 1: Permanent Address (cont.) + Office + References + Employment ─────
-  permanentState:          { page: 1, x: 161, y: 770, width: 125, height: 15 },
-  permanentTel1:           { page: 1, x: 161, y: 755, width: 125, height: 15 },
-  permanentCountry:        { page: 1, x: 435, y: 770, width: 125, height: 15 },
-  permanentTel2:           { page: 1, x: 435, y: 755, width: 125, height: 15 },
+  name: { page: 0, x: 435, y: 595, width: 125, height: 30 },
+  dob: { page: 0, x: 435, y: 565, width: 125, height: 15 },
+  spouseName: { page: 0, x: 435, y: 550, width: 125, height: 25 },
+  dependentChildren: { page: 0, x: 435, y: 525, width: 125, height: 15 },
+  motherMaidenName: { page: 0, x: 435, y: 508, width: 125, height: 15 },
+  residentialStatus: { page: 0, x: 435, y: 485, width: 125, height: 15 },
+  religion: { page: 0, x: 435, y: 470, width: 125, height: 15 },
+  placeOfBirth: { page: 0, x: 435, y: 453, width: 125, height: 12 },
+  qualifyingYear: { page: 0, x: 435, y: 440, width: 125, height: 18 },
+  pan: { page: 0, x: 161, y: 415, width: 125, height: 15 },
+  passportNo: { page: 0, x: 161, y: 400, width: 125, height: 15 },
+  drivingLicenseNo: { page: 0, x: 161, y: 385, width: 125, height: 15 },
+  voterId: { page: 0, x: 161, y: 370, width: 125, height: 15 },
+  aadhaarNo: { page: 0, x: 435, y: 415, width: 125, height: 15 },
+  passportValidUpto: { page: 0, x: 435, y: 400, width: 125, height: 15 },
+  dlValidUpto: { page: 0, x: 435, y: 385, width: 125, height: 30 },
+  // Addresses
+  houseOwnership: { page: 0, x: 161, y: 320, width: 125, height: 25 },
+  addressProofType: { page: 0, x: 161, y: 295, width: 125, height: 30 },
+  presentHouseNo: { page: 0, x: 161, y: 265, width: 125, height: 30 },
+  presentLandmark: { page: 0, x: 161, y: 235, width: 125, height: 25 },
+  presentDistrict: { page: 0, x: 161, y: 210, width: 125, height: 15 },
+  presentState: { page: 0, x: 161, y: 193, width: 125, height: 15 },
+  primaryMobile: { page: 0, x: 161, y: 178, width: 125, height: 15 },
+  landline: { page: 0, x: 161, y: 165, width: 125, height: 15 },
+  isPermanentSame: { page: 0, x: 161, y: 150, width: 125, height: 25 },
+  presentStayDuration: { page: 0, x: 435, y: 320, width: 125, height: 25 },
+  addressProofNo: { page: 0, x: 435, y: 295, width: 125, height: 15 },
+  addressProofDate: { page: 0, x: 435, y: 277, width: 125, height: 15 },
+  presentStreet: { page: 0, x: 435, y: 265, width: 125, height: 30 },
+  presentCity: { page: 0, x: 435, y: 235, width: 125, height: 25 },
+  presentPin: { page: 0, x: 435, y: 210, width: 125, height: 15 },
+  presentCountry: { page: 0, x: 435, y: 193, width: 125, height: 15 },
+  secondaryMobile: { page: 0, x: 435, y: 178, width: 125, height: 15 },
+  personalEmail: { page: 0, x: 435, y: 165, width: 125, height: 40 },
+  permanentHouseNo: { page: 0, x: 161, y: 110, width: 125, height: 25 },
+  permanentLandmark: { page: 0, x: 161, y: 85, width: 125, height: 25 },
+  permanentDistrict: { page: 0, x: 161, y: 60, width: 125, height: 15 },
+  permanentStreet: { page: 0, x: 435, y: 110, width: 125, height: 25 },
+  permanentCity: { page: 0, x: 435, y: 85, width: 125, height: 25 },
+  permanentPin: { page: 0, x: 435, y: 60, width: 125, height: 15 },
+  permanentState: { page: 1, x: 161, y: 770, width: 125, height: 15 },
+  permanentTel1: { page: 1, x: 161, y: 755, width: 125, height: 15 },
+  permanentCountry: { page: 1, x: 435, y: 770, width: 125, height: 15 },
+  permanentTel2: { page: 1, x: 435, y: 755, width: 125, height: 15 },
   // Office
-  orgName:                 { page: 1, x: 161, y: 705, width: 125, height: 15 },
-  departmentName:          { page: 1, x: 161, y: 690, width: 125, height: 15 },
-  officeStreet:            { page: 1, x: 161, y: 675, width: 125, height: 25 },
-  officeCity:              { page: 1, x: 161, y: 650, width: 125, height: 30 },
-  officeState:             { page: 1, x: 435, y: 620, width: 125, height: 15 },
-  officePin:               { page: 1, x: 435, y: 605, width: 125, height: 15 },
-  orgEmail:                { page: 1, x: 435, y: 590, width: 125, height: 15 },
-  officeBuilding:          { page: 1, x: 435, y: 705, width: 125, height: 30 },
-  officeLandmark:          { page: 1, x: 435, y: 675, width: 125, height: 25 },
-  officeDistrict:          { page: 1, x: 435, y: 650, width: 125, height: 30 },
-  officeCountry:           { page: 1, x: 161, y: 620, width: 125, height: 15 },
-  officeLandline1:         { page: 1, x: 161, y: 605, width: 125, height: 15 },
-  officeFax:               { page: 1, x: 435, y: 590, width: 125, height: 15 },
+  orgName: { page: 1, x: 161, y: 703, width: 125, height: 15 },
+  departmentName: { page: 1, x: 161, y: 688, width: 125, height: 15 },
+  officeStreet: { page: 1, x: 161, y: 673, width: 125, height: 25 },
+  officeCity: { page: 1, x: 161, y: 648, width: 125, height: 30 },
+  officeState: { page: 1, x: 161, y: 618, width: 125, height: 15 },
+  officePin: { page: 1, x: 161, y: 603, width: 125, height: 15 },
+  orgEmail: { page: 1, x: 161, y: 588, width: 125, height: 15 },
+  officeBuilding: { page: 1, x: 435, y: 703, width: 125, height: 30 },
+  officeLandmark: { page: 1, x: 435, y: 673, width: 125, height: 25 },
+  officeDistrict: { page: 1, x: 435, y: 647, width: 125, height: 30 },
+  officeCountry: { page: 1, x: 435, y: 618, width: 125, height: 15 },
+  officeLandline1: { page: 1, x: 435, y: 603, width: 65, height: 15 },
+  officeLandline2: { page: 1, x: 501, y: 603, width: 65, height: 15 },
+  officeFax: { page: 1, x: 435, y: 588, width: 125, height: 15 },
   // References
-  ref1Name:                { page: 1, x: 161, y: 500, width: 125, height: 15 },
-  ref1Address:             { page: 1, x: 161, y: 485, width: 125, height: 30 },
-  ref1Email:               { page: 1, x: 161, y: 455, width: 125, height: 15 },
-  ref1Telephone:           { page: 1, x: 161, y: 440, width: 125, height: 15 },
-  ref1Mobile:              { page: 1, x: 161, y: 425, width: 125, height: 15 },
-  ref2Name:                { page: 1, x: 435, y: 500, width: 125, height: 15 },
-  ref2Address:             { page: 1, x: 435, y: 485, width: 125, height: 30 },
-  ref2Email:               { page: 1, x: 435, y: 455, width: 125, height: 15 },
-  ref2Telephone:           { page: 1, x: 435, y: 440, width: 125, height: 15 },
-  ref2Mobile:              { page: 1, x: 435, y: 425, width: 125, height: 15 },
+  ref1Name: { page: 1, x: 161, y: 500, width: 125, height: 15 },
+  ref1Address: { page: 1, x: 161, y: 485, width: 125, height: 30 },
+  ref1Email: { page: 1, x: 161, y: 455, width: 125, height: 15 },
+  ref1Telephone: { page: 1, x: 161, y: 440, width: 125, height: 15 },
+  ref1Mobile: { page: 1, x: 161, y: 425, width: 125, height: 15 },
+  ref2Name: { page: 1, x: 435, y: 500, width: 125, height: 15 },
+  ref2Address: { page: 1, x: 435, y: 485, width: 125, height: 30 },
+  ref2Email: { page: 1, x: 435, y: 455, width: 125, height: 15 },
+  ref2Telephone: { page: 1, x: 435, y: 440, width: 125, height: 15 },
+  ref2Mobile: { page: 1, x: 435, y: 425, width: 125, height: 15 },
   // Employment
-  occupationType:          { page: 1, x: 161, y: 355, width: 125, height: 15 },
-  orgType:                 { page: 1, x: 161, y: 340, width: 125, height: 15 },
-  employerName:            { page: 1, x: 161, y: 325, width: 125, height: 30 },
-  empDeptName:             { page: 1, x: 161, y: 295, width: 125, height: 20 },
-  employeeNo:              { page: 1, x: 161, y: 275, width: 125, height: 25 },
-  ddoDesignation:          { page: 1, x: 161, y: 250, width: 125, height: 80 },
-  prevEmployerName:        { page: 1, x: 161, y: 170, width: 125, height: 40 },
-  prevContactNo:           { page: 1, x: 161, y: 130, width: 125, height: 40 },
-  expPresentJobDOJ:        { page: 1, x: 161, y: 90,  width: 125, height: 15 },
-  totalExp:                { page: 1, x: 161, y: 75,  width: 125, height: 30 },
-  natureOfEmployment:      { page: 1, x: 435, y: 355, width: 125, height: 15 },
-  currentIndustry:         { page: 1, x: 435, y: 340, width: 125, height: 15 },
-  corporateRating:         { page: 1, x: 435, y: 325, width: 125, height: 30 },
-  designation:             { page: 1, x: 435, y: 295, width: 125, height: 20 },
-  orgWebsite:              { page: 1, x: 435, y: 275, width: 125, height: 25 },
-  ddoPin:                  { page: 1, x: 435, y: 250, width: 125, height: 15 },
-  ddoAddress:              { page: 1, x: 435, y: 235, width: 125, height: 65 },
-  prevPin:                 { page: 1, x: 435, y: 170, width: 125, height: 15 },
-  prevEmployerAddress:     { page: 1, x: 435, y: 155, width: 125, height: 65 },
-  expPrevJob:              { page: 1, x: 435, y: 90,  width: 125, height: 15 },
-  retirementDate:          { page: 1, x: 435, y: 75,  width: 125, height: 30 },
+  occupationType: { page: 1, x: 161, y: 355, width: 125, height: 15 },
+  orgType: { page: 1, x: 161, y: 340, width: 125, height: 15 },
+  employerName: { page: 1, x: 161, y: 325, width: 125, height: 30 },
+  empDeptName: { page: 1, x: 161, y: 295, width: 125, height: 20 },
+  employeeNo: { page: 1, x: 161, y: 275, width: 125, height: 25 },
+  ddoDesignation: { page: 1, x: 161, y: 250, width: 125, height: 80 },
+  prevEmployerName: { page: 1, x: 161, y: 170, width: 125, height: 40 },
+  prevContactNo: { page: 1, x: 161, y: 130, width: 125, height: 40 },
+  expPresentJobDOJ: { page: 1, x: 161, y: 90, width: 125, height: 15 },
+  totalExp: { page: 1, x: 161, y: 75, width: 125, height: 30 },
+  natureOfEmployment: { page: 1, x: 435, y: 355, width: 125, height: 15 },
+  currentIndustry: { page: 1, x: 435, y: 340, width: 125, height: 15 },
+  corporateRating: { page: 1, x: 435, y: 325, width: 125, height: 30 },
+  designation: { page: 1, x: 435, y: 295, width: 125, height: 20 },
+  orgWebsite: { page: 1, x: 435, y: 275, width: 125, height: 25 },
+  ddoPin: { page: 1, x: 460, y: 250, width: 125, height: 15 },
+  ddoAddress: { page: 1, x: 435, y: 235, width: 125, height: 65 },
+  prevPin: { page: 1, x: 460, y: 170, width: 125, height: 15 },
+  prevEmployerAddress: { page: 1, x: 435, y: 155, width: 125, height: 65 },
+  expPrevJob: { page: 1, x: 435, y: 90, width: 125, height: 15 },
+  retirementDate: { page: 1, x: 435, y: 75, width: 125, height: 30 },
+  // Defence
+  forceNo: { page: 2, x: 161, y: 725, width: 125, height: 25 },
+  regimentName: { page: 2, x: 435, y: 725, width: 125, height: 25 },
 
-  // ── PAGE 2: Defence + Bank/SBI Relationship + Income + Assets ───────────────
-  forceNo:                 { page: 2, x: 161, y: 725, width: 125, height: 25 },
-  regimentName:            { page: 2, x: 435, y: 725, width: 125, height: 25 },
-  salaryAcNo:              { page: 2, x: 161, y: 670, width: 125, height: 15 },
-  bankName:                { page: 2, x: 161, y: 655, width: 125, height: 15 },
-  acOpenDate:              { page: 2, x: 161, y: 640, width: 125, height: 15 },
-  xpressCrAcNo:            { page: 2, x: 161, y: 625, width: 125, height: 15 },
-  sanctionedLimit:         { page: 2, x: 161, y: 610, width: 125, height: 15 },
-  emisPaid:                { page: 2, x: 161, y: 595, width: 125, height: 15 },
-  cifNo:                   { page: 2, x: 435, y: 670, width: 125, height: 15 },
-  branchName:              { page: 2, x: 435, y: 655, width: 125, height: 15 },
-  salaryPackageName:       { page: 2, x: 435, y: 640, width: 125, height: 15 },
-  disbursementDate:        { page: 2, x: 435, y: 625, width: 125, height: 15 },
-  outstandingAmount:       { page: 2, x: 435, y: 610, width: 125, height: 15 },
-  riskGrade:               { page: 2, x: 435, y: 595, width: 125, height: 15 },
-  grossIncome:             { page: 2, x: 156, y: 508, width: 85,  height: 12 },
-  netIncome:               { page: 2, x: 258, y: 508, width: 85,  height: 12 },
-  bankAccountDetails:      { page: 2, x: 35,  y: 170, width: 515, height: 60 },
-  creditCards:             { page: 2, x: 35,  y: 108, width: 515, height: 35 },
+  // Bank Details
+  salaryAcNo: { page: 2, x: 161, y: 670, width: 125, height: 15 },
+  bankName: { page: 2, x: 161, y: 653, width: 125, height: 15 },
+  acOpenDate: { page: 2, x: 161, y: 638, width: 125, height: 15 },
+  xpressCrAcNo: { page: 2, x: 161, y: 623, width: 125, height: 15 },
+  sanctionedLimit: { page: 2, x: 161, y: 608, width: 125, height: 15 },
+  emisPaid: { page: 2, x: 161, y: 593, width: 125, height: 15 },
+  cifNo: { page: 2, x: 435, y: 670, width: 125, height: 15 },
+  branchName: { page: 2, x: 435, y: 653, width: 125, height: 15 },
+  salaryPackageName: { page: 2, x: 435, y: 638, width: 125, height: 15 },
+  disbursementDate: { page: 2, x: 435, y: 623, width: 30, height: 15 },
+  outstandingAmount: { page: 2, x: 435, y: 608, width: 125, height: 15 },
+  riskGrade: { page: 2, x: 435, y: 593, width: 125, height: 15 },
 
-  // ── PAGE 3: Fixed Deposits + Other Investments ──────────────────────────────
-  fixedDeposits:           { page: 3, x: 35,  y: 780, width: 515, height: 50 },
-  otherInvestments:        { page: 3, x: 35,  y: 680, width: 515, height: 30 },
+  // Loan Info
+  grossIncome: { page: 2, x: 145, y: 508, width: 85, height: 15 },
+  netIncome: { page: 2, x: 255, y: 508, width: 85, height: 15 },
 
-  // ── PAGE 4: Loan Information ─────────────────────────────────────────────────
-  loanVariant:             { page: 4, x: 161, y: 744, width: 125, height: 20 },
-  campaignId:              { page: 4, x: 161, y: 718, width: 125, height: 12 },
-  netMonthlyIncome:        { page: 4, x: 161, y: 703, width: 125, height: 12 },
-  proposedEmi:             { page: 4, x: 168, y: 689, width: 115, height: 12 },
-  emiNmiRatio:             { page: 4, x: 161, y: 675, width: 125, height: 12 },
-  loanAmount:              { page: 4, x: 161, y: 659, width: 125, height: 12 },
-  repaymentTenure:         { page: 4, x: 161, y: 629, width: 125, height: 12 },
-  corporateTieUps:         { page: 4, x: 161, y: 613, width: 125, height: 20 },
-  sourcingChannel:         { page: 4, x: 435, y: 744, width: 125, height: 20 },
-  checkOff:                { page: 4, x: 435, y: 718, width: 125, height: 12 },
-  salaryPackages:          { page: 4, x: 435, y: 703, width: 125, height: 12 },
-  processingFee:           { page: 4, x: 435, y: 689, width: 125, height: 12 },
-  concessionPercent:       { page: 4, x: 435, y: 675, width: 125, height: 12 },
+  loanVariant: { page: 4, x: 161, y: 744, width: 125, height: 20 },
+  campaignId: { page: 4, x: 161, y: 718, width: 125, height: 12 },
+  netMonthlyIncome: { page: 4, x: 161, y: 703, width: 125, height: 12 },
+  proposedEmi: { page: 4, x: 168, y: 689, width: 115, height: 12 },
+  emiNmiRatio: { page: 4, x: 161, y: 675, width: 125, height: 12 },
+  loanAmount: { page: 4, x: 161, y: 659, width: 125, height: 12 },
+  repaymentTenure: { page: 4, x: 161, y: 629, width: 125, height: 12 },
+  corporateTieUps: { page: 4, x: 161, y: 613, width: 125, height: 20 },
+
+  sourcingChannel: { page: 4, x: 435, y: 744, width: 125, height: 20 },
+  checkOff: { page: 4, x: 435, y: 718, width: 125, height: 12 },
+  salaryPackages: { page: 4, x: 435, y: 703, width: 125, height: 12 },
+  processingFee: { page: 4, x: 435, y: 689, width: 125, height: 12 },
+  concessionPercent: { page: 4, x: 435, y: 675, width: 125, height: 12 },
   concessionInProcessingFee: { page: 4, x: 435, y: 659, width: 125, height: 12 },
-  interestRate:            { page: 4, x: 161, y: 643, width: 125, height: 12 },
-  loanPurpose:             { page: 4, x: 161, y: 629, width: 125, height: 35 },
-  optLifeInsurance:        { page: 4, x: 161, y: 500, width: 125, height: 15 },
-  addLifePremium:          { page: 4, x: 435, y: 500, width: 125, height: 15 },
-  optGeneralInsurance:     { page: 4, x: 161, y: 400, width: 125, height: 15 },
-  addGeneralPremium:       { page: 4, x: 435, y: 400, width: 125, height: 15 },
+  interestRate: { page: 4, x: 435, y: 643, width: 125, height: 12 },
+  loanPurpose: { page: 4, x: 435, y: 629, width: 125, height: 35 },
 
-  // ── PAGE 5: Declarations / Place ─────────────────────────────────────────────
-  place:                   { page: 5, x: 140, y: 600, width: 420, height: 15 },
+
+  //Insurance Details
+  optLifeInsurance: { page: 4, x: 320, y: 520, width: 125, height: 12 },
+  addLifePremium: { page: 4, x: 320, y: 505, width: 125, height: 12 },
+  optGeneralInsurance: { page: 4, x: 320, y: 425, width: 125, height: 12 },
+  addGeneralPremium: { page: 4, x: 320, y: 410, width: 125, height: 12 },
+
+  // Declarations
+  place: { page: 5, x: 140, y: 595, width: 420, height: 15 }
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const extractDataByCoordinates = (pagesItems: Record<number, { str: string; x: number; y: number }[]>) => {
   const extracted: Partial<DataModel> = {};
+
   for (const [key, box] of Object.entries(PDF_COORDINATES)) {
     const pageItems = pagesItems[box.page] || [];
-    // Tolerance: ±5 pts — matches the original hand-calibrated coordinate map
+
     const tolerance = 5;
-    const left   = box.x - tolerance;
-    const right  = box.x + box.width + tolerance;
-    // box.y is the baseline y of the value cell (bottom of text, origin at bottom-left of page)
-    // box.height is how tall the cell is (text may be anywhere from y to y+height)
-    const bottom = box.y - tolerance;
-    const top    = box.y + box.height + tolerance;
-    const matchedItems = pageItems.filter(
-      item => item.x >= left && item.x <= right && item.y >= bottom && item.y <= top
-    );
+    const left = box.x - tolerance;
+    const right = box.x + box.width + tolerance;
+    const top = box.y + tolerance;
+    const bottom = box.y - box.height - tolerance;
+
+    const matchedItems = pageItems.filter(item => {
+      return item.x >= left && item.x <= right && item.y >= bottom && item.y <= top;
+    });
+
     if (matchedItems.length > 0) {
-      // Sort top-to-bottom (descending y), then left-to-right
-      matchedItems.sort((a, b) => Math.abs(a.y - b.y) > 4 ? b.y - a.y : a.x - b.x);
-      const fieldText = matchedItems.map(item => item.str).join(' ').trim().replace(/\s+/g, ' ');
-      if (fieldText) (extracted as Record<string, string>)[key] = fieldText;
+      matchedItems.sort((a, b) => {
+        if (Math.abs(a.y - b.y) > 4) {
+          return b.y - a.y;
+        }
+        return a.x - b.x;
+      });
+
+      let fieldText = matchedItems.map(item => item.str).join(' ').trim();
+      fieldText = fieldText.replace(/\s+/g, ' ');
+
+      if (fieldText) {
+        (extracted as Record<string, string>)[key] = fieldText;
+      }
     }
   }
+
   const dateFields = ['dob', 'addressProofDate', 'passportValidUpto', 'dlValidUpto', 'expPresentJobDOJ', 'retirementDate', 'acOpenDate', 'disbursementDate'];
   dateFields.forEach(field => {
-    const val = (extracted as Record<string, string>)[field];
-    if (val) {
-      const m = val.match(/(\d{2})[-/](\d{2})[-/](\d{4})/);
-      if (m) (extracted as Record<string, string>)[field] = `${m[3]}-${m[2]}-${m[1]}`;
+    if ((extracted as Record<string, string>)[field]) {
+      const dateMatch = (extracted as Record<string, string>)[field].match(/(\d{2})[-/](\d{2})[-/](\d{4})/);
+      if (dateMatch) {
+        (extracted as Record<string, string>)[field] = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+      } else {
+        const shortDateMatch = (extracted as Record<string, string>)[field].match(/(\d{2})[-/](\d{2})[-/](\d{2})\b/);
+        if (shortDateMatch && !(extracted as Record<string, string>)[field].includes('20')) {
+          let year = parseInt(shortDateMatch[3], 10);
+          year = year < 50 ? 2000 + year : 1900 + year;
+          (extracted as Record<string, string>)[field] = `${year}-${shortDateMatch[2]}-${shortDateMatch[1]}`;
+        }
+      }
     }
   });
+
   return extracted;
 };
 
@@ -361,6 +395,10 @@ const numberToWords = (num: string | number) => {
   if (Number(numArr[5]) !== 0) { if (str) str += 'and '; str += (a[Number(numArr[5])] || b[Number(numArr[5][0])] + ' ' + a[Number(numArr[5][1])]).trim() + ' '; }
   str = str.trim();
   return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+const trimLeadingZeros = (value: string) => {
+  return String(value).replace(/^0+/, '') || value;
 };
 
 // ─── Form Field Components (themed) ──────────────────────────────────────────
@@ -441,7 +479,149 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const TABS = ['Application Details', 'Personal', 'Addresses', 'Employment', 'Bank Details', 'References & Assets', 'Loan Info', 'Finalise & Print'];
+const TABS = ['Application Details', 'Personal', 'Addresses', 'Employment', 'Bank Details', 'References & Assets', 'Loan Info', 'Finalise & Print', 'Standalone Annexures'];
+
+type StandaloneAnnexureData = {
+  salutation: string;
+  name: string;
+  fatherName: string;
+  loanAmount: string;
+  presentHouseNo: string;
+  presentStreet: string;
+  presentCity: string;
+  presentState: string;
+  presentPin: string;
+  branchName: string;
+  branchState: string;
+  branchPin: string;
+  loanVariant: string;
+  applicationDate: string;
+  documentExecutionDate: string;
+  designation: string;
+  departmentName: string;
+  employerAddress: string;
+  salaryAcNo: string;
+  proposedEmi: string;
+  employeeNo: string;
+  ddoDesignation: string;
+  ddoAddress: string;
+  ddoPin: string;
+};
+
+const initialAnnexureData: StandaloneAnnexureData = {
+  salutation: '',
+  name: '',
+  fatherName: '',
+  loanAmount: '',
+  presentHouseNo: '',
+  presentStreet: '',
+  presentCity: '',
+  presentState: '',
+  presentPin: '',
+  branchName: '',
+  branchState: '',
+  branchPin: '',
+  loanVariant: '',
+  applicationDate: '',
+  documentExecutionDate: '',
+  designation: '',
+  departmentName: '',
+  employerAddress: '',
+  salaryAcNo: '',
+  proposedEmi: '',
+  employeeNo: '',
+  ddoDesignation: '',
+  ddoAddress: '',
+  ddoPin: '',
+};
+
+const ANNEXURE_FIELD_LABELS: Record<keyof StandaloneAnnexureData, string> = {
+  salutation: 'Salutation',
+  name: 'Borrower Name',
+  fatherName: "Father's Name",
+  loanAmount: 'Loan Amount',
+  presentHouseNo: 'House Number',
+  presentStreet: 'Street',
+  presentCity: 'City',
+  presentState: 'State',
+  presentPin: 'PIN Code',
+  branchName: 'Branch Name',
+  branchState: 'Branch State',
+  branchPin: 'Branch PIN Code',
+  loanVariant: 'Loan Variant',
+  applicationDate: 'Application Date',
+  documentExecutionDate: 'Document Execution Date',
+  designation: 'Borrower Designation',
+  departmentName: 'Department Name',
+  employerAddress: 'Employer Address',
+  salaryAcNo: 'Salary Account Number',
+  proposedEmi: 'Proposed EMI',
+  employeeNo: 'Employee Number',
+  ddoDesignation: 'DDO Designation',
+  ddoAddress: 'DDO Address',
+  ddoPin: 'DDO PIN Code',
+};
+
+const REQUIRED_FIELDS_BY_ANNEXURE: Record<string, (keyof StandaloneAnnexureData)[]> = {
+  nesl: ['name', 'documentExecutionDate'],
+  sec281: [
+    'salutation',
+    'name',
+    'fatherName',
+    'loanAmount',
+    'presentHouseNo',
+    'presentStreet',
+    'presentCity',
+    'presentState',
+    'presentPin',
+    'branchName',
+    'documentExecutionDate',
+  ],
+  annex2: [
+    'name',
+    'loanAmount',
+    'branchName',
+    'loanVariant',
+    'applicationDate',
+    'documentExecutionDate',
+  ],
+  annex10: [
+    'salutation',
+    'name',
+    'fatherName',
+    'loanAmount',
+    'branchName',
+    'loanVariant',
+    'applicationDate',
+    'documentExecutionDate',
+    'designation',
+    'employeeNo',
+    'ddoDesignation',
+    'ddoAddress',
+    'ddoPin',
+  ],
+  pl12: [
+    'salutation',
+    'name',
+    'branchName',
+    'branchState',
+    'branchPin',
+    'loanVariant',
+    'documentExecutionDate',
+    'designation',
+    'departmentName',
+    'employerAddress',
+    'salaryAcNo',
+    'proposedEmi',
+    'presentHouseNo',
+    'presentStreet',
+    'presentCity',
+    'presentState',
+    'presentPin',
+  ],
+};
+
+const STANDALONE_PRINT_ORDER = ['nesl', 'sec281', 'annex2', 'annex10', 'pl12'];
 
 export default function RLMSSupplementer() {
   const [data, setData] = useState<DataModel>(initialData);
@@ -451,6 +631,13 @@ export default function RLMSSupplementer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFinalised, setIsFinalised] = useState(false);
   const [printDocId, setPrintDocId] = useState<string | null>(null);
+  const [annexureData, setAnnexureData] = useState<StandaloneAnnexureData>(initialAnnexureData);
+  const [unfilledFields, setUnfilledFields] = useState<(keyof StandaloneAnnexureData)[]>([]);
+  const [printingAnnexures, setPrintingAnnexures] = useState<string[]>([]);
+  const [currentPrintIndex, setCurrentPrintIndex] = useState(0);
+  const [previewDocId, setPreviewDocId] = useState<string | null>(null);
+  const { branchName, state, pinCode } = useBranch();
+  const [, navigate] = useLocation();
 
   // Persist to localStorage
   useEffect(() => {
@@ -470,6 +657,72 @@ export default function RLMSSupplementer() {
     localStorage.setItem('rlmsReadOnly', JSON.stringify(readOnlyFields));
   }, [data, readOnlyFields]);
 
+  // Auto-populate branchName from global Branch Config (set on Landing page)
+  useEffect(() => {
+    if (branchName) {
+      setData(prev => ({ ...prev, branchName }));
+      setReadOnlyFields(prev => ({ ...prev, branchName: true }));
+      setAnnexureData(prev => ({
+        ...prev,
+        branchName,
+        branchState: prev.branchState || state || '',
+        branchPin: prev.branchPin || pinCode || '',
+      }));
+    }
+  }, [branchName, state, pinCode]);
+
+  // Handle multi-annexure printing queue
+  useEffect(() => {
+    if (printingAnnexures.length > 0 && printDocId === null) {
+      // Start printing the next annexure
+      setTimeout(() => {
+        if (printingAnnexures.length > currentPrintIndex) {
+          setPrintDocId(printingAnnexures[currentPrintIndex]);
+        }
+      }, 300);
+    }
+  }, [printingAnnexures, currentPrintIndex, printDocId]);
+
+  // Handle after print for multi-annexure and single prints
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      // Handle multi-annexure queue
+      if (printingAnnexures.length > 0) {
+        const nextIndex = currentPrintIndex + 1;
+        if (nextIndex < printingAnnexures.length) {
+          setCurrentPrintIndex(nextIndex);
+          // Show next annexure in modal preview
+          setPreviewDocId(printingAnnexures[nextIndex]);
+        } else {
+          // All annexures printed - close everything
+          setPrintingAnnexures([]);
+          setCurrentPrintIndex(0);
+          setIsProcessing(false);
+          setPreviewDocId(null);
+          setPrintDocId(null);
+        }
+      } else {
+        // Single print - just close preview modal
+        setPreviewDocId(null);
+      }
+      
+      // Always reset printDocId
+      setPrintDocId(null);
+    };
+
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, [printingAnnexures, currentPrintIndex]);
+
+  // Auto-trigger print when printDocId is set for multi-annexure printing
+  useEffect(() => {
+    if (printDocId && printingAnnexures.length > 0) {
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    }
+  }, [printDocId, printingAnnexures]);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     let { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -488,7 +741,7 @@ export default function RLMSSupplementer() {
       nameFields.forEach(f => { if (savedApp[f]) savedApp[f] = toProperCase(savedApp[f]); });
       setData(prev => {
         const merged = { ...savedApp };
-        for (const key in readOnlyFields) { if (readOnlyFields[key as keyof DataModel]) merged[key] = (prev as Record<string, unknown>)[key]; }
+        for (const key in readOnlyFields) { if (readOnlyFields[key as keyof DataModel] && (prev as Record<string, unknown>)[key]) merged[key] = (prev as Record<string, unknown>)[key]; }
         return merged;
       });
       toast.success("Application data loaded successfully! Pre-filled PDF data was preserved.");
@@ -503,8 +756,9 @@ export default function RLMSSupplementer() {
     setIsProcessing(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
-      setPdfBytes(arrayBuffer);
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      // Store a copy in state; pass a separate copy to pdfjs so neither is detached
+      setPdfBytes(arrayBuffer.slice(0));
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
       const pagesItems: Record<number, { str: string; x: number; y: number }[]> = {};
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -544,37 +798,69 @@ export default function RLMSSupplementer() {
   const handleGeneratePDF = async () => {
     if (!pdfBytes) { toast.error("Please upload the original Bank PDF first."); return; }
     setIsProcessing(true);
+
+    let objectUrl: string | null = null;
+
     try {
-      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const pdfDoc = await PDFDocument.load(pdfBytes.slice(0));
       const pages = pdfDoc.getPages();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
       for (const [key, val] of Object.entries(data)) {
         if (!readOnlyFields[key as keyof DataModel] && PDF_COORDINATES[key] && val) {
           const { page, x, y, width } = PDF_COORDINATES[key];
           if (pages[page]) {
-            pages[page].drawText(String(val), { x: x + TEXT_X_OFFSET, y: y + TEXT_Y_OFFSET, size: 8, font, color: rgb(0, 0, 0), maxWidth: width, lineHeight: 12 });
+            // Convert boolean isPermanentSame to "Yes" for PDF rendering
+            let textValue = String(val);
+            if (key === 'isPermanentSame' && val === true) {
+              textValue = 'Yes';
+            }
+            pages[page].drawText(textValue, {
+              x: x + TEXT_X_OFFSET,
+              y: y + TEXT_Y_OFFSET,
+              size: 8,
+              font,
+              color: rgb(0, 0, 0),
+              maxWidth: width,
+              lineHeight: 12,
+            });
           }
         }
       }
+
       if (data.rlmsApplicationNo) {
         const userEntered: Record<string, unknown> = {};
-        for (const key in data) { if (!readOnlyFields[key as keyof DataModel]) userEntered[key] = (data as Record<string, unknown>)[key]; }
+        for (const key in data) {
+          if (!readOnlyFields[key as keyof DataModel]) {
+            userEntered[key] = (data as Record<string, unknown>)[key];
+          }
+        }
         userEntered.rlmsApplicationNo = data.rlmsApplicationNo;
         localStorage.setItem(`rlmsApp_${data.rlmsApplicationNo}`, JSON.stringify(userEntered));
       }
+
       const modifiedBytes = await pdfDoc.save();
-      const blob = new Blob([modifiedBytes], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'Filled_Application_Form.pdf';
+      const safeBytes = Uint8Array.from(modifiedBytes);
+      const blob = new Blob([safeBytes.buffer], { type: "application/pdf" });
+
+      objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "Filled_Application_Form.pdf";
       link.click();
-      URL.revokeObjectURL(link.href);
+
+      // Revoke after click settles (safer across browsers)
+      setTimeout(() => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      }, 0);
+
       toast.success("PDF generated and downloaded successfully!");
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate the final PDF.");
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
 
   const handleClearData = () => {
@@ -590,8 +876,118 @@ export default function RLMSSupplementer() {
   };
 
   const triggerHTMLPrint = (docId: string) => {
-    setPrintDocId(docId);
-    setTimeout(() => { window.print(); setPrintDocId(null); }, 500);
+    // Show preview in modal instead of taking over full page
+    setPreviewDocId(docId);
+  };
+
+  const handlePrintFromPreview = () => {
+    if (previewDocId) {
+      setPrintDocId(previewDocId);
+      // If this is part of a multi-annexure queue, keep the queue active
+      if (printingAnnexures.length === 0) {
+        // Single print - close modal after print
+        setTimeout(() => {
+          window.print();
+        }, 100);
+      } else {
+        // Multi-annexure print - trigger print for queue
+        setTimeout(() => {
+          window.print();
+        }, 100);
+      }
+    }
+  };
+
+  const handleAnnexureChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    let { value } = e.target;
+    if (name === 'name' || name === 'fatherName') {
+      value = toProperCase(value);
+    }
+    setAnnexureData(prev => ({ ...prev, [name]: value }));
+    // Clear the field from unfilled list if it's being filled
+    if (value.trim()) {
+      setUnfilledFields(prev => prev.filter(f => f !== name));
+    }
+  };
+
+  const getStandalonePrintData = () => ({
+    ...data,
+    salutation: annexureData.salutation,
+    name: annexureData.name,
+    fatherName: annexureData.fatherName,
+    loanAmount: annexureData.loanAmount,
+    presentHouseNo: annexureData.presentHouseNo,
+    presentStreet: annexureData.presentStreet,
+    presentCity: annexureData.presentCity,
+    presentState: annexureData.presentState,
+    presentPin: annexureData.presentPin,
+    branchName: annexureData.branchName,
+    loanVariant: annexureData.loanVariant,
+    applicationDate: annexureData.applicationDate,
+    documentExecutionDate: annexureData.documentExecutionDate,
+    designation: annexureData.designation,
+    empDeptName: annexureData.departmentName,
+    officeStreet: annexureData.employerAddress,
+    salaryAcNo: annexureData.salaryAcNo,
+    proposedEmi: annexureData.proposedEmi,
+    employeeNo: annexureData.employeeNo,
+    ddoDesignation: annexureData.ddoDesignation,
+    ddoAddress: annexureData.ddoAddress,
+    ddoPin: annexureData.ddoPin,
+  });
+
+  const validateAnnexureFields = (annexureIds: string[]) => {
+    const requiredFields = Array.from(new Set(
+      annexureIds.flatMap(annexureId => REQUIRED_FIELDS_BY_ANNEXURE[annexureId] || [])
+    ));
+
+    const unfilled = requiredFields.filter(
+      field => !annexureData[field] || annexureData[field].toString().trim() === ''
+    );
+
+    setUnfilledFields(unfilled);
+    return {
+      isValid: unfilled.length === 0,
+      unfilled,
+    };
+  };
+
+  const handlePrintAnnexures = () => {
+    const validation = validateAnnexureFields(STANDALONE_PRINT_ORDER);
+    if (!validation.isValid) {
+      const confirmed = window.confirm(
+        `${validation.unfilled.length} required field(s) are empty.\n\nDo you want to continue anyway?\n\nClick OK to continue, or Cancel to fill the missing fields (highlighted in red).`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setData(getStandalonePrintData());
+    // Set up multi-annexure queue
+    setPrintingAnnexures(STANDALONE_PRINT_ORDER);
+    setCurrentPrintIndex(0);
+    setIsProcessing(true);
+    // Show first annexure in preview modal
+    setPreviewDocId(STANDALONE_PRINT_ORDER[0]);
+  };
+
+  const handlePrintSingleAnnexure = (annexureId: string) => {
+    const validation = validateAnnexureFields([annexureId]);
+    if (!validation.isValid) {
+      const confirmed = window.confirm(
+        `${validation.unfilled.length} required field(s) are empty.\n\nDo you want to continue anyway?\n\nClick OK to continue, or Cancel to fill the missing fields (highlighted in red).`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setData(getStandalonePrintData());
+    triggerHTMLPrint(annexureId); // This will set previewDocId to show modal
   };
 
   // ─── Print Document Renderer ────────────────────────────────────────────────
@@ -599,97 +995,125 @@ export default function RLMSSupplementer() {
   const renderPrintDocument = () => {
     const empAddress = [data.officeBuilding, data.officeStreet, data.officeCity, data.officeState, data.officePin].filter(Boolean).join(', ');
     const ddoFullAddress = [data.ddoAddress].filter(Boolean).join(', ');
+    const branchStateValue = annexureData.branchState || state || '______________________';
+    const branchPinValue = annexureData.branchPin || pinCode || '______';
+    const pl12EmployerAddress = annexureData.employerAddress || empAddress;
 
     switch (printDocId) {
-      case 'pl12':
+      case 'pl12': {
+        // Compute first EMI month: month after execution date
+        const emiMonthLabel = (() => {
+          if (!data.documentExecutionDate) return '____________';
+          const d = new Date(data.documentExecutionDate);
+          d.setMonth(d.getMonth() + 1);
+          return d.toLocaleString('en-IN', { month: 'long', year: 'numeric' }).toUpperCase();
+        })();
+        const presentAddress = [data.presentHouseNo, data.presentStreet, data.presentCity, data.presentState, data.presentPin].filter(Boolean).join(', ');
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
             <div className="flex justify-between items-start mb-6">
               <SbiRlmsLogo />
-              <div className="font-bold text-right pt-2">Annexure: XP-12</div>
+              <div className="text-right pt-2 text-[10pt]">Annexure: XP- 12</div>
             </div>
-            <h2 className="text-center font-bold mb-6 underline text-[12pt]">Irrevocable Standing Instruction given by the Borrower to the Bank</h2>
+            <h2 className="text-center font-bold mb-8 underline text-[10pt]">Irrevocable Standing Instruction given by the Borrower to the Bank</h2>
+            <div className="mb-8 leading-6">
+              <p>{data.branchName || '______________________,'}</p>
+              <p>{branchStateValue}, PIN- {branchPinValue}</p>
+            </div>
+            <div className="flex justify-between mb-6">
+              <p>Madam/Dear Sir,</p>
+              <p>Date: {formatDate(data.documentExecutionDate)}</p>
+            </div>
             <div className="mb-6">
-              <p>To,</p><p>The Branch Manager,</p><p>State Bank of India,</p>
-              <p>{data.branchName || '........................................'}</p>
+              <p className="underline">{data.salutation ? `${data.salutation} ` : ''}{data.name || '________________________________'}</p>
+              <p className="underline font-bold">Father's Name: <strong>{data.fatherName || '________________________________'}</strong></p>
+              <p className="underline">Irrevocable Letter of Authority/Standing Instruction</p>
+              <p className="underline">{data.loanVariant || '________________________ Loan'}</p>
+              <p className="underline">Savings Bank/Current Account Number: {data.salaryAcNo ? data.salaryAcNo.replace(/^0+/, '') : '________________________'}</p>
             </div>
-            <p className="mb-4">Madam/Dear Sir,</p>
-            <p className="font-bold my-4 underline">Irrevocable Letter of Authority/Standing Instruction</p>
-            <p className="font-bold my-4 underline">Personal Loan</p>
-            <p className="font-bold my-4 underline">Savings Bank/Current Account Number: {data.salaryAcNo ? data.salaryAcNo.replace(/^0+/, '') : '................................'}</p>
             <p className="text-justify mb-4">
-              I intend to avail the benefit of the aforesaid scheme, at present I am serving as <strong>{data.designation || '.............................'}</strong> in <strong>{data.empDeptName || '.............................'}</strong> Department at <strong>{empAddress || '...................................................'}</strong>. I undertake to deposit my salary every month for credit to the aforesaid Savings Bank/Current account maintained at your branch till liquidation of the amount advanced to me with up to date interest etc.
+              I intend to avail the benefit of the aforesaid scheme, at present I am serving as{' '}
+              <span className="inline-block border-b border-black min-w-[120px]">{data.designation || ''}</span>{' '}in{' '}
+              <span className="inline-block border-b border-black min-w-[120px]">{data.empDeptName || ''}</span>{' '}
+              Department at {pl12EmployerAddress || '___________________________________________'}. I undertake to deposit my salary every month for credit to the aforesaid Savings Bank/Current account maintained at your branch till liquidation of the amount advanced to me with up to date interest etc.
             </p>
             <p className="text-justify mb-4">
-              2. I further authorise you to deduct a sum of <strong>Rs. {data.proposedEmi || '...........'}</strong> per month beginning from the month following the month in which the loan is disbursed and to credit the same to the loan account as EMI (Equated Monthly Instalment) till the loan is fully repaid.
+              2. I further authorise you to deduct a sum of <strong>{data.proposedEmi || '₹ ____________'}</strong>{data.proposedEmi ? ` (Rupees ${numberToWords(data.proposedEmi.replace(/[^\d.]/g, ''))} only)` : ' (Rupees _________________________ only)'} per month beginning from the salary for the month of <strong>{emiMonthLabel}</strong> from the aforesaid account for adjustment towards the balance outstanding in the loan account till liquidation.
             </p>
-            <p className="text-justify mb-4">3. I further authorise you to debit my Savings Bank/Current Account for the EMI amount even if the balance in the account is insufficient, resulting in a debit balance in the account.</p>
-            <p className="text-justify mb-4">4. I undertake to maintain sufficient balance in my Savings Bank/Current Account to meet the EMI obligation every month.</p>
-            <p className="text-justify mb-16">5. This letter of authority/standing instruction is irrevocable and shall remain in force until the loan is fully repaid.</p>
-            <div className="flex justify-between w-4/5 mt-16">
-              <div>
-                <p className="mb-8">Signature of Borrower: _______________________</p>
-                <p>Name of Borrower: <strong>{data.name || '........................................................'}</strong></p>
-                <p>Date: {formatDate(data.documentExecutionDate)}</p>
+            <p className="text-justify mb-4">
+              3. I hereby authorise State Bank of India, <strong>{data.branchName || '________________'}</strong> Branch to collect and receive any amount payable towards provident fund, gratuity, pension or similar dues on my behalf in the event of my retirement/resignation/termination or discontinuation of my services for any reason whatsoever.
+            </p>
+            <p className="text-justify mb-4">
+              4. I agree that the aforesaid authority shall be irrevocable till the entire amount of loan together with interest stands liquidated. I further undertake to execute necessary authorisation/documents as deemed just and necessary by the Bank.
+            </p>
+            <p className="text-justify mb-10">
+              5. I hereby undertake that I shall not shift/close my salary account with SBI and will continue to route my salary from the same account till the currency of the loan.
+            </p>
+            <div className="mt-16">
+              <p className="mb-8">Signature of the borrower</p>
+              <p className="font-semibold">{data.name || '________________________________'}</p>
+              <div className="max-w-xs mt-1"> 
+                <p className="text-sm text-gray-800 leading-relaxed break-words">
+                {presentAddress || '________________________________'}
+                </p>
               </div>
             </div>
           </div>
         );
+      }
       case 'sec281':
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
-            <div className="mb-8"><SbiStandardLogo /></div>
-            <h2 className="text-center font-bold mb-2 text-[12pt]">UNDERTAKING UNDER SECTION 281 OF INCOME TAX ACT, 1961</h2>
-            <p className="text-center mb-10 text-[9pt]">(To be stamped as an agreement)</p>
-            <p className="mb-6">I/We, <strong>{data.name || '............................................'}</strong>, hereby declare and undertake as follows:</p>
-            <p className="text-justify mb-4">1. That I/We have applied for a loan of Rs. <strong>{data.loanAmount || '.................'}</strong> {data.loanAmount ? `(Rupees ${numberToWords(data.loanAmount)} only)` : '(Rupees ........................................................ only)'} from State Bank of India, <strong>{data.branchName || '.......................................'}</strong>.</p>
-            <p className="text-justify mb-4">2. That I/We am/are not aware of any pending proceedings for assessment or reassessment of my/our income under the Income Tax Act, 1961 for any assessment year.</p>
-            <p className="text-justify mb-4">3. That I/We undertake to inform the Bank immediately in the event of any such proceedings being initiated against me/us.</p>
-            <p className="text-justify mb-4">4. That I/We am/are not aware of any demand outstanding against me/us under the Income Tax Act, 1961.</p>
-            <p className="text-justify mb-16">5. That I/We undertake that in case any demand is raised against me/us under the Income Tax Act, 1961 in future, I/We shall immediately inform the Bank and shall not create any charge on my/our assets without the prior written consent of the Bank.</p>
-            <div className="flex justify-between items-end mt-16">
-              <div>
-                <p>Place: {data.place || '................................'}</p>
-                <p>Date: {formatDate(data.documentExecutionDate)}</p>
-              </div>
-              <div className="text-right">
-                <p className="mb-10">Signature of Borrower(s)</p>
-                <p>Name: <strong>{data.name || '........................................................'}</strong></p>
-              </div>
+            <div className="mb-3"><SbiStandardLogo /></div>
+            <h2 className="text-center font-bold mb-8 text-[12pt]">UNDERTAKING</h2>
+            <p className="text-justify mb-6">
+              I, <strong>{data.salutation || 'Shri / Smt. / Kum. '} {data.name || '_________________________________'}</strong> Son / Wife / Daughter
+              of <strong>Shri {data.fatherName || '_________________________'}</strong> residing at{' '}
+              <strong>{[data.presentHouseNo, data.presentStreet, data.presentCity, data.presentState, data.presentPin].filter(Boolean).join(', ') || '______________________________________'}</strong>{' '}
+              do hereby solemnly affirm and declare as follows:
+            </p>
+            <p className="text-justify mb-4">
+              A. I have availed credit facilities to the extent of Rs. <strong>{data.loanAmount || '____________'}</strong>{' '}
+              (Rupees <strong>{data.loanAmount ? numberToWords(data.loanAmount) : '_______________________________________'}</strong> only) from State Bank of India, {data.branchName || '.........................'}.
+            </p>
+            <p className="text-justify mb-4">
+              B. I confirm herewith that no IT proceedings for recovery of taxes are pending against me, under Section 281 of the Income-Tax Act or any other law in force for the time being.
+            </p>
+            <p className="text-justify mb-4">
+              C. I confirm herewith that no notice has been issued and/or served on me under Rules 2, 16, or 51, or any other Rules of the second schedule to the income-tax Act 1961 or under any other law.
+            </p>
+            <p className="text-justify mb-16">
+              D. I/we further declare that no dues are pending to the Income Tax Department in my name as on date.
+            </p>
+            <p className="text-justify mb-10">The above mention facts are true and correct to the best of my knowledge, information and belief.</p>
+            <div className="mt-16">
+              <p className="mb-10">Signature of Borrower</p>
+              <p>Date: {formatDate(data.documentExecutionDate) || '___/___/______'}</p>
             </div>
           </div>
         );
       case 'nesl':
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
-            <div className="mb-8"><SbiStandardLogo /></div>
-            <h2 className="text-center font-bold mb-2 text-[12pt]">CONSENT TO DISCLOSE INFORMATION TO NeSL</h2>
-            <p className="text-center mb-10 text-[9pt]">(National e-Governance Services Limited)</p>
-            <p className="mb-6">I/We, <strong>{data.name || '............................................'}</strong>, hereby give my/our consent to State Bank of India to disclose the following information to National e-Governance Services Limited (NeSL) for the purpose of registration of the loan documents:</p>
-            <ul className="list-disc ml-6 mb-6 space-y-2">
-              <li>Name and address of the borrower(s)</li>
-              <li>Loan account number and details</li>
-              <li>Details of securities/collaterals</li>
-              <li>Any other information as required for registration</li>
-            </ul>
-            <p className="text-justify mb-4">I/We understand that this information will be used solely for the purpose of registration of loan documents under the applicable laws and regulations.</p>
-            <p className="text-justify mb-16">I/We confirm that I/We have read and understood the terms and conditions of this consent and agree to the same.</p>
-            <div className="flex justify-between items-end mt-16">
-              <div>
-                <p>Place: {data.place || '................................'}</p>
-                <p>Date: {formatDate(data.documentExecutionDate)}</p>
-              </div>
-              <div className="text-right">
-                <p className="mb-10">Signature of Borrower(s)</p>
-                <p>Name: <strong>{data.name || '........................................................'}</strong></p>
-              </div>
+            <div className="mb-3"><SbiStandardLogo /></div>
+            <h2 className="text-center font-bold mb-6 text-[10pt]">Consent to disclose credit/security information to Information Utilities (IUs) by Borrower</h2>
+            <p className="text-justify mb-6 indent-8">
+              The Borrower hereby agrees and gives consent for the disclosure/ sharing by the Bank of all or any such (a) information and data relating to it/him (b) information or data relating to his obligation in any credit facility granted / to be granted by the Bank and availed/enjoyed/guaranteed by it/ him as Borrower (c) Information relating to assets in relation to which any security interest has been created in favour of the Bank and (d)) default, if any, committed by it/ him in discharge of such obligation as the Bank may deem appropriate and necessary to disclose and furnish to any of the Information Utilities (IUs) registered with Insolvency and Bankruptcy Board of India (IBBI), Credit Information Companies (&ldquo;CIC&rdquo;) registered with Reserve Bank of India (RBI) and any other agency authorised in this behalf by the IBBI, RBI, and/or any such agency that may be constituted or require such information at any time under any of the statutory provisions/ Regulations. The Borrower declares that the information and data furnished by it/him is true and correct. The Borrower further undertakes that (a) the IU/CICs and / or any other agency so authorised may use, process the said information and data disclosed by the Bank in the matter as deemed fit by them and (b) the IU/CICs and / any other agency so authorised may furnish for consideration, the processed information and data or products thereof prepared by them, to Banks / Financial Institutions or other Credit Grantors or Registered Users/ Insolvency Professionals, as may be specified by the IBBI/RBI or such other Regulators/ Statutory Authorities in this behalf. Notwithstanding any right available to the Bank under any law for the time-being in force, the Borrower hereby further agrees and undertakes that the furnishing of information to IUs and any default as reported by IU is sufficient to record the default for the purpose of filing/ initiating any proceedings including but not limited to filing application before the Adjudicating Authority under Insolvency and Bankruptcy Code (IBC) for Insolvency Resolution Process.
+            </p>
+            <p className="text-justify mb-16 indent-8">
+              The Borrower further agrees and undertakes to authenticate the information furnished by it/ him to the Bank/IUs/CICs or such Institutions (&ldquo;Credit Information Institutions&rdquo;) in such manner as may be prescribed by the respective Credit Information Institutions or the Regulators/Authorities governing such Credit Information Institutions.
+            </p>
+            <div className="mt-16 space-y-4">
+              <p>Signature of Borrower: <span className="inline-block w-48 border-b border-black">&nbsp;</span></p>
+              <p>Name of Borrower: <strong>{data.name || <span className="inline-block w-48 border-b border-black">&nbsp;</span>}</strong></p>
+              <p>Date: {formatDate(data.documentExecutionDate) || '___/___/______'}</p>
             </div>
           </div>
         );
       case 'annex2':
         return (
           <div className="font-sans text-[10pt] leading-relaxed max-w-3xl mx-auto">
-            <div className="mb-8"><SbiStandardLogo /></div>
+            <div className="mb-3"><SbiStandardLogo /></div>
             <h2 className="text-center font-bold mb-2 text-[12pt]">Annexure - II</h2>
             <p className="text-center mb-10 text-[9pt]">(Format for obtaining acknowledgment of the borrower that he has received a copy of the loan documents along with its enclosures)</p>
             <div className="mb-8">
@@ -698,8 +1122,8 @@ export default function RLMSSupplementer() {
             </div>
             <p className="mb-6">Date: {formatDate(data.documentExecutionDate)}</p>
             <p className="mb-6">Dear Sir,</p>
-            <p className="mb-6">My <strong>{data.loanVariant || 'Personal Loan'}</strong> Application Dated: <strong>{formatDate(data.applicationDate)}</strong></p>
-            <p className="text-justify mb-6">With reference to above, I/We submit herewith that my/our loan was sanctioned for Rs. <strong>{data.loanAmount || '.........................'}</strong> {data.loanAmount ? `(Rupees ${numberToWords(data.loanAmount)} only)` : '(Rupees ........................................................ only)'}.</p>
+            <p className="mb-6">My <strong>{data.loanVariant || '______________________ Loan'}</strong> application Dated: <strong>{formatDate(data.applicationDate)}</strong></p>
+            <p className="text-justify mb-6">With reference to above, I/We submit herewith that my/our {data.loanVariant || '______________________ Loan'} was sanctioned for Rs. <strong>{data.loanAmount || '.........................'}</strong> {data.loanAmount ? `(Rupees ${numberToWords(data.loanAmount)} only)` : '(Rupees ........................................................ only)'}.</p>
             <p className="text-justify mb-16">I/ We confirm that a copy of the loan documents viz. Sanction letter, Arrangement letter, Key fact statement, Pamphlet on IRACP norms as enunciated by RBI has been obtained by me/us.</p>
             <p className="mb-8">Regards,</p>
             <div className="flex justify-between w-4/5">
@@ -713,7 +1137,7 @@ export default function RLMSSupplementer() {
       case 'annex10':
         return (
           <div className="font-sans text-[10pt] leading-relaxed">
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-3">
               <SbiRlmsLogo />
               <div className="font-bold text-right pt-2">Annexure: XP - 10</div>
             </div>
@@ -725,10 +1149,10 @@ export default function RLMSSupplementer() {
             </div>
             <p className="mb-6">Dear Sir/Madam,</p>
             <h2 className="text-left font-bold mb-3 underline">SANCTION OF PERSONAL LOAN</h2>
-            <h2 className="text-left font-bold mb-3 underline uppercase">SHRI/SMT {data.name || '.............................................'}</h2>
+            <h2 className="text-left font-bold mb-3 underline uppercase"> {data.salutation || 'SHRI/SMT.'} {data.name || '.............................................'}</h2>
             <h2 className="text-left font-bold mb-10 underline uppercase">UNDER {data.loanVariant || 'PERSONAL LOAN'} SCHEME</h2>
             <p className="text-justify mb-6 leading-loose">
-              Shri / Smt <strong>{data.name || '...................................'}</strong> S/O <strong>{data.fatherName || '...........................'}</strong> Designation <strong>{data.designation || '......................'}</strong> Employee No <strong>{data.employeeNo || '...............'}</strong> of your Department/Institution/Corporate has been sanctioned and disbursed a loan of Rs <strong>{data.loanAmount || '................'}</strong> {data.loanAmount ? `(Rupees ${numberToWords(data.loanAmount)} only)` : '(Rupees ........................................................ only)'} under the Bank's <strong>{data.loanVariant || 'PERSONAL LOAN'}</strong> on date <strong>{formatDate(data.documentExecutionDate)}</strong> as per the terms and conditions agreed to vide the loan application dated <strong>{formatDate(data.applicationDate)}</strong> signed by the borrower.
+              <strong> {data.salutation || 'Shri / Smt.'} {data.name || '...................................'}</strong> S/o <strong>{data.fatherName || '...........................'}</strong> Designation <strong>{data.designation || '......................'}</strong> Employee No <strong>{data.employeeNo || '...............'}</strong> of your Department/Institution/Corporate has been sanctioned and disbursed a loan of Rs <strong>{data.loanAmount || '................'}</strong> {data.loanAmount ? `(Rupees ${numberToWords(data.loanAmount)} only)` : '(Rupees ........................................................ only)'} under the Bank's <strong>{data.loanVariant || 'PERSONAL LOAN'}</strong> on date <strong>{formatDate(data.documentExecutionDate)}</strong> as per the terms and conditions agreed to vide the loan application dated <strong>{formatDate(data.applicationDate)}</strong> signed by the borrower.
             </p>
             <p className="text-justify mb-16">2. Please do not hesitate to bring to our notice any issue which would help us to improve / strengthen the good business relationship of our Bank with your esteemed Department/Institution/Corporate.</p>
             <div className="flex justify-between items-end mt-16">
@@ -799,9 +1223,9 @@ export default function RLMSSupplementer() {
             <InputField label="Total No. of Dependents" name="dependents" type="number" value={data.dependents} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.dependents} />
             <InputField label="No. of Dependent Children" name="dependentChildren" type="number" value={data.dependentChildren} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.dependentChildren} />
             <InputField label="Nationality" name="nationality" value={data.nationality} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.nationality} />
-            <SelectField label="Category" name="category" value={data.category} onChange={handleChange as (e: ChangeEvent<HTMLSelectElement>) => void} options={['General', 'OBC', 'SC', 'ST']} readOnly={readOnlyFields.category} />
-            <SelectField label="Residential Status" name="residentialStatus" value={data.residentialStatus} onChange={handleChange as (e: ChangeEvent<HTMLSelectElement>) => void} options={['Resident Indian', 'NRI']} readOnly={readOnlyFields.residentialStatus} />
-            <InputField label="Religion" name="religion" value={data.religion} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.religion} />
+            <SelectField label="Religion" name="religion" value={data.religion} onChange={handleChange} options={['Hindu', 'Islam', 'Christian', 'Sikh', 'Jain', 'Buddhism', 'Others']} readOnly={readOnlyFields.religion} />
+            <SelectField label="Category" name="category" value={data.category} onChange={handleChange} options={['General', 'Other Backward Castes (OBC)', 'Scheduled Castes (SC)', 'Scheduled Tribes (ST)']} readOnly={readOnlyFields.category} />
+            <SelectField label="Residential Status" name="residentialStatus" value={data.residentialStatus} onChange={handleChange} options={['Resident Indian', 'NRI']} readOnly={readOnlyFields.residentialStatus} />
             <InputField label="Educational Qualification" name="education" value={data.education} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.education} />
             <InputField label="Qualifying Year" name="qualifyingYear" type="number" max={new Date().getFullYear()} value={data.qualifyingYear} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.qualifyingYear} />
             <InputField label="Disability Type" name="disabilityType" value={data.disabilityType} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.disabilityType} />
@@ -883,24 +1307,26 @@ export default function RLMSSupplementer() {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+              <InputField label="Nature of Employment" name="natureOfEmployment" value={data.natureOfEmployment} onChange={handleChange} readOnly={readOnlyFields.natureOfEmployment} />
               <SelectField label="Occupation Type" name="occupationType" value={data.occupationType} onChange={handleChange as (e: ChangeEvent<HTMLSelectElement>) => void}
                 options={['Service in Private Sector', 'Service in Public Sector', 'Service in Government Sector', 'Others - Professional', 'Others - Self-employed', 'Others - Retired', 'Others - House Wife', 'Others - Student', 'Business', 'Not Categorised']}
                 readOnly={readOnlyFields.occupationType} />
-              <InputField label="Organization Type" name="orgType" value={data.orgType} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.orgType} />
-              <InputField label="Employer Name" name="employerName" value={data.employerName} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.employerName} />
-              <InputField label="Department Name" name="empDeptName" value={data.empDeptName} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.empDeptName} />
-              <InputField label="Employee No" name="employeeNo" value={data.employeeNo} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.employeeNo} />
-              <InputField label="DDO's Designation" name="ddoDesignation" value={data.ddoDesignation} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.ddoDesignation} />
-              <InputField label="Nature of Employment" name="natureOfEmployment" value={data.natureOfEmployment} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.natureOfEmployment} />
-              <InputField label="Current Industry" name="currentIndustry" value={data.currentIndustry} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.currentIndustry} />
-              <InputField label="Corporate Rating" name="corporateRating" value={data.corporateRating} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.corporateRating} />
-              <InputField label="Designation" name="designation" value={data.designation} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.designation} />
-              <InputField label="Organisation's Website" name="orgWebsite" value={data.orgWebsite} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.orgWebsite} />
-              <InputField label="DDO's Address" name="ddoAddress" value={data.ddoAddress} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.ddoAddress} />
-              <InputField label="DDO PIN Code" name="ddoPin" value={data.ddoPin} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.ddoPin} />
-              <InputField label="Experience in Present Job (DOJ)" name="expPresentJobDOJ" type="date" value={data.expPresentJobDOJ} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.expPresentJobDOJ} />
-              <InputField label="Total Experience" name="totalExp" value={data.totalExp} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.totalExp} />
-              <InputField label="Remaining Service (Retirement)" name="retirementDate" type="date" value={data.retirementDate} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.retirementDate} />
+              <InputField label="Organization Type" name="orgType" value={data.orgType} onChange={handleChange} readOnly={readOnlyFields.orgType} />
+              <InputField label="Employer Name" name="employerName" value={data.employerName} onChange={handleChange} readOnly={readOnlyFields.employerName} />
+              <InputField label="Department Name" name="empDeptName" value={data.empDeptName} onChange={handleChange} readOnly={readOnlyFields.empDeptName} />
+              <InputField label="Employee No" name="employeeNo" value={data.employeeNo} onChange={handleChange} readOnly={readOnlyFields.employeeNo} />
+              <InputField label="Designation" name="designation" value={data.designation} onChange={handleChange} readOnly={readOnlyFields.designation} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+              <InputField label="DDO's Designation" name="ddoDesignation" value={data.ddoDesignation} onChange={handleChange} readOnly={readOnlyFields.ddoDesignation} />
+              <InputField label="DDO's Address" name="ddoAddress" value={data.ddoAddress} onChange={handleChange} readOnly={readOnlyFields.ddoAddress} />
+              <InputField label="DDO PIN Code" name="ddoPin" value={data.ddoPin} onChange={handleChange} readOnly={readOnlyFields.ddoPin} />
+              <InputField label="Current Industry" name="currentIndustry" value={data.currentIndustry} onChange={handleChange} readOnly={readOnlyFields.currentIndustry} />
+              <InputField label="Corporate Rating" name="corporateRating" value={data.corporateRating} onChange={handleChange} readOnly={readOnlyFields.corporateRating} />
+              <InputField label="Organisation's Website" name="orgWebsite" value={data.orgWebsite} onChange={handleChange} readOnly={readOnlyFields.orgWebsite} />
+              <InputField label="Experience in Present Job (DOJ)" name="expPresentJobDOJ" type="date" value={data.expPresentJobDOJ} onChange={handleChange} readOnly={readOnlyFields.expPresentJobDOJ} />
+              <InputField label="Total Experience" name="totalExp" value={data.totalExp} onChange={handleChange} readOnly={readOnlyFields.totalExp} />
+              <InputField label="Remaining Service (Retirement)" name="retirementDate" type="date" value={data.retirementDate} onChange={handleChange} readOnly={readOnlyFields.retirementDate} />
             </div>
             <div>
               <SectionHeader title="Previous Employment Details" />
@@ -924,13 +1350,13 @@ export default function RLMSSupplementer() {
       case 'Bank Details':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
-            <InputField label="Salary Account No." name="salaryAcNo" value={data.salaryAcNo} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.salaryAcNo} />
+            <InputField label="Salary Account No." name="salaryAcNo" value={trimLeadingZeros(data.salaryAcNo)} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.salaryAcNo} />
             <InputField label="Name of Bank" name="bankName" value={data.bankName} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.bankName} />
             <InputField label="Date of Account Opening" name="acOpenDate" type="date" value={data.acOpenDate} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.acOpenDate} />
-            <InputField label="Existing Xpress Cr. A/c No." name="xpressCrAcNo" value={data.xpressCrAcNo} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.xpressCrAcNo} />
+            <InputField label="Existing Xpress Cr. A/c No." name="xpressCrAcNo" value={trimLeadingZeros(data.xpressCrAcNo)} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.xpressCrAcNo} />
             <InputField label="Sanctioned Limit" name="sanctionedLimit" value={data.sanctionedLimit} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.sanctionedLimit} />
             <InputField label="No. of EMIs Paid" name="emisPaid" type="number" value={data.emisPaid} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.emisPaid} />
-            <InputField label="CIF No." name="cifNo" value={data.cifNo} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.cifNo} />
+            <InputField label="CIF No." name="cifNo" value={trimLeadingZeros(data.cifNo)} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.cifNo} />
             <InputField label="Name of Branch" name="branchName" value={data.branchName} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.branchName} />
             <InputField label="Name of Salary Package" name="salaryPackageName" value={data.salaryPackageName} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.salaryPackageName} />
             <InputField label="Date of Disbursement" name="disbursementDate" type="date" value={data.disbursementDate} onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void} readOnly={readOnlyFields.disbursementDate} />
@@ -1046,7 +1472,7 @@ export default function RLMSSupplementer() {
                 <SectionHeader title="Supplementary Formats & Annexures" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { id: 'pl12', label: '2. Irrevocable Authority (PL-12)' },
+                    { id: 'pl12', label: '2. Standing Instruction (PL-12)' },
                     { id: 'sec281', label: '3. IT Undertaking Sec 281' },
                     { id: 'nesl', label: '4. Consent to Disclose to NeSL' },
                     { id: 'annex2', label: '5. Annexure II' },
@@ -1066,49 +1492,640 @@ export default function RLMSSupplementer() {
             )}
           </div>
         );
+      case 'Standalone Annexures':
+        return (
+          <div className="space-y-6">
+            <div className="p-4 border rounded-lg shadow-sm" style={{ background: '#fdf4ff', borderColor: '#e9d5ff' }}>
+              <p className="text-sm text-slate-600 mb-4">
+                Fill in the required information below to print the standalone outputs: NeSL Consent, Section 281 Undertaking, Annexure II, Annexure 10, and PL-12.
+              </p>
+            </div>
+
+            {/* Visual feedback for unfilled fields */}
+            <style>{`
+              .annexure-input-unfilled {
+                background-color: #fee2e2 !important;
+                border-color: #fca5a5 !important;
+              }
+            `}</style>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Salutation *</label>
+                <select
+                  name="salutation"
+                  value={annexureData.salutation}
+                  onChange={handleAnnexureChange}
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('salutation')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                >
+                  <option value="">Select Salutation</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Dr.">Dr.</option>
+                  <option value="Prof.">Prof.</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Borrower Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={annexureData.name}
+                  onChange={handleAnnexureChange}
+                  placeholder="Full name"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('name')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Father's Name *</label>
+                <input
+                  type="text"
+                  name="fatherName"
+                  value={annexureData.fatherName}
+                  onChange={handleAnnexureChange}
+                  placeholder="Father's name"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('fatherName')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Loan Amount *</label>
+                <input
+                  type="text"
+                  name="loanAmount"
+                  value={annexureData.loanAmount}
+                  onChange={handleAnnexureChange}
+                  placeholder="Amount in Rs."
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('loanAmount')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">House Number *</label>
+                <input
+                  type="text"
+                  name="presentHouseNo"
+                  value={annexureData.presentHouseNo}
+                  onChange={handleAnnexureChange}
+                  placeholder="House number"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('presentHouseNo')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Street *</label>
+                <input
+                  type="text"
+                  name="presentStreet"
+                  value={annexureData.presentStreet}
+                  onChange={handleAnnexureChange}
+                  placeholder="Street address"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('presentStreet')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">City *</label>
+                <input
+                  type="text"
+                  name="presentCity"
+                  value={annexureData.presentCity}
+                  onChange={handleAnnexureChange}
+                  placeholder="City"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('presentCity')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">State *</label>
+                <input
+                  type="text"
+                  name="presentState"
+                  value={annexureData.presentState}
+                  onChange={handleAnnexureChange}
+                  placeholder="State"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('presentState')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">PIN Code *</label>
+                <input
+                  type="text"
+                  name="presentPin"
+                  value={annexureData.presentPin}
+                  onChange={handleAnnexureChange}
+                  placeholder="PIN code"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('presentPin')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Branch Name *</label>
+                <input
+                  type="text"
+                  name="branchName"
+                  value={annexureData.branchName}
+                  onChange={handleAnnexureChange}
+                  placeholder="Branch name"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('branchName')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Branch State *</label>
+                <input
+                  type="text"
+                  name="branchState"
+                  value={annexureData.branchState}
+                  onChange={handleAnnexureChange}
+                  placeholder="Branch state"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('branchState')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Branch PIN Code *</label>
+                <input
+                  type="text"
+                  name="branchPin"
+                  value={annexureData.branchPin}
+                  onChange={handleAnnexureChange}
+                  placeholder="Branch PIN code"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('branchPin')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Loan Variant *</label>
+                <select
+                  name="loanVariant"
+                  value={annexureData.loanVariant}
+                  onChange={handleAnnexureChange}
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('loanVariant')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                >
+                  <option value="">Select Loan Variant</option>
+                  <option value="Personal Loan">Personal Loan</option>
+                  <option value="PM Surya Ghar Loan">PM Surya Ghar Loan</option>
+                  <option value="Mudra Loan">Mudra Loan</option>
+                  <option value="Home Loan">Home Loan</option>
+                  <option value="Auto Loan">Auto Loan</option>
+                  <option value="Education Loan">Education Loan</option>
+                  <option value="Loan Against Securities">Loan Against Securities</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Application Date *</label>
+                <input
+                  type="date"
+                  name="applicationDate"
+                  value={annexureData.applicationDate}
+                  onChange={handleAnnexureChange}
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('applicationDate')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Document Execution Date *</label>
+                <input
+                  type="date"
+                  name="documentExecutionDate"
+                  value={annexureData.documentExecutionDate}
+                  onChange={handleAnnexureChange}
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('documentExecutionDate')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="md:col-span-2 mt-2">
+                <SectionHeader title="Additional Fields For Annexure 10 & PL-12" />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Borrower Designation *</label>
+                <input
+                  type="text"
+                  name="designation"
+                  value={annexureData.designation}
+                  onChange={handleAnnexureChange}
+                  placeholder="Designation"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('designation')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Department Name *</label>
+                <input
+                  type="text"
+                  name="departmentName"
+                  value={annexureData.departmentName}
+                  onChange={handleAnnexureChange}
+                  placeholder="Department name"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('departmentName')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4 md:col-span-2">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Employer Address *</label>
+                <input
+                  type="text"
+                  name="employerAddress"
+                  value={annexureData.employerAddress}
+                  onChange={handleAnnexureChange}
+                  placeholder="Employer address for PL-12"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('employerAddress')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Salary Account Number *</label>
+                <input
+                  type="text"
+                  name="salaryAcNo"
+                  value={annexureData.salaryAcNo}
+                  onChange={handleAnnexureChange}
+                  placeholder="Salary account number"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('salaryAcNo')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Proposed EMI *</label>
+                <input
+                  type="text"
+                  name="proposedEmi"
+                  value={annexureData.proposedEmi}
+                  onChange={handleAnnexureChange}
+                  placeholder="EMI amount"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('proposedEmi')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">Employee Number *</label>
+                <input
+                  type="text"
+                  name="employeeNo"
+                  value={annexureData.employeeNo}
+                  onChange={handleAnnexureChange}
+                  placeholder="Employee number"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('employeeNo')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">DDO Designation *</label>
+                <input
+                  type="text"
+                  name="ddoDesignation"
+                  value={annexureData.ddoDesignation}
+                  onChange={handleAnnexureChange}
+                  placeholder="DDO designation"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('ddoDesignation')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4 md:col-span-2">
+                <label className="mb-1 text-xs font-semibold text-slate-600">DDO Address *</label>
+                <input
+                  type="text"
+                  name="ddoAddress"
+                  value={annexureData.ddoAddress}
+                  onChange={handleAnnexureChange}
+                  placeholder="DDO address"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('ddoAddress')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-xs font-semibold text-slate-600">DDO PIN Code *</label>
+                <input
+                  type="text"
+                  name="ddoPin"
+                  value={annexureData.ddoPin}
+                  onChange={handleAnnexureChange}
+                  placeholder="DDO PIN code"
+                  className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors text-sm ${
+                    unfilledFields.includes('ddoPin')
+                      ? 'annexure-input-unfilled'
+                      : 'bg-white border-slate-300 focus:ring-purple-400'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Show unfilled fields warning */}
+            {unfilledFields.length > 0 && (
+              <div className="mt-6 p-4 border rounded-lg" style={{ background: '#fee2e2', borderColor: '#fca5a5' }}>
+                <p className="text-sm font-semibold" style={{ color: '#991b1b' }}>
+                  ⚠️ Please fill all required fields (marked with *). Highlighted fields are missing:
+                </p>
+                <ul className="text-sm mt-2" style={{ color: '#991b1b' }}>
+                  {unfilledFields.map(field => (
+                    <li key={field}>• {ANNEXURE_FIELD_LABELS[field]}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Print buttons - 6 options */}
+            <div className="mt-8 pt-6 border-t">
+              <h4 className="font-semibold text-sm mb-4 text-slate-700">Print Options:</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <button
+                  onClick={() => handlePrintSingleAnnexure('nesl')}
+                  className="text-white font-bold py-3 px-4 rounded-lg shadow-md transition hover:shadow-lg"
+                  style={{ background: '#0366d6' }}
+                >
+                  📄 Print NeSL Consent
+                </button>
+
+                <button
+                  onClick={() => handlePrintSingleAnnexure('sec281')}
+                  className="text-white font-bold py-3 px-4 rounded-lg shadow-md transition hover:shadow-lg"
+                  style={{ background: '#16a34a' }}
+                >
+                  📋 Print Section 281 Undertaking
+                </button>
+
+                <button
+                  onClick={() => handlePrintSingleAnnexure('annex2')}
+                  className="text-white font-bold py-3 px-4 rounded-lg shadow-md transition hover:shadow-lg"
+                  style={{ background: '#d97706' }}
+                >
+                  📎 Print Annexure II
+                </button>
+
+                <button
+                  onClick={() => handlePrintSingleAnnexure('annex10')}
+                  className="text-white font-bold py-3 px-4 rounded-lg shadow-md transition hover:shadow-lg"
+                  style={{ background: '#7c3aed' }}
+                >
+                  📨 Print Annexure 10
+                </button>
+
+                <button
+                  onClick={() => handlePrintSingleAnnexure('pl12')}
+                  className="text-white font-bold py-3 px-4 rounded-lg shadow-md transition hover:shadow-lg"
+                  style={{ background: '#0891b2' }}
+                >
+                  🖋️ Print PL-12
+                </button>
+
+                <button
+                  onClick={handlePrintAnnexures}
+                  className="text-white font-bold py-3 px-4 rounded-lg shadow-md transition hover:shadow-lg"
+                  style={{ background: 'linear-gradient(to right, #d4007f, #4e1a74)' }}
+                >
+                  🗂️ Print All 5 Documents
+                </button>
+              </div>
+            </div>
+
+            {/* Information about the annexures */}
+            <div className="mt-8 p-4 border rounded-lg" style={{ background: '#f0f9ff', borderColor: '#bfdbfe' }}>
+              <h4 className="font-semibold text-sm mb-3" style={{ color: '#1e40af' }}>Documents available from this tab:</h4>
+              <ul className="text-xs space-y-2">
+                <li><strong>1. NeSL Consent:</strong> Borrower's consent to submit data to NeSL</li>
+                <li><strong>2. Section 281 Undertaking:</strong> IT undertaking as per Section 281</li>
+                <li><strong>3. Annexure II:</strong> Supporting annexure document</li>
+                <li><strong>4. Annexure 10:</strong> Sanction communication to the DDO or employer</li>
+                <li><strong>5. PL-12:</strong> Standing instruction for salary account recovery</li>
+              </ul>
+            </div>
+          </div>
+        );
       default: return null;
     }
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
-  // Print mode: show only the document
+  // Print mode: show only the document (called from window.print())
   if (printDocId) {
+    const showWatermark = printDocId === 'pl12' || printDocId === 'annex10';
     return (
-      <div className="bg-white w-full max-w-[210mm] min-h-[297mm] mx-auto p-10 text-black relative overflow-hidden shadow-xl print:shadow-none print:p-[15mm] print:m-0">
+      <div
+        className="bg-white w-full max-w-[210mm] min-h-[297mm] mx-auto p-10 print:p-[15mm] text-black print:m-0 relative overflow-hidden shadow-xl print:shadow-none"
+        style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', colorAdjust: 'exact' } as React.CSSProperties}
+      >
+        {/* Decoratives: z-index:0, painted before content. No white background on the container
+            or content children — Chrome would paint those white layers over these z:0 elements. */}
         <TopRightCurve />
-        {(printDocId === 'pl12' || printDocId === 'annex10') && <Watermark />}
-        <div className="relative z-10">{renderPrintDocument()}</div>
+        {showWatermark && <Watermark />}
+        {/* Content: z-10 sits above decoratives. Must have NO explicit background so the
+            decoratives are visible through the content area padding/gaps. */}
+        <div className="relative z-10">
+          {renderPrintDocument()}
+        </div>
+      </div>
+    );
+  }
+
+  // Preview modal for document viewing and printing
+  if (previewDocId) {
+    const showWatermark = previewDocId === 'pl12' || previewDocId === 'annex10';
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        {/* Modal container */}
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl my-8">
+          {/* Header with close button */}
+          <div className="flex justify-between items-center p-4 border-b border-slate-200 sticky top-0 bg-white">
+            <h3 className="text-lg font-semibold text-slate-800">Document Preview</h3>
+            <button
+              onClick={() => setPreviewDocId(null)}
+              className="text-slate-500 hover:text-slate-700 transition"
+              aria-label="Close preview"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Document preview content */}
+          <div className="p-6 overflow-y-auto max-h-[calc(100vh-250px)]">
+            <div
+              className="bg-white max-w-[210mm] mx-auto p-8 text-black relative"
+              style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', colorAdjust: 'exact' } as React.CSSProperties}
+            >
+              <TopRightCurve />
+              {showWatermark && <Watermark />}
+              <div className="relative z-10">
+                {renderPrintDocument()}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer with action buttons */}
+          <div className="flex gap-3 p-4 border-t border-slate-200 bg-slate-50 sticky bottom-0">
+            <button
+              onClick={() => setPreviewDocId(null)}
+              className="flex-1 text-slate-700 font-semibold py-2 px-4 rounded-lg border border-slate-300 hover:bg-slate-100 transition"
+            >
+              Close
+            </button>
+            <button
+              onClick={handlePrintFromPreview}
+              className="flex-1 text-white font-semibold py-2 px-4 rounded-lg transition shadow-md"
+              style={{ background: 'linear-gradient(to right, #d4007f, #4e1a74)' }}
+            >
+              🖨️ Print Document
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 print:hidden">
-      {/* Header — matches app catalogue style */}
-      <header className="w-full flex items-center justify-between px-6"
+      {/* Header — identical style to Letter & Notice Generator */}
+      <header
+        className="w-full py-2 px-6"
         style={{
-          background: 'linear-gradient(to right, #d4007f, #4e1a74)',
+          background: "linear-gradient(to right, #d4007f, #4e1a74)",
           height: '101px',
           paddingTop: '0px'
-        }}>
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <button className="text-white/80 hover:text-white transition p-1 rounded-full hover:bg-white/10">
-              <ArrowLeft className="w-5 h-5" />
+        }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0">
+              <img
+                src={sbiLogoUrl}
+                alt="State Bank of India"
+                className="h-28 w-auto"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
+            </div>
+            <div className="flex flex-col justify-center">
+              <h1
+                className="text-white font-semibold leading-tight"
+                style={{ fontSize: "1.3rem" }}
+              >
+                RLMS Supplementer
+              </h1>
+              <p
+                className="text-white/90"
+                style={{ fontSize: "0.85rem" }}
+              >
+                {branchName}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClearData}
+              className="text-white/80 hover:text-white px-3 py-2 rounded transition font-semibold text-sm hover:bg-white/10 border border-white/30"
+            >
+              Clear Data
             </button>
-          </Link>
-          <img src={sbiLogoUrl} alt="SBI Logo" className="h-12 object-contain
-" />
-          <div>
-            <h1 className="text-white font-bold text-xl leading-tight">RLMS Supplementer</h1>
-            <p className="text-white/70 text-xs">Personal Loan Application Assistant</p>
+            <Button
+              variant="outline"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/40"
+              onClick={() => navigate("/")}
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
           </div>
         </div>
-        <button onClick={handleClearData}
-          className="text-white/70 hover:text-white px-3 py-2 rounded transition font-semibold text-sm hover:bg-white/10">
-          Clear Data
-        </button>
       </header>
 
       {/* Processing overlay */}

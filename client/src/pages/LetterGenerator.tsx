@@ -13,6 +13,7 @@ import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
 import { PDFDocument } from "pdf-lib";
 import html2canvas from "html2canvas";
+import { generateMultipleReferenceNumbers, GenerateRefOptions, GenerateRefResult } from "@/lib/refNumberEngine";
 
 interface CSVData {
   headers: string[];
@@ -51,6 +52,8 @@ interface DakRecord {
 }
 
 const STORAGE_KEY = "sbi-letter-generator";
+const DAK_STORAGE_KEY = "dak-records";  // Unified key used by refNumberEngine
+const HISTORY_LIMIT = 200;
 
 // Letter Type options (same as Dak Generator)
 const LETTER_TYPES = ["Letter", "Memo", "Note", "NOC", "Notices", "Others"];
@@ -67,7 +70,7 @@ const LETTER_DESTINATIONS = [
   "Others"
 ];
 
-// Dak Number Generator utility functions
+// Helper to get today's date and financial year info
 function getTodayInfo() {
   const now = new Date();
   const d = String(now.getDate()).padStart(2, "0");
@@ -80,19 +83,15 @@ function getTodayInfo() {
   return {
     dateDisplay: `${d}-${m}-${y}`,
     monthNo: m,
-    fyLabel: `${fyStart}-${String(fyEnd).slice(-2)}`
+    // Format: YY-YY (e.g., "25-26") - matches DakNumberGenerator and refNumberEngine
+    fyLabel: `${String(fyStart).slice(-2)}-${String(fyEnd).slice(-2)}`
   };
 }
 
-function generateSerial(records: DakRecord[], fy: string): string {
-  const sameFy = records.filter(r => r.financialYear === fy);
-  if (!sameFy.length) return "0001";
-  const max = Math.max(...sameFy.map(r => parseInt(r.serialNo)));
-  return String(max + 1).padStart(4, "0");
-}
-
-function buildRef(fy: string, month: string, serial: string, branchCode: string): string {
-  return `SBI/${branchCode}/${fy}/${month}/${serial}`;
+async function loadUnifiedDakRecords(): Promise<DakRecord[]> {
+  // Uses unified key from refNumberEngine for consistency across all apps
+  const records = (await loadData(DAK_STORAGE_KEY)) || [];
+  return Array.isArray(records) ? records : [];
 }
 
 export default function LetterGenerator() {
@@ -158,6 +157,10 @@ export default function LetterGenerator() {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ arrayBuffer });
       setTemplateHTML(result.value);
+      historyRef.current = result.value ? [result.value] : [];
+      historyIndexRef.current = result.value ? 0 : -1;
+      setHistory(historyRef.current);
+      setHistoryIndex(historyIndexRef.current);
       toast.success("Template loaded successfully");
     } catch (error) {
       toast.error("Failed to load template");
@@ -197,46 +200,72 @@ export default function LetterGenerator() {
   
   // Editor ref for cursor position
   const editorRef = useRef<HTMLDivElement>(null);
+  const editorInitializedRef = useRef(false);
   
   // Track undo/redo history
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const historyRef = useRef<string[]>([]);
+  const historyIndexRef = useRef(-1);
+
+  const updateHistoryState = (nextHistory: string[], nextIndex: number) => {
+    historyRef.current = nextHistory;
+    historyIndexRef.current = nextIndex;
+    setHistory(nextHistory);
+    setHistoryIndex(nextIndex);
+  };
+
+  const pushHistorySnapshot = (nextHTML: string) => {
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+
+    if (currentIndex >= 0 && currentHistory[currentIndex] === nextHTML) {
+      return;
+    }
+
+    const truncatedHistory = currentHistory.slice(0, currentIndex + 1);
+    const boundedHistory = [...truncatedHistory, nextHTML].slice(-HISTORY_LIMIT);
+    updateHistoryState(boundedHistory, boundedHistory.length - 1);
+  };
   
   // Handle template change with history tracking
   const handleTemplateChange = () => {
     if (editorRef.current) {
       const newHTML = editorRef.current.innerHTML;
       setTemplateHTML(newHTML);
-      
-      // Add to history
-      const newHistory = history.slice(0, historyIndex + 1);
-      newHistory.push(newHTML);
-      setHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
+
+      pushHistorySnapshot(newHTML);
     }
   };
   
-  // Initialize history when template is loaded
+  // Initialize editor content only once per entry into editor step.
   useEffect(() => {
-    if (templateHTML && history.length === 0) {
-      setHistory([templateHTML]);
-      setHistoryIndex(0);
-    }
-  }, [templateHTML]);
-  
-  // Sync editor content when switching to editor step
-  useEffect(() => {
-    if (currentStep === "editor" && editorRef.current && templateHTML) {
+    if (currentStep === "editor" && editorRef.current && !editorInitializedRef.current) {
       editorRef.current.innerHTML = templateHTML;
+      editorInitializedRef.current = true;
+
+      if (historyIndexRef.current === -1 && templateHTML) {
+        updateHistoryState([templateHTML], 0);
+      }
     }
-  }, [currentStep, templateHTML]);
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (currentStep !== "editor") {
+      editorInitializedRef.current = false;
+    }
+  }, [currentStep]);
   
   // Undo
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+
+    if (currentIndex > 0) {
+      const newIndex = currentIndex - 1;
+      const prevHTML = currentHistory[newIndex];
+      historyIndexRef.current = newIndex;
       setHistoryIndex(newIndex);
-      const prevHTML = history[newIndex];
       setTemplateHTML(prevHTML);
       if (editorRef.current) {
         editorRef.current.innerHTML = prevHTML;
@@ -246,10 +275,14 @@ export default function LetterGenerator() {
   
   // Redo
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+
+    if (currentIndex < currentHistory.length - 1) {
+      const newIndex = currentIndex + 1;
+      const nextHTML = currentHistory[newIndex];
+      historyIndexRef.current = newIndex;
       setHistoryIndex(newIndex);
-      const nextHTML = history[newIndex];
       setTemplateHTML(nextHTML);
       if (editorRef.current) {
         editorRef.current.innerHTML = nextHTML;
@@ -261,6 +294,58 @@ export default function LetterGenerator() {
   const applyFormat = (command: string) => {
     document.execCommand(command, false);
     handleTemplateChange();
+  };
+
+  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const isPrimaryModifier = e.metaKey || e.ctrlKey;
+
+    if (isPrimaryModifier && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        handleRedo();
+      } else {
+        handleUndo();
+      }
+      return;
+    }
+
+    if (isPrimaryModifier && e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      handleRedo();
+      return;
+    }
+
+    if (isPrimaryModifier && !e.altKey) {
+      const formatKey = e.key.toLowerCase();
+
+      if (formatKey === "b") {
+        e.preventDefault();
+        applyFormat("bold");
+        return;
+      }
+
+      if (formatKey === "i") {
+        e.preventDefault();
+        applyFormat("italic");
+        return;
+      }
+
+      if (formatKey === "u") {
+        e.preventDefault();
+        applyFormat("underline");
+        return;
+      }
+
+      if (e.shiftKey && formatKey === "x") {
+        e.preventDefault();
+        applyFormat("strikeThrough");
+      }
+    }
+
+    if (e.altKey && e.shiftKey && e.key === "5") {
+      e.preventDefault();
+      applyFormat("strikeThrough");
+    }
   };
   
   // Add field at cursor position
@@ -331,7 +416,7 @@ export default function LetterGenerator() {
     setCurrentStep("generate");
   };
   
-  // Generate letters with Dak integration
+  // Generate letters with Dak integration using centralized engine
   const handleGenerateLetters = async () => {
     if (!csvData || !templateHTML) {
       toast.error("Please upload both CSV and template");
@@ -339,21 +424,35 @@ export default function LetterGenerator() {
     }
     
     try {
-      // Load existing Dak records
-      const existingRecords = (await loadData("dak-records")) || [];
       const { dateDisplay, monthNo, fyLabel } = getTodayInfo();
       
-      const letters: GeneratedLetter[] = [];
-      let currentSerial = parseInt(generateSerial(existingRecords, fyLabel));
+      // Prepare options for reference number generation engine
+      const refOptions: GenerateRefOptions[] = csvData.rows.map((row) => ({
+        branchCode: branchCode || "XXXXX",
+        financialYear: fyLabel,
+        monthNo: monthNo,
+        dateDisplay: dateDisplay,
+        letterType: dakMetadata.letterType,
+        letterDestination: dakMetadata.letterDestination,
+        recipientDetails: dakMetadata.recipientDetails,
+        subject: dakMetadata.subject,
+        remarks: dakMetadata.remarks
+      }));
       
-      for (const row of csvData.rows) {
-        const serial = String(currentSerial).padStart(4, "0");
-        const refNo = buildRef(fyLabel, monthNo, serial, branchCode);
+      // Generate all reference numbers in one transaction
+      const refResults = await generateMultipleReferenceNumbers(refOptions);
+      
+      // Build letters with generated reference numbers
+      const letters: GeneratedLetter[] = [];
+      
+      for (let i = 0; i < csvData.rows.length; i++) {
+        const row = csvData.rows[i];
+        const { refNo, serialNo } = refResults[i];
         
         // Replace placeholders
         let content = templateHTML;
         
-        // Replace system fields first
+        // Replace system fields
         content = content.replace(new RegExp(`{{ref_no}}`, "g"), refNo);
         content = content.replace(new RegExp(`{{date}}`, "g"), dateDisplay);
         
@@ -371,7 +470,7 @@ export default function LetterGenerator() {
         });
         
         letters.push({
-          id: `letter-${currentSerial}`,
+          id: `letter-${serialNo}`,
           refNo,
           date: dateDisplay,
           content,
@@ -381,13 +480,12 @@ export default function LetterGenerator() {
             recipientDetails
           }
         });
-        
-        currentSerial++;
       }
       
       setGeneratedLetters(letters);
-      toast.success(`Generated ${letters.length} letters`);
+      toast.success(`Generated ${letters.length} letters with centralized reference numbers`);
     } catch (error) {
+      console.error(error);
       toast.error("Failed to generate letters");
     }
   };
@@ -405,37 +503,80 @@ export default function LetterGenerator() {
 
   // Render a letter HTML to a canvas PNG using html2canvas
   const renderLetterToCanvas = async (letter: GeneratedLetter): Promise<HTMLCanvasElement> => {
-    // Create an off-screen container with A4 content area dimensions
-    // A4 at 96dpi: 794px wide, 1123px tall
-    // Content area (minus 2.54cm top, 2cm sides, 2cm bottom):
-    //   width = 794 - 2*(2cm * 37.8px/cm) = 794 - 151 = 643px
-    //   height = 1123 - (2.54cm * 37.8) - (2cm * 37.8) = 1123 - 96 - 75.6 = 951px
-    const container = document.createElement('div');
-    container.style.cssText = `
+    // Create a fully isolated iframe document so html2canvas does not inherit
+    // Tailwind/root CSS variables (e.g. oklch colors unsupported by html2canvas).
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = `
       position: fixed;
-      top: -9999px;
-      left: -9999px;
-      width: 643px;
-      background: transparent;
-      font-family: Arial, 'Noto Sans Devanagari', sans-serif;
-      font-size: 12pt;
-      line-height: 1.4;
-      color: #000;
-      padding: 0;
-      margin: 0;
+      top: -10000px;
+      left: -10000px;
+      width: 700px;
+      height: 1200px;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+      background: #ffffff;
     `;
-    container.innerHTML = `
-      <div style="text-align: right; margin-bottom: 15px; font-family: Arial, sans-serif; font-size: 12pt;">
-        <strong>Ref No:</strong> ${letter.refNo}<br>
-        <strong>Date:</strong> ${letter.date}
-      </div>
-      <div style="font-family: Arial, 'Noto Sans Devanagari', sans-serif; font-size: 12pt; line-height: 1.4;">${letter.content}</div>
-    `;
-    document.body.appendChild(container);
+    document.body.appendChild(iframe);
 
     try {
-      const canvas = await html2canvas(container, {
-        backgroundColor: null, // transparent background
+      const doc = iframe.contentDocument;
+      if (!doc) {
+        throw new Error('Unable to access iframe document');
+      }
+
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8" />
+          <style>
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              color: #000000;
+              font-family: Arial, 'Noto Sans Devanagari', sans-serif;
+              font-size: 12pt;
+              line-height: 1.4;
+            }
+            #capture-root {
+              width: 643px;
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              color: #000000;
+            }
+            #capture-root, #capture-root * {
+              color: #000000;
+            }
+          </style>
+        </head>
+        <body>
+          <div id="capture-root">
+            <div style="text-align: right; margin-bottom: 15px; font-family: Arial, sans-serif; font-size: 12pt;">
+              <strong>Ref No:</strong> ${letter.refNo}<br>
+              <strong>Date:</strong> ${letter.date}
+            </div>
+            <div style="font-family: Arial, 'Noto Sans Devanagari', sans-serif; font-size: 12pt; line-height: 1.4;">${letter.content}</div>
+          </div>
+        </body>
+        </html>
+      `);
+      doc.close();
+
+      await new Promise(resolve => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+
+      const captureRoot = doc.getElementById('capture-root') as HTMLElement | null;
+      if (!captureRoot) {
+        throw new Error('Failed to initialize isolated render container');
+      }
+
+      const canvas = await html2canvas(captureRoot, {
+        backgroundColor: '#ffffff',
         scale: 2,
         useCORS: false,
         logging: false,
@@ -443,7 +584,7 @@ export default function LetterGenerator() {
       });
       return canvas;
     } finally {
-      document.body.removeChild(container);
+      document.body.removeChild(iframe);
     }
   };
 
@@ -518,7 +659,8 @@ export default function LetterGenerator() {
 
       // Save and download the PDF
       const pdfBytes = await outputDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const pdfBinary = new Uint8Array(pdfBytes);
+      const blob = new Blob([pdfBinary], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -546,23 +688,8 @@ export default function LetterGenerator() {
     }
     
     try {
-      // Update Dak records first
-      const existingRecords = (await loadData("dak-records")) || [];
-      const newRecords: DakRecord[] = generatedLetters.map((letter, idx) => ({
-        id: Date.now() + idx,
-        refNo: letter.refNo,
-        serialNo: letter.refNo.split("/").pop() || "",
-        financialYear: letter.refNo.split("/")[2] || "",
-        monthNo: letter.refNo.split("/")[3] || "",
-        dateDisplay: letter.date,
-        letterType: letter.dakMetadata.letterType,
-        letterDestination: letter.dakMetadata.letterDestination,
-        recipientDetails: letter.dakMetadata.recipientDetails,
-        subject: letter.dakMetadata.subject,
-        remarks: letter.dakMetadata.remarks
-      }));
-      
-      await saveData("dak-records", [...existingRecords, ...newRecords]);
+      // NOTE: Dak records are already saved by the centralized engine during generateLetters()
+      // No need to manually create and save DakRecords here
       
       // If letterhead is available, generate PDF with embedded letterhead
       if (letterheadPDF) {
@@ -660,8 +787,7 @@ export default function LetterGenerator() {
       remarks: ""
     });
     setGeneratedLetters([]);
-    setHistory([]);
-    setHistoryIndex(-1);
+    updateHistoryState([], -1);
     setCurrentStep("upload");
     toast.success("Reset complete");
   };
@@ -1032,12 +1158,13 @@ export default function LetterGenerator() {
                 ref={editorRef}
                 contentEditable
                 onInput={handleTemplateChange}
+                onKeyDown={handleEditorKeyDown}
                 className="min-h-[600px] p-6 border rounded bg-white prose max-w-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                 suppressContentEditableWarning
               />
               
               <p className="text-sm text-gray-500 mt-2">
-                Click inside the editor to place cursor, then click a field button to insert it at that position.
+                Click inside the editor to place cursor, then click a field button to insert it at that position. Shortcuts: Cmd/Ctrl+B, I, U, Z, Shift+Z, Y, and Cmd/Ctrl+Shift+X.
               </p>
             </Card>
           </div>

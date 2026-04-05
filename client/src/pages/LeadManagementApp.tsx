@@ -14,7 +14,7 @@ import { sbiLogoUrl } from '@/lib/assets';
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useBranch } from "@/contexts/BranchContext";
-import { ArrowLeft, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ArrowLeft, Plus, X, Edit2, Trash2, ChevronDown, ChevronUp, Search, Home, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -316,13 +316,14 @@ export default function LeadManagementApp() {
             </div>
           </div>
           
-          <div>
+          <div className="flex items-center gap-3">
             {isAdmin ? (
               <Button
                 variant="outline"
                 className="bg-green-500 hover:bg-green-600 text-white border-none"
                 onClick={handleLogout}
               >
+                <LogOut className="w-4 h-4 mr-2" />
                 Logout Admin
               </Button>
             ) : (
@@ -331,9 +332,19 @@ export default function LeadManagementApp() {
                 className="bg-white/20 hover:bg-white/30 text-white border-white/40"
                 onClick={() => setShowLoginDialog(true)}
               >
+                <LogIn className="w-4 h-4 mr-2" />
                 Admin Login
               </Button>
             )}
+            <Link href="/">
+              <Button
+                variant="outline"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/40 gap-2"
+              >
+                <Home className="w-4 h-4" />
+                Back to Home
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -341,14 +352,6 @@ export default function LeadManagementApp() {
       {/* Main Content */}
       <main className="flex-1 py-8 px-6">
         <div className="max-w-7xl mx-auto">
-          {/* Back to Home */}
-          <Link href="/">
-            <Button variant="ghost" className="mb-6">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-
           {/* Dashboard Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Total Leads */}

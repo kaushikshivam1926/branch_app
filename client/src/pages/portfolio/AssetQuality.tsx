@@ -4,17 +4,52 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { AlertTriangle, Search, Download, Printer, FileText, Filter } from "lucide-react";
+import { AlertTriangle, Search, Download, Printer, FileText, Filter, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAllRecords, getRecordCount, STORES } from "@/lib/portfolioDb";
 import { formatINR, formatINRFull } from "@/lib/portfolioTransform";
 import { useBranch } from "@/contexts/BranchContext";
+import { loadData as dbLoad, saveData as dbSave } from "@/lib/db";
+import { toast } from "sonner";
+import { generateMultipleReferenceNumbers, GenerateRefOptions } from "@/lib/refNumberEngine";
+
+// ─── Dak Record Interface ──────────────────
+interface DakRecord {
+  id: number;
+  refNo: string;
+  serialNo: string;
+  financialYear: string;
+  monthNo: string;
+  dateDisplay: string;
+  letterType: string;
+  letterDestination: string;
+  recipientDetails: string;
+  subject: string;
+  remarks: string;
+}
+
+function getDakTodayInfo() {
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, "0");
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const y = now.getFullYear();
+  const fyStart = now.getMonth() + 1 >= 4 ? y : y - 1;
+  const fyEnd = fyStart + 1;
+  return {
+    dateDisplay: `${d}-${m}-${y}`,
+    dateForSubject: `${d}/${m}/${y}`,
+    monthNo: m,
+    // Format: YY-YY (e.g., "25-26") - matches DakNumberGenerator and refNumberEngine
+    fyLabel: `${String(fyStart).slice(-2)}-${String(fyEnd).slice(-2)}`,
+  };
+}
 
 export default function AssetQuality() {
-  const { branchName, branchCode } = useBranch();
+  const { branchName, branchCode, address1, address2, state, pinCode } = useBranch();
   const [loans, setLoans] = useState<any[]>([]);
   const [ccod, setCcod] = useState<any[]>([]);
   const [npaReport, setNpaReport] = useState<any[]>([]);
+  const [customerDim, setCustomerDim] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,6 +58,7 @@ export default function AssetQuality() {
   const [viewMode, setViewMode] = useState<"overview" | "npa-list" | "sma-watch">("overview");
   const [selectedForNotice, setSelectedForNotice] = useState<Set<string>>(new Set());
   const [showNoticePreview, setShowNoticePreview] = useState(false);
+  const [noticeLang, setNoticeLang] = useState<"en" | "hi">("en");
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadData(); }, []);
@@ -35,10 +71,11 @@ export default function AssetQuality() {
       ]);
       if (lc === 0 && cc === 0 && nc === 0) { setHasData(false); setLoading(false); return; }
       setHasData(true);
-      const [ld, cd, nd] = await Promise.all([
-        getAllRecords(STORES.LOAN_DATA), getAllRecords(STORES.CCOD_DATA), getAllRecords(STORES.NPA_DATA)
+      const [ld, cd, nd, custd] = await Promise.all([
+        getAllRecords(STORES.LOAN_DATA), getAllRecords(STORES.CCOD_DATA),
+        getAllRecords(STORES.NPA_DATA), getAllRecords(STORES.CUSTOMER_DIM)
       ]);
-      setLoans(ld); setCcod(cd); setNpaReport(nd);
+      setLoans(ld); setCcod(cd); setNpaReport(nd); setCustomerDim(custd);
     } catch (e) { console.error(e); }
     setLoading(false);
   }
@@ -48,27 +85,35 @@ export default function AssetQuality() {
     const totalCCODBalance = ccod.reduce((s, c) => s + Math.abs(c.CurrentBalance || 0), 0);
     const totalAdvances = totalLoanOutstanding + totalCCODBalance;
 
-    // NPA from loan balance
-    const npaLoans = loans.filter(l => l.SMA_CLASS === "NPA" || (l.NEWIRAC && !["00", "01", ""].includes(l.NEWIRAC)));
-    const npaCCOD = ccod.filter(c => c.SMA_CLASS === "NPA" || (c.NEWIRAC && !["00", "01", "0", ""].includes(c.NEWIRAC)));
+    // NPA from loan balance — use Computed_SMA_Class (RBI IRAC norms)
+    // Exclude NPA-exempt accounts: OD against Bank's Deposits and Staff OD
+    const npaLoans = loans.filter(l =>
+      !l.Computed_NPA_Exempt &&
+      (l.Computed_Is_NPA === true || l.Computed_SMA_Class === "NPA")
+    );
+    const npaCCOD = ccod.filter(c =>
+      !c.Computed_NPA_Exempt &&
+      (c.Computed_Is_NPA === true || c.Computed_SMA_Class === "NPA")
+    );
     const npaLoanAmount = npaLoans.reduce((s, l) => s + Math.abs(l.OUTSTAND || 0), 0);
     const npaCCODAmount = npaCCOD.reduce((s, c) => s + Math.abs(c.CurrentBalance || 0), 0);
     const totalNPAAmount = npaLoanAmount + npaCCODAmount;
     const grossNPA = totalAdvances > 0 ? (totalNPAAmount / totalAdvances) * 100 : 0;
 
-    // SMA breakdown
+    // SMA breakdown — use Computed_SMA_Class (RBI IRAC norms: SMA-0=1-30d, SMA-1=31-60d, SMA-2=61-90d)
+    // Exempt accounts (OD against Deposits, Staff OD) are excluded from SMA stress counts
     const smaLoans = {
-      SMA0: loans.filter(l => l.SMA_CLASS === "SMA0"),
-      SMA1: loans.filter(l => l.SMA_CLASS === "SMA1"),
-      SMA2: loans.filter(l => l.SMA_CLASS === "SMA2"),
+      "SMA-0": loans.filter(l => !l.Computed_NPA_Exempt && l.Computed_SMA_Class === "SMA-0"),
+      "SMA-1": loans.filter(l => !l.Computed_NPA_Exempt && l.Computed_SMA_Class === "SMA-1"),
+      "SMA-2": loans.filter(l => !l.Computed_NPA_Exempt && l.Computed_SMA_Class === "SMA-2"),
     };
     const smaCCOD = {
-      SMA0: ccod.filter(c => c.SMA_CLASS === "SMA0"),
-      SMA1: ccod.filter(c => c.SMA_CLASS === "SMA1"),
-      SMA2: ccod.filter(c => c.SMA_CLASS === "SMA2"),
+      "SMA-0": ccod.filter(c => !c.Computed_NPA_Exempt && c.Computed_SMA_Class === "SMA-0"),
+      "SMA-1": ccod.filter(c => !c.Computed_NPA_Exempt && c.Computed_SMA_Class === "SMA-1"),
+      "SMA-2": ccod.filter(c => !c.Computed_NPA_Exempt && c.Computed_SMA_Class === "SMA-2"),
     };
 
-    const smaData = ["SMA0", "SMA1", "SMA2"].map(cls => ({
+    const smaData = ["SMA-0", "SMA-1", "SMA-2"].map(cls => ({
       class: cls,
       loanCount: (smaLoans as any)[cls].length,
       loanAmount: (smaLoans as any)[cls].reduce((s: number, l: any) => s + Math.abs(l.OUTSTAND || 0), 0),
@@ -123,16 +168,43 @@ export default function AssetQuality() {
     return filtered.sort((a, b) => Math.abs(b.OUTSTANDING || 0) - Math.abs(a.OUTSTANDING || 0));
   }, [npaReport, searchTerm, iracFilter, typeFilter]);
 
-  // SMA watchlist
+  // Mobile lookup: account number → MobileNo from Customer 360
+  // Strategy: LOAN_DATA/CCOD_DATA has CIF; CUSTOMER_DIM has CIF → MobileNo
+  const mobileLookup = useMemo(() => {
+    // Build CIF → MobileNo from Customer 360
+    const cifToMobile: Record<string, string> = {};
+    for (const c of customerDim) {
+      if (c.CIF && c.MobileNo) cifToMobile[c.CIF] = c.MobileNo;
+    }
+    // Build account → CIF from loan and CC/OD data
+    const acToMobile: Record<string, string> = {};
+    for (const l of loans) {
+      if (l.LoanKey && l.CIF && cifToMobile[l.CIF]) {
+        acToMobile[l.LoanKey] = cifToMobile[l.CIF];
+      }
+    }
+    for (const c of ccod) {
+      if (c.LoanKey && c.CIF && cifToMobile[c.CIF]) {
+        acToMobile[c.LoanKey] = cifToMobile[c.CIF];
+      }
+    }
+    return acToMobile;
+  }, [loans, ccod, customerDim]);
+
+  // SMA watchlist — use Computed_SMA_Class (RBI IRAC norms); exclude NPA-exempt accounts
   const smaWatchlist = useMemo(() => {
-    const smaLoansFiltered = loans.filter(l => ["SMA0", "SMA1", "SMA2"].includes(l.SMA_CLASS));
-    const smaCCODFiltered = ccod.filter(c => ["SMA0", "SMA1", "SMA2"].includes(c.SMA_CLASS));
+    const smaLoansFiltered = loans.filter(l =>
+      !l.Computed_NPA_Exempt && ["SMA-0", "SMA-1", "SMA-2"].includes(l.Computed_SMA_Class || "")
+    );
+    const smaCCODFiltered = ccod.filter(c =>
+      !c.Computed_NPA_Exempt && ["SMA-0", "SMA-1", "SMA-2"].includes(c.Computed_SMA_Class || "")
+    );
     const combined = [
-      ...smaLoansFiltered.map(l => ({ acNo: l.LoanKey, name: l.CUSTNAME, type: "Term Loan", sma: l.SMA_CLASS, outstanding: Math.abs(l.OUTSTAND || 0), emiOverdue: l.EMISOvrdue || 0, irac: l.NEWIRAC })),
-      ...smaCCODFiltered.map(c => ({ acNo: c.LoanKey, name: c.CUSTNAME, type: "CC/OD", sma: c.SMA_CLASS, outstanding: Math.abs(c.CurrentBalance || 0), emiOverdue: 0, irac: c.NEWIRAC })),
+      ...smaLoansFiltered.map(l => ({ acNo: l.LoanKey, name: l.CUSTNAME, type: "Term Loan", sma: l.Computed_SMA_Class, dpd: l.Computed_DPD || 0, outstanding: Math.abs(l.OUTSTAND || 0), emiOverdue: l.EMISOvrdue || 0, irac: l.NEWIRAC })),
+      ...smaCCODFiltered.map(c => ({ acNo: c.LoanKey, name: c.CUSTNAME, type: "CC/OD", sma: c.Computed_SMA_Class, dpd: c.Computed_DPD || 0, outstanding: Math.abs(c.CurrentBalance || 0), emiOverdue: 0, irac: c.NEWIRAC })),
     ];
     return combined.sort((a, b) => {
-      const order: Record<string, number> = { SMA2: 0, SMA1: 1, SMA0: 2 };
+      const order: Record<string, number> = { "SMA-2": 0, "SMA-1": 1, "SMA-0": 2 };
       return (order[a.sma] ?? 3) - (order[b.sma] ?? 3) || b.outstanding - a.outstanding;
     });
   }, [loans, ccod]);
@@ -152,40 +224,195 @@ export default function AssetQuality() {
     }
   }
 
-  function printNotices() {
+  async function printNotices() {
+    if (selectedForNotice.size === 0) return;
     setShowNoticePreview(true);
-    setTimeout(() => {
-      const printContent = printRef.current;
-      if (!printContent) return;
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) return;
-      printWindow.document.write(`
-        <html><head><title>NPA Recovery Notices</title>
-        <style>
-          @page { size: A4; margin: 1.5cm; }
-          body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: #000; }
-          .notice { page-break-after: always; padding: 20px; }
-          .notice:last-child { page-break-after: auto; }
-          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-          .header h1 { font-size: 16pt; font-weight: bold; margin: 0; }
-          .header h2 { font-size: 13pt; margin: 5px 0; }
-          .header p { font-size: 10pt; margin: 2px 0; }
-          .ref-line { display: flex; justify-content: space-between; margin: 15px 0; font-size: 11pt; }
-          .address-block { margin: 15px 0; }
-          .subject { font-weight: bold; text-align: center; margin: 15px 0; text-decoration: underline; }
-          .body-text { text-align: justify; margin: 10px 0; }
-          table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-          th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; font-size: 11pt; }
-          th { background: #f0f0f0; font-weight: bold; }
-          .signature { margin-top: 40px; }
-          .signature-line { margin-top: 50px; }
-        </style></head><body>
-        ${printContent.innerHTML}
-        </body></html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
-    }, 500);
+
+    // ── 1. Generate reference numbers using centralized engine ──────────────
+    try {
+      const { dateDisplay, dateForSubject, monthNo, fyLabel } = getDakTodayInfo();
+      
+      // Prepare options for reference number generation engine
+      const refOptions: GenerateRefOptions[] = Array.from(selectedForNotice).map((acNo) => {
+        const npa = npaReport.find((n: any) => n.ACCOUNT_NO === acNo);
+        const customerName = npa?.CUSTOMER_NAME || acNo;
+        return {
+          branchCode: branchCode || "_____",  // Fallback if branch code is not loaded
+          financialYear: fyLabel,
+          monthNo: monthNo,
+          dateDisplay: dateDisplay,
+          letterType: "Notices",
+          letterDestination: "Customer",
+          recipientDetails: customerName,
+          subject: `NPA Notice dt. ${dateForSubject} - A/c ${acNo}`,
+          remarks: "Auto-generated"
+        };
+      });
+      
+      // Generate all reference numbers in one transaction
+      const refResults = await generateMultipleReferenceNumbers(refOptions);
+      
+      // Build map of acNo → refNo from results
+      const refMap: Record<string, string> = {};
+      Array.from(selectedForNotice).forEach((acNo, idx) => {
+        refMap[acNo] = refResults[idx].refNo;
+      });
+      
+      toast.success(`${refResults.length} reference number${refResults.length > 1 ? "s" : ""} generated. Opening print window…`);
+
+      // ── 2. Build print HTML with LAMS format ───────────────────────────────
+      // (NOTE: Dak records are already saved by the centralized engine)
+      const { dateDisplay: printDate } = getDakTodayInfo();
+      const isHindi = noticeLang === "hi";
+      const fontFace = isHindi
+        ? `@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');`
+        : "";
+      const bodyFont = isHindi
+        ? `'Noto Sans Devanagari', 'Mangal', Arial, sans-serif`
+        : `'Times New Roman', Georgia, serif`;
+
+      const noticesHTML = Array.from(selectedForNotice).map(acNo => {
+        const npa = npaReport.find((n: any) => n.ACCOUNT_NO === acNo);
+        if (!npa) return "";
+        const refNo = refMap[acNo] || "";
+        const customerName = npa.CUSTOMER_NAME || "";
+        const fatherName = npa.FATHER_NAME || "";
+        const addr1 = npa.ADDRESS1 || "";
+        const addr2 = npa.ADDRESS2 || "";
+        const addr3 = npa.ADDRESS3 || "";
+        const pinCode = npa.POSTCODE || npa.PIN || "";
+        // Mobile: prefer Customer 360 lookup, fallback to NPA file field
+        const mobile = mobileLookup[acNo] || npa.MOBILE || npa.MOBILE_NO || "";
+        const loanSegment = npa.SYS || npa.ACCTDESC || npa.IRAC_DESC || "Loan";
+        const outstanding = formatINRFull(Math.abs(npa.OUTSTANDING || 0));
+        const npaDate = npa.NPA_DATE
+          ? (() => { const dt = new Date(npa.NPA_DATE); const dd = String(dt.getDate()).padStart(2,"0"); const mm = String(dt.getMonth()+1).padStart(2,"0"); return `${dd}/${mm}/${dt.getFullYear()}`; })()
+          : (npa.IRRGDT || "—");
+
+        if (isHindi) {
+          return `
+            <div class="notice">
+              <div class="address-block">
+                <p>&#2358;&#2381;&#2352;&#2368;/&#2358;&#2381;&#2352;&#2368;&#2350;&#2340;&#2368;/&#2325;&#2369;&#2350;&#2366;&#2352;&#2368; <strong>${customerName}</strong></p>
+                ${fatherName ? `<p>&#2346;&#2367;&#2340;&#2366;/&#2346;&#2340;&#2367; &#2358;&#2381;&#2352;&#2368; ${fatherName}</p>` : ""}
+                ${addr1 ? `<p>${addr1}</p>` : ""}
+                ${addr2 ? `<p>${addr2}</p>` : ""}
+                ${addr3 ? `<p>${addr3}</p>` : ""}
+                ${pinCode ? `<p>PIN &#8211; ${pinCode}</p>` : ""}
+                ${mobile ? `<p>&#2350;&#2379;&#2348;&#2366;&#2311;&#2354; &#8211; ${mobile}</p>` : ""}
+              </div>
+              <div class="ref-line">
+                <span>&#2346;&#2340;&#2381;&#2352; &#2360;&#2306;&#2326;&#2381;&#2351;&#2366;: <strong>${refNo}</strong></span>
+                <span>&#2342;&#2367;&#2344;&#2366;&#2306;&#2325;: <strong>${printDate}</strong></span>
+              </div>
+              <p class="salutation">&#2350;&#2361;&#2379;&#2342;&#2351;&#2366;/&#2346;&#2381;&#2352;&#2367;&#2351; &#2350;&#2361;&#2379;&#2342;&#2351;,</p>
+              <p class="subject-line">&#2310;&#2346;&#2325;&#2366; ${loanSegment} &#2307;&#2339; &#2326;&#2366;&#2340;&#2366; &#2360;&#2306;&#2326;&#2381;&#2351;&#2366; ${acNo}</p>
+              <ol>
+                <li>&#2310;&#2346;&#2325;&#2375; &#2313;&#2346;&#2352;&#2381;&#2351;&#2369;&#2325;&#2381;&#2340; ${loanSegment} &#2307;&#2339; &#2326;&#2366;&#2340;&#2366; &#2342;&#2367;&#2344;&#2366;&#2306;&#2325; <strong>${npaDate}</strong> &#2360;&#2375; &#2309;&#2344;&#2367;&#2351;&#2350;&#2367;&#2340;/&#2309;&#2340;&#2367;&#2342;&#2375;&#2351; &#2361;&#2376; &#2324;&#2352; &#2311;&#2360; &#2346;&#2340;&#2381;&#2352; &#2325;&#2368; &#2340;&#2367;&#2925;&#2367; &#2340;&#2325; &#2325;&#2369;&#2354; &#2348;&#2325;&#2366;&#2351;&#2366; &#8377; <strong>${outstanding}</strong> &#2361;&#2376;&#2404;</li>
+                <li>&#2325;&#2371;&#2346;&#2351;&#2366; &#2309;&#2344;&#2367;&#2351;&#2350;&#2367;&#2340; &#2352;&#2366;&#2358;&#2367; &#2340;&#2369;&#2352;&#2306;&#2340; &#2332;&#2350;&#2366; &#2325;&#2352; &#2309;&#2346;&#2344;&#2375; &#2326;&#2366;&#2340;&#2375; &#2325;&#2379; &#2344;&#2367;&#2351;&#2350;&#2367;&#2340; &#2325;&#2352;&#2375;&#2306; &#2324;&#2352; &#2332;&#2367;&#2360;&#2360;&#2375; &#2310;&#2346;&#2325;&#2375; &#2325;&#2381;&#2352;&#2375;&#2337;&#2367;&#2335; &#2360;&#2381;&#2325;&#2379;&#2352; &#2346;&#2352; &#2346;&#2381;&#2352;&#2340;&#2367;&#2325;&#2370;&#2354; &#2346;&#2381;&#2352;&#2349;&#2366;&#2357; &#2344; &#2346;&#2396;&#2375;&#2404;</li>
+                <li>&#2332;&#2376;&#2360;&#2366; &#2325;&#2367; &#2310;&#2346; &#2332;&#2366;&#2344;&#2340;&#2375; &#2361;&#2376;&#2306;, &#2307;&#2339; &#2326;&#2366;&#2340;&#2375; &#2350;&#2375;&#2306; &#2309;&#2344;&#2367;&#2351;&#2350;&#2367;&#2340;&#2340;&#2366; &#2346;&#2352; &#2342;&#2306;&#2337;&#2366;&#2340;&#2381;&#2350;&#2325; &#2346;&#2381;&#2352;&#2349;&#2366;&#2352; &#2354;&#2327;&#2366;&#2351;&#2366; &#2332;&#2366;&#2340;&#2366; &#2361;&#2376; &#2324;&#2352; &#2348;&#2376;&#2306;&#2325; &#2325;&#2366;&#2344;&#2370;&#2344;&#2368; &#2325;&#2366;&#2352;&#2381;&#2352;&#2357;&#2366;&#2908; &#2358;&#2369;&#2352;&#2370; &#2325;&#2352;&#2344;&#2375; &#2325;&#2366; &#2349;&#2368; &#2309;&#2343;&#2367;&#2325;&#2366;&#2352; &#2361;&#2376;&#2404;</li>
+                <li>&#2351;&#2342;&#2367; &#2310;&#2346;&#2344;&#2375; &#2313;&#2346;&#2352;&#2381;&#2351;&#2369;&#2325;&#2381;&#2340; &#2307;&#2339; &#2326;&#2366;&#2340;&#2375; &#2325;&#2379; &#2344;&#2367;&#2351;&#2350;&#2367;&#2340; &#2348;&#2344;&#2366;&#2344;&#2375; &#2325;&#2375; &#2354;&#2367;&#2319; &#2352;&#2366;&#2358;&#2367; &#2346;&#2361;&#2354;&#2375; &#2361;&#2368; &#2332;&#2350;&#2366; &#2325;&#2352; &#2342;&#2368; &#2361;&#2379; &#2340;&#2379; &#2325;&#2371;&#2346;&#2351;&#2366; &#2311;&#2360; &#2360;&#2306;&#2342;&#2375;&#2358; &#2325;&#2379; &#2309;&#2344;&#2342;&#2375;&#2326;&#2366; &#2325;&#2352;&#2375;&#2306;&#2404;</li>
+              </ol>
+              <div class="signature">
+                <p>&#2349;&#2357;&#2342;&#2368;&#2351;,</p>
+                <p class="sig-gap"></p>
+                <p><strong>&#2358;&#2366;&#2326;&#2366; &#2346;&#2381;&#2352;&#2348;&#2306;&#2343;&#2325;</strong></p>
+                <p class="branch-info-hi">&#2349;&#2366;&#2352;&#2340;&#2368;&#2351; &#2360;&#2381;&#2335;&#2375;&#2335; &#2348;&#2376;&#2306;&#2325;</p>
+                <p class="branch-info-hi">${branchName || "Branch"}</p>
+                ${address1 ? `<p class="branch-info-hi">${address1}</p>` : ""}
+                ${address2 ? `<p class="branch-info-hi">${address2}</p>` : ""}
+                <p class="branch-info-hi">${state || ""}, PIN - ${pinCode || ""}</p>
+                <p class="note-gap"></p>
+                <p class="note">(&#2344;&#2379;&#2335; : &#2351;&#2361; &#2319;&#2325; &#2325;&#2306;&#2346;&#2381;&#2351;&#2370;&#2335;&#2352; &#2346;&#2381;&#2352;&#2339;&#2366;&#2354;&#2368; &#2332;&#2344;&#2367;&#2340; &#2346;&#2340;&#2381;&#2352; &#2361;&#2376;&#2404; &#2311;&#2360; &#2346;&#2352; &#2361;&#2360;&#2381;&#2340;&#2366;&#2325;&#2381;&#2359;&#2352; &#2325;&#2368; &#2310;&#2357;&#2358;&#2381;&#2351;&#2325;&#2340;&#2366; &#2344;&#2361;&#2368;&#2306; &#2361;&#2376;&#2404;)</p>
+              </div>
+            </div>`;
+        } else {
+          return `
+            <div class="notice">
+              <div class="address-block">
+                <p>To,</p>
+                <p><strong>Shri/Smt/Kum ${customerName}</strong></p>
+                ${fatherName ? `<p>S/o, W/o, D/o <strong>${fatherName}</strong></p>` : ""}
+                ${addr1 ? `<p>${addr1}</p>` : ""}
+                ${addr2 ? `<p>${addr2}</p>` : ""}
+                ${addr3 ? `<p>${addr3}</p>` : ""}
+                ${pinCode ? `<p>PIN &#8211; ${pinCode}</p>` : ""}
+                ${mobile ? `<p>Mobile &#8211; ${mobile}</p>` : "+91-"}
+              </div>
+              <div class="ref-line">
+                <span>Letter No: <strong>${refNo}</strong></span>
+                <span>Dated: <strong>${printDate}</strong></span>
+              </div>
+              <p class="salutation">Madam/Dear Sir,</p>
+              <p class="subject-line">YOUR ${loanSegment} ACCOUNT NO. ${acNo}</p>
+              <ol>
+                <li>Your captioned <strong>${loanSegment}</strong> account is irregular/overdue since <strong>${npaDate}</strong> and total outstanding as on date of this letter is <strong>&#8377; ${outstanding}</strong>.</li>
+                <li>Please arrange to regularize your above account by depositing irregular amount immediately to avoid adverse impact on credit score.</li>
+                <li>As you are aware, irregularity in the loan account attracts applicable penal charges as well as Bank also has the right to initiate legal proceedings.</li>
+                <li>Please ignore if you have already deposited the amount for regularisation of the above loan account.</li>
+              </ol>
+              <div class="signature">
+                <p>Yours faithfully,</p>
+                <p class="sig-gap"></p>
+                <p><strong>Branch Manager</strong></p>
+                <p class="branch-info">State Bank of India</p>
+                <p class="branch-info">${branchName || "Branch"}</p>
+                ${address1 ? `<p class="branch-info">${address1}</p>` : ""}
+                ${address2 ? `<p class="branch-info">${address2}</p>` : ""}
+                <p class="branch-info">${state || ""}, PIN - ${pinCode || ""}</p>
+                <p class="note-gap"></p>
+                <p class="note">(N.B.: It is a computer system generated advice. Needs no signature)</p>
+              </div>
+            </div>`;
+        }
+      }).join("");
+
+      setTimeout(() => {
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) { toast.error("Please allow popups to print notices."); return; }
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8" />
+            <title>NPA Notices — ${printDate}</title>
+            <style>
+              ${fontFace}
+              @page { size: A4; margin: 1.8cm 2cm; }
+              *, *::before, *::after { box-sizing: border-box; }
+              body { font-family: ${bodyFont}; font-size: 12pt; line-height: 1.55; color: #000; margin: 0; padding: 0; }
+              .notice { page-break-after: always; padding: 0; }
+              .notice:last-child { page-break-after: auto; }
+              .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+              .header h1 { font-size: 15pt; font-weight: bold; margin: 0 0 4px 0; letter-spacing: 0.5px; }
+              .header h2 { font-size: 12pt; margin: 3px 0; }
+              .header p { font-size: 10pt; margin: 2px 0; }
+              .address-block { margin: 16px 0 12px 0; }
+              .address-block p { margin: 2px 0; }
+              .ref-line { display: flex; justify-content: space-between; margin: 14px 0; font-size: 11pt; }
+              .salutation { margin: 14px 0 6px 0; }
+              .subject-line { font-weight: bold; text-decoration: underline; margin: 6px 0 12px 0; }
+              ol { margin: 0 0 16px 0; padding-left: 22px; }
+              ol li { margin-bottom: 10px; text-align: justify; }
+              .signature { margin-top: 36px; }
+              .signature p { margin: 3px 0; }
+              .sig-gap { height: 44px; }
+              .note-gap { height: 15px; }
+              .branch-info { font-size: 11pt; margin: 2px 0; }
+              .branch-info-hi { font-size: 11pt; margin: 2px 0; }
+              .note { text-align: center; font-size: 9.5pt; font-style: italic; margin-top: 6px; }
+            </style>
+          </head>
+          <body>${noticesHTML}</body>
+          </html>`);
+        printWindow.document.close();
+        setTimeout(() => printWindow.print(), 600);
+      }, 300);
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save Dak records or open print window.");
+    }
   }
 
   function exportCSV() {
@@ -201,10 +428,11 @@ export default function AssetQuality() {
     a.click(); URL.revokeObjectURL(url);
   }
 
+  // RBI IRAC SMA colour map (SMA-0=1-30d, SMA-1=31-60d, SMA-2=61-90d)
   const smaColorMap: Record<string, string> = {
-    SMA0: "bg-yellow-100 text-yellow-800 border-yellow-300",
-    SMA1: "bg-orange-100 text-orange-800 border-orange-300",
-    SMA2: "bg-red-100 text-red-800 border-red-300",
+    "SMA-0": "bg-yellow-100 text-yellow-800 border-yellow-300",
+    "SMA-1": "bg-orange-100 text-orange-800 border-orange-300",
+    "SMA-2": "bg-red-100 text-red-800 border-red-300",
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -347,9 +575,28 @@ export default function AssetQuality() {
               <Button variant="outline" size="sm" onClick={selectAllNPA}>
                 {selectedForNotice.size === filteredNPA.length ? "Deselect All" : "Select All"}
               </Button>
+              {/* Language toggle */}
+              <div className="flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setNoticeLang("en")}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition ${
+                    noticeLang === "en" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Languages className="w-3 h-3" /> EN
+                </button>
+                <button
+                  onClick={() => setNoticeLang("hi")}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition ${
+                    noticeLang === "hi" ? "bg-orange-500 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Languages className="w-3 h-3" /> &#2361;&#2367;
+                </button>
+              </div>
               {selectedForNotice.size > 0 && (
                 <Button size="sm" onClick={printNotices} className="bg-red-600 hover:bg-red-700 text-white">
-                  <Printer className="w-4 h-4 mr-1" /> Print Notices ({selectedForNotice.size})
+                  <Printer className="w-4 h-4 mr-1" /> Print Notices ({selectedForNotice.size}) &mdash; {noticeLang === "hi" ? "&#2361;&#2367;&#2306;&#2342;&#2368;" : "English"}
                 </Button>
               )}
             </div>
@@ -365,6 +612,7 @@ export default function AssetQuality() {
                     <th className="py-3 px-3 w-8"><input type="checkbox" checked={selectedForNotice.size === filteredNPA.length && filteredNPA.length > 0} onChange={selectAllNPA} /></th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Account No</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Customer</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Mobile</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Outstanding</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">NPA Date</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">IRAC</th>
@@ -380,6 +628,15 @@ export default function AssetQuality() {
                       <td className="py-2 px-3">
                         <p className="text-gray-700 font-medium">{n.CUSTOMER_NAME}</p>
                         {n.FATHER_NAME && <p className="text-xs text-gray-400">S/o {n.FATHER_NAME}</p>}
+                      </td>
+                      <td className="py-2 px-3">
+                        {mobileLookup[n.ACCOUNT_NO] ? (
+                          <a href={`tel:${mobileLookup[n.ACCOUNT_NO]}`} className="text-xs font-mono text-blue-700 hover:underline flex items-center gap-1">
+                            <span>&#128222;</span> {mobileLookup[n.ACCOUNT_NO]}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-300 italic">—</span>
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right font-medium text-red-700">{formatINRFull(Math.abs(n.OUTSTANDING || 0))}</td>
                       <td className="py-2 px-3 text-xs text-gray-600">{n.NPA_DATE ? new Date(n.NPA_DATE).toLocaleDateString("en-IN") : "-"}</td>
@@ -422,8 +679,10 @@ export default function AssetQuality() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Account No</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Customer</th>
+                    <th className="text-left py-3 px-3 text-gray-500 font-medium">Mobile</th>
                     <th className="text-left py-3 px-3 text-gray-500 font-medium">Type</th>
-                    <th className="text-center py-3 px-3 text-gray-500 font-medium">SMA</th>
+                    <th className="text-center py-3 px-3 text-gray-500 font-medium">SMA Class</th>
+                    <th className="text-center py-3 px-3 text-gray-500 font-medium">DPD</th>
                     <th className="text-right py-3 px-3 text-gray-500 font-medium">Outstanding</th>
                     <th className="text-center py-3 px-3 text-gray-500 font-medium">EMIs O/D</th>
                   </tr>
@@ -432,10 +691,24 @@ export default function AssetQuality() {
                   {smaWatchlist.map(s => (
                     <tr key={s.acNo} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-2 px-3 font-mono text-xs text-gray-700">{s.acNo}</td>
-                      <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[200px]">{s.name}</td>
+                      <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[180px]">{s.name}</td>
+                      <td className="py-2 px-3">
+                        {mobileLookup[s.acNo] ? (
+                          <a href={`tel:${mobileLookup[s.acNo]}`} className="text-xs font-mono text-blue-700 hover:underline flex items-center gap-1">
+                            <span>&#128222;</span> {mobileLookup[s.acNo]}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-300 italic">—</span>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-xs text-gray-600">{s.type}</td>
                       <td className="py-2 px-3 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${smaColorMap[s.sma] || "bg-gray-100 text-gray-600"}`}>{s.sma}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${smaColorMap[s.sma] || "bg-gray-100 text-gray-600 border-gray-200"}`}>{s.sma}</span>
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <span className={`text-xs font-bold ${
+                          s.dpd >= 61 ? "text-red-700" : s.dpd >= 31 ? "text-orange-600" : "text-yellow-700"
+                        }`}>{s.dpd}d</span>
                       </td>
                       <td className="py-2 px-3 text-right font-medium text-gray-800">{formatINR(s.outstanding)}</td>
                       <td className="py-2 px-3 text-center">{s.emiOverdue > 0 ? <span className="text-red-600 font-medium">{s.emiOverdue}</span> : "-"}</td>
@@ -448,65 +721,8 @@ export default function AssetQuality() {
         </>
       )}
 
-      {/* Hidden Notice Print Template */}
-      <div ref={printRef} style={{ display: showNoticePreview ? "block" : "none", position: "absolute", left: "-9999px" }}>
-        {Array.from(selectedForNotice).map(acNo => {
-          const npa = npaReport.find((n: any) => n.ACCOUNT_NO === acNo);
-          if (!npa) return null;
-          return (
-            <div key={acNo} className="notice">
-              <div className="header">
-                <h1>STATE BANK OF INDIA</h1>
-                <h2>{branchName}</h2>
-                <p>Branch Code: {branchCode}</p>
-              </div>
-              <div className="ref-line">
-                <span>Ref: {branchCode}/NPA/{acNo}/{new Date().getFullYear()}</span>
-                <span>Date: {today}</span>
-              </div>
-              <div className="address-block">
-                <p><strong>To,</strong></p>
-                <p>{npa.CUSTOMER_NAME}</p>
-                {npa.FATHER_NAME && <p>S/o {npa.FATHER_NAME}</p>}
-                {npa.ADDRESS1 && <p>{npa.ADDRESS1}</p>}
-                {npa.ADDRESS2 && <p>{npa.ADDRESS2}</p>}
-                {npa.ADDRESS3 && <p>{npa.ADDRESS3}</p>}
-                {npa.POSTCODE && <p>PIN: {npa.POSTCODE}</p>}
-              </div>
-              <p className="subject">NOTICE FOR RECOVERY OF DUES — ACCOUNT NO: {acNo}</p>
-              <p className="body-text">Dear Sir/Madam,</p>
-              <p className="body-text">
-                It is observed that your above-mentioned loan account has been classified as <strong>Non-Performing Asset ({npa.IRAC_DESC})</strong> with
-                effect from <strong>{npa.NPA_DATE ? new Date(npa.NPA_DATE).toLocaleDateString("en-IN") : "N/A"}</strong>.
-              </p>
-              <table>
-                <tbody>
-                  <tr><th>Account Number</th><td>{acNo}</td></tr>
-                  <tr><th>Outstanding Amount</th><td>{formatINRFull(Math.abs(npa.OUTSTANDING || 0))}</td></tr>
-                  <tr><th>NPA Classification</th><td>{npa.IRAC_DESC}</td></tr>
-                  <tr><th>NPA Date</th><td>{npa.NPA_DATE ? new Date(npa.NPA_DATE).toLocaleDateString("en-IN") : "N/A"}</td></tr>
-                  <tr><th>Account Type</th><td>{npa.SYS}</td></tr>
-                </tbody>
-              </table>
-              <p className="body-text">
-                You are hereby called upon to pay the above-mentioned outstanding dues within <strong>15 days</strong> from the date of receipt of this notice,
-                failing which the Bank shall be constrained to initiate appropriate legal proceedings for recovery of its dues, including but not limited to
-                proceedings under the SARFAESI Act, 2002, and/or filing of suit before the Debt Recovery Tribunal.
-              </p>
-              <p className="body-text">
-                You are advised to contact the undersigned at the earliest to discuss the matter and arrange for immediate repayment.
-              </p>
-              <div className="signature">
-                <p>Yours faithfully,</p>
-                <p className="signature-line">_________________________</p>
-                <p><strong>Chief/Branch Manager</strong></p>
-                <p>State Bank of India</p>
-                <p>{branchName}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* printRef retained for potential future use */}
+      <div ref={printRef} style={{ display: "none" }} />
     </div>
   );
 }

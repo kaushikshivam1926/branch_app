@@ -702,6 +702,15 @@ export default function RemindersApp() {
                 Admin Login
               </Button>
             )}
+            <Link href="/">
+              <Button
+                variant="outline"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/40 gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Home
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -709,14 +718,6 @@ export default function RemindersApp() {
       {/* Main Content */}
       <main className="flex-1 py-8 px-6">
         <div className="max-w-7xl mx-auto">
-          {/* Back to Home */}
-          <Link href="/">
-            <Button variant="ghost" className="mb-6">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-
           {/* Add Task Button */}
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-2xl font-semibold" style={{ color: "#4e1a74" }}>

@@ -1,23 +1,78 @@
 /**
  * Customer 360 Dashboard
- * Complete customer view with deposits, loans, and exposure analysis
+ * Multi-flag customer segmentation: customers can hold multiple flags simultaneously
+ * Flags: Ultra HNI, HNI (by TRV), Wealth, Salary, Senior Citizen, NRI, Staff, Regular
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, Users, User, ChevronDown, ChevronUp, X, Download } from "lucide-react";
+import { Search, Users, X, Download, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAllRecords, getRecordsByIndex, getRecordCount, STORES } from "@/lib/portfolioDb";
 import { formatINR, formatINRFull } from "@/lib/portfolioTransform";
+
+// All available flags in priority order
+const ALL_FLAGS = ["Ultra HNI", "HNI", "Wealth", "Salary", "Senior Citizen", "NRI", "Staff", "Regular"] as const;
+type CustomerFlag = typeof ALL_FLAGS[number];
+
+// Flag colour map
+const FLAG_COLORS: Record<string, string> = {
+  "Ultra HNI":      "bg-amber-100 text-amber-800 border-amber-300",
+  "HNI":            "bg-blue-100 text-blue-800 border-blue-300",
+  "Wealth":         "bg-purple-100 text-purple-800 border-purple-300",
+  "Salary":         "bg-cyan-100 text-cyan-800 border-cyan-300",
+  "Senior Citizen": "bg-orange-100 text-orange-800 border-orange-300",
+  "NRI":            "bg-green-100 text-green-800 border-green-300",
+  "Staff":          "bg-rose-100 text-rose-800 border-rose-300",
+  "Regular":        "bg-gray-100 text-gray-600 border-gray-300",
+};
+
+// Active (selected) filter button colours
+const FLAG_ACTIVE_COLORS: Record<string, string> = {
+  "Ultra HNI":      "bg-amber-600 text-white border-amber-600",
+  "HNI":            "bg-blue-600 text-white border-blue-600",
+  "Wealth":         "bg-purple-600 text-white border-purple-600",
+  "Salary":         "bg-cyan-600 text-white border-cyan-600",
+  "Senior Citizen": "bg-orange-600 text-white border-orange-600",
+  "NRI":            "bg-green-600 text-white border-green-600",
+  "Staff":          "bg-rose-600 text-white border-rose-600",
+  "Regular":        "bg-gray-600 text-white border-gray-600",
+};
+
+function FlagBadge({ flag, small = false }: { flag: string; small?: boolean }) {
+  const cls = FLAG_COLORS[flag] || "bg-gray-100 text-gray-600 border-gray-300";
+  return (
+    <span className={`inline-block border rounded-full font-medium ${small ? "text-[10px] px-1.5 py-0" : "text-xs px-2 py-0.5"} ${cls}`}>
+      {flag}
+    </span>
+  );
+}
+
+function getCustomerFlags(c: any): string[] {
+  // Use pre-computed CustomerFlags if available, otherwise derive
+  if (Array.isArray(c.CustomerFlags) && c.CustomerFlags.length > 0) return c.CustomerFlags;
+  const flags: string[] = [];
+  const trv = Math.abs(c.TotalDeposits || 0) + Math.abs(c.TotalLoans || 0) + Math.abs(c.TotalCCOD || 0);
+  if (trv >= 10000000) flags.push("Ultra HNI");
+  else if (trv >= 2500000) flags.push("HNI");
+  if (c.Wealth_Client_Flag === "Wealth") flags.push("Wealth");
+  if (c.Salary_Account_Flag === "Salary") flags.push("Salary");
+  if (c.SeniorCitizen_Flag === "Senior Citizen") flags.push("Senior Citizen");
+  if (c.NRI_Client_Flag === "NRI") flags.push("NRI");
+  if (c.Staff_Flag === "Staff") flags.push("Staff");
+  if (flags.length === 0) flags.push("Regular");
+  return flags;
+}
 
 export default function Customer360() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [segmentFilter, setSegmentFilter] = useState("All");
+  const [selectedFlags, setSelectedFlags] = useState<string[]>([]);
   const [selectedCIF, setSelectedCIF] = useState<string | null>(null);
   const [customerDetail, setCustomerDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -42,12 +97,19 @@ export default function Customer360() {
         getRecordsByIndex(STORES.LOAN_DATA, "CIF", cif),
         getRecordsByIndex(STORES.CCOD_DATA, "CIF", cif),
       ]);
-      // Also check loan data where Shadow_CIF matches
       const customer = customers.find(c => c.CIF === cif);
       setCustomerDetail({ customer, deposits, loans, ccod });
     } catch (e) { console.error(e); }
     setDetailLoading(false);
   }
+
+  function toggleFlag(flag: string) {
+    setSelectedFlags(prev =>
+      prev.includes(flag) ? prev.filter(f => f !== flag) : [...prev, flag]
+    );
+  }
+
+  function clearFlags() { setSelectedFlags([]); }
 
   const filteredCustomers = useMemo(() => {
     let filtered = customers;
@@ -58,24 +120,40 @@ export default function Customer360() {
         (c.CIF || "").includes(term)
       );
     }
-    if (segmentFilter !== "All") filtered = filtered.filter(c => c.CustomerSegment === segmentFilter);
-    return filtered.sort((a, b) => ((b.TotalDeposits || 0) + (b.TotalLoans || 0) + (b.TotalCCOD || 0)) - ((a.TotalDeposits || 0) + (a.TotalLoans || 0) + (a.TotalCCOD || 0)));
-  }, [customers, searchTerm, segmentFilter]);
-
-  const segments = useMemo(() => {
-    const segMap: Record<string, number> = {};
-    for (const c of customers) {
-      const seg = c.CustomerSegment || "Regular";
-      segMap[seg] = (segMap[seg] || 0) + 1;
+    if (selectedFlags.length > 0) {
+      filtered = filtered.filter(c => {
+        const flags = getCustomerFlags(c);
+        // Customer must have ALL selected flags (AND logic)
+        return selectedFlags.every(sf => flags.includes(sf));
+      });
     }
-    return Object.entries(segMap).sort((a, b) => b[1] - a[1]);
+    return filtered.sort((a, b) => {
+      const trvA = Math.abs(a.TotalDeposits || 0) + Math.abs(a.TotalLoans || 0) + Math.abs(a.TotalCCOD || 0);
+      const trvB = Math.abs(b.TotalDeposits || 0) + Math.abs(b.TotalLoans || 0) + Math.abs(b.TotalCCOD || 0);
+      return trvB - trvA;
+    });
+  }, [customers, searchTerm, selectedFlags]);
+
+  // Count customers per flag
+  const flagCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of customers) {
+      const flags = getCustomerFlags(c);
+      for (const f of flags) {
+        counts[f] = (counts[f] || 0) + 1;
+      }
+    }
+    return counts;
   }, [customers]);
 
   function exportCSV() {
-    const headers = ["CIF", "Customer Name", "Segment", "HNI Category", "Total Deposits", "Total Loans", "Total CC/OD", "Total Relationship Value", "Deposit Count", "Loan Count", "CC/OD Count", "Has NPA"];
+    const headers = ["CIF", "Customer Name", "Flags", "Total Deposits", "Total Loans", "Total CC/OD", "Total Relationship Value", "Deposit Count", "Loan Count", "CC/OD Count", "Has NPA"];
     const csvContent = [
       headers.join(","),
-      ...filteredCustomers.map(c => [c.CIF, `"${c.CustName}"`, c.CustomerSegment, c.HNI_Category, c.TotalDeposits, c.TotalLoans, c.TotalCCOD, c.TotalRelationshipValue, c.DepositCount, c.LoanCount, c.CCODCount, c.HasNPA].join(","))
+      ...filteredCustomers.map(c => {
+        const flags = getCustomerFlags(c);
+        return [c.CIF, `"${c.CustName}"`, `"${flags.join("; ")}"`, c.TotalDeposits, c.TotalLoans, c.TotalCCOD, c.TotalRelationshipValue, c.DepositCount, c.LoanCount, c.CCODCount, c.HasNPA].join(",");
+      })
     ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -83,12 +161,6 @@ export default function Customer360() {
     a.href = url; a.download = `customer_360_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click(); URL.revokeObjectURL(url);
   }
-
-  const segColorMap: Record<string, string> = {
-    "Ultra HNI": "bg-amber-100 text-amber-800", HNI: "bg-blue-100 text-blue-800",
-    NRI: "bg-green-100 text-green-800", Wealth: "bg-purple-100 text-purple-800",
-    Salary: "bg-cyan-100 text-cyan-800", Regular: "bg-gray-100 text-gray-600",
-  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
   if (!hasData) return (
@@ -99,12 +171,13 @@ export default function Customer360() {
     </div></div>
   );
 
-  // Detail view
+  // ── Detail view ─────────────────────────────────────────────
   if (selectedCIF && customerDetail) {
     const { customer, deposits, loans, ccod } = customerDetail;
     const totalDeposits = deposits.reduce((s: number, d: any) => s + (d.CurrentBalance || 0), 0);
     const totalLoans = loans.reduce((s: number, l: any) => s + Math.abs(l.OUTSTAND || 0), 0);
     const totalCCOD = ccod.reduce((s: number, c: any) => s + Math.abs(c.CurrentBalance || 0), 0);
+    const custFlags = getCustomerFlags(customer || {});
 
     return (
       <div className="space-y-6">
@@ -122,25 +195,22 @@ export default function Customer360() {
             {/* Customer Header */}
             <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-bold">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-bold shrink-0">
                   {(customer?.CustName || "?").charAt(0)}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3 className="text-xl font-bold text-gray-800">{customer?.CustName || "Unknown"}</h3>
                   <p className="text-sm text-gray-500">CIF: {selectedCIF}</p>
-                  <div className="flex gap-2 mt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${segColorMap[customer?.CustomerSegment] || "bg-gray-100 text-gray-600"}`}>
-                      {customer?.CustomerSegment || "Regular"}
-                    </span>
-                    {customer?.HasNPA && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">NPA</span>}
-                    {customer?.NRI_Client_Flag === "NRI" && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">NRI</span>}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {custFlags.map(f => <FlagBadge key={f} flag={f} />)}
+                    {customer?.HasNPA && <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 border border-red-300">NPA</span>}
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <p className="text-xs text-gray-500">Mobile</p>
                   <p className="text-sm text-gray-700">{customer?.MobileNo || "-"}</p>
                   <p className="text-xs text-gray-500 mt-1">Address</p>
-                  <p className="text-sm text-gray-700">{[customer?.Add1, customer?.Add2, customer?.Add3].filter(Boolean).join(", ") || "-"}</p>
+                  <p className="text-sm text-gray-700 max-w-[200px] text-right">{[customer?.Add1, customer?.Add2, customer?.Add3].filter(Boolean).join(", ") || "-"}</p>
                 </div>
               </div>
             </div>
@@ -162,9 +232,9 @@ export default function Customer360() {
                 <p className="text-xl font-bold text-green-800">{formatINR(totalCCOD)}</p>
                 <p className="text-xs text-green-500">{ccod.length} accounts</p>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-xs font-medium text-blue-600">Total Relationship Value</p>
-                <p className="text-xl font-bold text-blue-800">
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                <p className="text-xs font-medium text-indigo-600">Total Relationship Value</p>
+                <p className="text-xl font-bold text-indigo-800">
                   {formatINR(Math.abs(totalDeposits) + Math.abs(totalLoans) + Math.abs(totalCCOD))}
                 </p>
               </div>
@@ -184,6 +254,7 @@ export default function Customer360() {
                         <th className="text-right py-2 px-3 text-gray-500 font-medium">Balance</th>
                         <th className="text-right py-2 px-3 text-gray-500 font-medium">Rate</th>
                         <th className="text-left py-2 px-3 text-gray-500 font-medium">Maturity</th>
+                        <th className="text-left py-2 px-3 text-gray-500 font-medium">Flags</th>
                         <th className="text-left py-2 px-3 text-gray-500 font-medium">Status</th>
                       </tr>
                     </thead>
@@ -196,6 +267,15 @@ export default function Customer360() {
                           <td className="py-2 px-3 text-right font-medium text-gray-800">{formatINRFull(d.CurrentBalance)}</td>
                           <td className="py-2 px-3 text-right text-gray-600">{d.INTRATE > 0 ? `${d.INTRATE.toFixed(2)}%` : "-"}</td>
                           <td className="py-2 px-3 text-xs text-gray-600">{d.Maturity_Dt ? new Date(d.Maturity_Dt).toLocaleDateString("en-IN") : "-"}</td>
+                          <td className="py-2 px-3">
+                            <div className="flex flex-wrap gap-1">
+                              {d.Wealth_Client_Flag === "Wealth" && <FlagBadge flag="Wealth" small />}
+                              {d.Salary_Account_Flag === "Salary" && <FlagBadge flag="Salary" small />}
+                              {d.SeniorCitizen_Flag === "Senior Citizen" && <FlagBadge flag="Senior Citizen" small />}
+                              {d.NRI_Client_Flag === "NRI" && <FlagBadge flag="NRI" small />}
+                              {d.Staff_Flag === "Staff" && <FlagBadge flag="Staff" small />}
+                            </div>
+                          </td>
                           <td className="py-2 px-3">
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                               d.Dormancy_Flag === "Active" ? "bg-green-100 text-green-700" :
@@ -226,6 +306,7 @@ export default function Customer360() {
                         <th className="text-right py-2 px-3 text-gray-500 font-medium">Rate</th>
                         <th className="text-center py-2 px-3 text-gray-500 font-medium">SMA</th>
                         <th className="text-center py-2 px-3 text-gray-500 font-medium">EMIs O/D</th>
+                        <th className="text-left py-2 px-3 text-gray-500 font-medium">Flags</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -246,6 +327,9 @@ export default function Customer360() {
                           </td>
                           <td className="py-2 px-3 text-center">
                             {l.EMISOvrdue > 0 ? <span className="text-red-600 font-medium">{l.EMISOvrdue}</span> : <span className="text-gray-400">-</span>}
+                          </td>
+                          <td className="py-2 px-3">
+                            {l.Staff_Flag === "Staff" && <FlagBadge flag="Staff" small />}
                           </td>
                         </tr>
                       ))}
@@ -301,39 +385,106 @@ export default function Customer360() {
     );
   }
 
-  // List view
+  // ── List view ────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Customer 360</h2>
-        <p className="text-gray-500 mt-1">Complete customer view with deposits, loans, and exposure analysis</p>
+        <p className="text-gray-500 mt-1">Complete customer view — customers can hold multiple flags simultaneously</p>
       </div>
 
-      {/* Segment Summary */}
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => setSegmentFilter("All")}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${segmentFilter === "All" ? "bg-purple-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          All ({customers.length.toLocaleString("en-IN")})
-        </button>
-        {segments.map(([seg, count]) => (
-          <button key={seg} onClick={() => setSegmentFilter(seg)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${segmentFilter === seg ? "bg-purple-700 text-white" : `${segColorMap[seg] || "bg-gray-100 text-gray-600"} hover:opacity-80`}`}>
-            {seg} ({count.toLocaleString("en-IN")})
-          </button>
-        ))}
+      {/* Flag Summary Cards */}
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+        {ALL_FLAGS.map(flag => {
+          const count = flagCounts[flag] || 0;
+          const isSelected = selectedFlags.includes(flag);
+          return (
+            <button
+              key={flag}
+              onClick={() => toggleFlag(flag)}
+              className={`p-2 rounded-lg border text-center transition-all ${
+                isSelected
+                  ? FLAG_ACTIVE_COLORS[flag]
+                  : `${FLAG_COLORS[flag]} hover:opacity-80`
+              }`}
+            >
+              <p className="text-sm font-bold">{count.toLocaleString("en-IN")}</p>
+              <p className="text-[10px] leading-tight mt-0.5">{flag}</p>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Search & Export */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+      {/* Search, Filter & Export */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
         <div className="flex gap-3 items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder="Search by customer name or CIF..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
+            <input
+              type="text"
+              placeholder="Search by customer name or CIF..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+            />
           </div>
-          <Button variant="outline" size="sm" onClick={exportCSV}><Download className="w-4 h-4 mr-1" /> Export</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFilterOpen(v => !v)}
+            className={selectedFlags.length > 0 ? "border-purple-400 text-purple-700" : ""}
+          >
+            <ChevronDown className="w-4 h-4 mr-1" />
+            Flags {selectedFlags.length > 0 ? `(${selectedFlags.length})` : ""}
+          </Button>
+          {selectedFlags.length > 0 && (
+            <Button variant="outline" size="sm" onClick={clearFlags} className="text-gray-500">
+              <X className="w-4 h-4 mr-1" /> Clear
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={exportCSV}>
+            <Download className="w-4 h-4 mr-1" /> Export
+          </Button>
         </div>
-        <p className="text-xs text-gray-400 mt-2">{filteredCustomers.length.toLocaleString("en-IN")} customers</p>
+
+        {/* Multi-select flag filter dropdown */}
+        {filterOpen && (
+          <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+            <p className="text-xs text-gray-500 mb-2 font-medium">Select flags to filter (AND logic — customer must have ALL selected flags):</p>
+            <div className="flex flex-wrap gap-2">
+              {ALL_FLAGS.map(flag => {
+                const isSelected = selectedFlags.includes(flag);
+                return (
+                  <button
+                    key={flag}
+                    onClick={() => toggleFlag(flag)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      isSelected ? FLAG_ACTIVE_COLORS[flag] : `${FLAG_COLORS[flag]} hover:opacity-80`
+                    }`}
+                  >
+                    {flag} ({(flagCounts[flag] || 0).toLocaleString("en-IN")})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            {filteredCustomers.length.toLocaleString("en-IN")} customers
+            {selectedFlags.length > 0 && (
+              <span className="ml-2 text-purple-600">
+                — filtered by: {selectedFlags.join(" + ")}
+              </span>
+            )}
+          </p>
+          {selectedFlags.length > 0 && (
+            <button onClick={clearFlags} className="text-xs text-purple-600 hover:underline">
+              Clear all filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Customer Table */}
@@ -344,39 +495,44 @@ export default function Customer360() {
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">CIF</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">Customer Name</th>
-                <th className="text-center py-3 px-3 text-gray-500 font-medium">Segment</th>
+                <th className="text-left py-3 px-3 text-gray-500 font-medium">Flags</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Deposits</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Loans</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">CC/OD</th>
-                <th className="text-right py-3 px-3 text-gray-500 font-medium">Total Relationship Value</th>
+                <th className="text-right py-3 px-3 text-gray-500 font-medium">Total Rel. Value</th>
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">A/c</th>
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">NPA</th>
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCustomers.slice(0, 500).map(c => (
-                <tr key={c.CIF} className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => loadCustomerDetail(c.CIF)}>
-                  <td className="py-2 px-3 font-mono text-xs text-gray-700">{c.CIF}</td>
-                  <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[200px]">{c.CustName || "-"}</td>
-                  <td className="py-2 px-3 text-center">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${segColorMap[c.CustomerSegment] || "bg-gray-100 text-gray-600"}`}>{c.CustomerSegment}</span>
-                  </td>
-                  <td className="py-2 px-3 text-right text-blue-700 font-medium">{formatINR(c.TotalDeposits)}</td>
-                  <td className="py-2 px-3 text-right text-purple-700 font-medium">{c.TotalLoans > 0 ? formatINR(c.TotalLoans) : "-"}</td>
-                  <td className="py-2 px-3 text-right text-green-700 font-medium">{c.TotalCCOD > 0 ? formatINR(c.TotalCCOD) : "-"}</td>
-                  <td className="py-2 px-3 text-right font-medium text-blue-700">{formatINR(c.TotalRelationshipValue || (Math.abs(c.TotalDeposits || 0) + Math.abs(c.TotalLoans || 0) + Math.abs(c.TotalCCOD || 0)))}</td>
-                  <td className="py-2 px-3 text-center text-xs text-gray-500">{c.DepositCount + c.LoanCount + c.CCODCount}</td>
-                  <td className="py-2 px-3 text-center">
-                    {c.HasNPA ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">Yes</span> : <span className="text-gray-400">-</span>}
-                  </td>
-                  <td className="py-2 px-3 text-center">
-                    <Button variant="outline" size="sm" className="text-xs h-7 px-2" onClick={(e) => { e.stopPropagation(); loadCustomerDetail(c.CIF); }}>
-                      View
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {filteredCustomers.slice(0, 500).map(c => {
+                const flags = getCustomerFlags(c);
+                return (
+                  <tr key={c.CIF} className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer" onClick={() => loadCustomerDetail(c.CIF)}>
+                    <td className="py-2 px-3 font-mono text-xs text-gray-700">{c.CIF}</td>
+                    <td className="py-2 px-3 text-gray-700 font-medium truncate max-w-[180px]">{c.CustName || "-"}</td>
+                    <td className="py-2 px-3">
+                      <div className="flex flex-wrap gap-1">
+                        {flags.map(f => <FlagBadge key={f} flag={f} small />)}
+                      </div>
+                    </td>
+                    <td className="py-2 px-3 text-right text-blue-700 font-medium">{formatINR(c.TotalDeposits)}</td>
+                    <td className="py-2 px-3 text-right text-purple-700 font-medium">{c.TotalLoans > 0 ? formatINR(c.TotalLoans) : "-"}</td>
+                    <td className="py-2 px-3 text-right text-green-700 font-medium">{c.TotalCCOD > 0 ? formatINR(c.TotalCCOD) : "-"}</td>
+                    <td className="py-2 px-3 text-right font-medium text-indigo-700">{formatINR(c.TotalRelationshipValue || (Math.abs(c.TotalDeposits || 0) + Math.abs(c.TotalLoans || 0) + Math.abs(c.TotalCCOD || 0)))}</td>
+                    <td className="py-2 px-3 text-center text-xs text-gray-500">{(c.DepositCount || 0) + (c.LoanCount || 0) + (c.CCODCount || 0)}</td>
+                    <td className="py-2 px-3 text-center">
+                      {c.HasNPA ? <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">Yes</span> : <span className="text-gray-400">-</span>}
+                    </td>
+                    <td className="py-2 px-3 text-center">
+                      <Button variant="outline" size="sm" className="text-xs h-7 px-2" onClick={(e) => { e.stopPropagation(); loadCustomerDetail(c.CIF); }}>
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {filteredCustomers.length > 500 && <p className="text-center text-xs text-gray-400 py-3">Showing first 500 of {filteredCustomers.length.toLocaleString("en-IN")} customers.</p>}

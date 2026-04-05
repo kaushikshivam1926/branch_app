@@ -26,6 +26,7 @@ import {
   LogIn,
   LogOut,
   ArrowLeft,
+  Home,
   Download,
   Upload,
   GripVertical,
@@ -349,6 +350,12 @@ export default function WebResourceHub() {
                 <span>Admin Login</span>
               </button>
             )}
+            <Link href="/">
+              <button className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors border border-white/30">
+                <Home className="w-4 h-4" />
+                <span>Back to Home</span>
+              </button>
+            </Link>
           </div>
         </div>
       </header>
@@ -356,14 +363,6 @@ export default function WebResourceHub() {
       {/* Main Content */}
       <main className="flex-1 py-8 px-6">
         <div className="max-w-7xl mx-auto">
-          {/* Back to Home */}
-          <Link href="/">
-            <button className="flex items-center gap-2 text-purple-700 hover:text-purple-900 mb-6 font-medium">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </button>
-          </Link>
-
           {/* Add/Edit Form */}
           <div className="bg-white rounded-xl p-6 shadow-md mb-6">
             <h2 className="text-lg font-semibold mb-4" style={{ color: "#4e1a74" }}>

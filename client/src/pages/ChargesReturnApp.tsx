@@ -1,7 +1,7 @@
 import { sbiLogoUrl } from '@/lib/assets';
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Upload, FileText, FileSpreadsheet, Download, Trash2, Edit2, Plus, Save, X } from "lucide-react";
+import { Home, Upload, FileText, FileSpreadsheet, Download, Trash2, Edit2, Plus, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -358,41 +358,44 @@ export default function ChargesReturnApp() {
           paddingTop: '0px'
         }}
       >
-        <div className="max-w-7xl mx-auto flex items-center gap-4">
-          {/* Back Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/")}
-            className="text-white hover:bg-white/20 flex-shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          
-          {/* SBI Logo */}
-          <div className="flex-shrink-0">
-            <img 
-              src={sbiLogoUrl} 
-              alt="State Bank of India" 
-              className="h-28 w-auto"
-              style={{ filter: "brightness(0) invert(1)" }}
-            />
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* SBI Logo */}
+            <div className="flex-shrink-0">
+              <img 
+                src={sbiLogoUrl} 
+                alt="State Bank of India" 
+                className="h-28 w-auto"
+                style={{ filter: "brightness(0) invert(1)" }}
+              />
+            </div>
+            
+            {/* App Title and Branch Name */}
+            <div className="flex flex-col justify-center">
+              <h1 
+                className="text-white font-semibold leading-tight"
+                style={{ fontSize: "1.3rem" }}
+              >
+                Charges Return
+              </h1>
+              <p 
+                className="text-white/90"
+                style={{ fontSize: "0.85rem" }}
+              >
+                {branchName}
+              </p>
+            </div>
           </div>
-          
-          {/* App Title and Branch Name */}
-          <div className="flex flex-col justify-center">
-            <h1 
-              className="text-white font-semibold leading-tight"
-              style={{ fontSize: "1.3rem" }}
+
+          <div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/")}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/40 gap-2"
             >
-              Charges Return
-            </h1>
-            <p 
-              className="text-white/90"
-              style={{ fontSize: "0.85rem" }}
-            >
-              {branchName}
-            </p>
+              <Home className="w-4 h-4" />
+              Back to Home
+            </Button>
           </div>
         </div>
       </header>
