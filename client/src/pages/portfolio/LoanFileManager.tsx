@@ -590,6 +590,17 @@ export default function LoanFileManager() {
     await saveData(STORE_EXCLUSIONS, updated);
   };
 
+  // ── Toggle account status between ACTIVE and CLOSED ─────────────────────────
+  const handleToggleStatus = async (accountNo: string) => {
+    const updated = accounts.map(a =>
+      a.accountNo === accountNo
+        ? { ...a, status: (a.status === "ACTIVE" ? "CLOSED" : "ACTIVE") as "ACTIVE" | "CLOSED" }
+        : a
+    );
+    setAccounts(updated);
+    await saveData(STORE_ACCOUNTS, updated);
+  };
+
   // ── Register View ──────────────────────────────────────────────────────────
   const filteredAccounts = accounts
     .filter(a => a.category === selectedCategory)
@@ -803,47 +814,64 @@ export default function LoanFileManager() {
                             <td className="px-4 py-3 text-gray-500 text-xs">{row.cifNo}</td>
                             <td className="px-4 py-3 text-gray-800 font-medium text-right">{formatINR(row.limit)}</td>
                             <td className="px-4 py-3 text-gray-500 text-xs">{row.sanctionDate}</td>
-                            <td className="px-4 py-3 text-center">
-                              {selectedCategory === "PERLOAN" && (
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {selectedCategory === "PERLOAN" && (
+                                  <button
+                                    onClick={() => setPrintRecord(row)}
+                                    title="Print Xpress Credit Front Page"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                                  >
+                                    <Printer className="w-3.5 h-3.5" />
+                                    Front Page
+                                  </button>
+                                )}
+                                {selectedCategory === "GOLDLON" && (
+                                  <button
+                                    onClick={() => setPrintRecord(row)}
+                                    title="Print Gold Loan Front Page"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                                  >
+                                    <Printer className="w-3.5 h-3.5" />
+                                    Front Page
+                                  </button>
+                                )}
+                                {selectedCategory === "PENLOAN" && (
+                                  <button
+                                    onClick={() => setPrintRecord(row)}
+                                    title="Print Pension Loan Front Page"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+                                  >
+                                    <Printer className="w-3.5 h-3.5" />
+                                    Front Page
+                                  </button>
+                                )}
+                                {selectedCategory === "PMSURYA" && (
+                                  <button
+                                    onClick={() => setPrintRecord(row)}
+                                    title="Print PM Surya Ghar Front Page"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 transition-colors"
+                                  >
+                                    <Printer className="w-3.5 h-3.5" />
+                                    Front Page
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => setPrintRecord(row)}
-                                  title="Print Xpress Credit Front Page"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                                  onClick={() => handleToggleStatus(row.accountNo)}
+                                  title={row.status === "ACTIVE" ? "Mark this account as Closed" : "Reopen this account (mark as Active)"}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                                    row.status === "ACTIVE"
+                                      ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                                      : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                                  }`}
                                 >
-                                  <Printer className="w-3.5 h-3.5" />
-                                  Front Page
+                                  {row.status === "ACTIVE" ? (
+                                    <><X className="w-3.5 h-3.5" /> Mark Closed</>
+                                  ) : (
+                                    <><CheckCircle className="w-3.5 h-3.5" /> Reopen</>
+                                  )}
                                 </button>
-                              )}
-                              {selectedCategory === "GOLDLON" && (
-                                <button
-                                  onClick={() => setPrintRecord(row)}
-                                  title="Print Gold Loan Front Page"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
-                                >
-                                  <Printer className="w-3.5 h-3.5" />
-                                  Front Page
-                                </button>
-                              )}
-                              {selectedCategory === "PENLOAN" && (
-                                <button
-                                  onClick={() => setPrintRecord(row)}
-                                  title="Print Pension Loan Front Page"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
-                                >
-                                  <Printer className="w-3.5 h-3.5" />
-                                  Front Page
-                                </button>
-                              )}
-                              {selectedCategory === "PMSURYA" && (
-                                <button
-                                  onClick={() => setPrintRecord(row)}
-                                  title="Print PM Surya Ghar Front Page"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 transition-colors"
-                                >
-                                  <Printer className="w-3.5 h-3.5" />
-                                  Front Page
-                                </button>
-                              )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1403,9 +1431,12 @@ export default function LoanFileManager() {
                         <td className="py-2 px-3">
                           <button
                             onClick={() => handleRemoveExclusion(e.accountNo)}
-                            className="text-xs text-blue-600 hover:underline"
-                            title="Remove from exclusion list — account will appear in next sync review"
-                          >Remove</button>
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                            title="Restore to register — account will appear in the Review dialog on the next sync and can be assigned a serial number"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            Restore
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1414,7 +1445,7 @@ export default function LoanFileManager() {
               )}
             </div>
             <div className="p-4 border-t border-gray-100 text-xs text-gray-400 bg-gray-50 rounded-b-2xl">
-              To re-include an excluded account, click Remove. It will appear in the Review dialog on the next sync.
+              Clicking <strong>Restore</strong> removes the account from this exclusion list. It will appear in the Review dialog on the next sync, where you can choose to assign it a serial number.
             </div>
           </div>
         </div>
