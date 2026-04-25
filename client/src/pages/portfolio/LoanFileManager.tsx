@@ -453,11 +453,25 @@ export default function LoanFileManager() {
           .sort((a: any, b: any) => ((a["LoanKey"] || a["ACCTNO"]) > (b["LoanKey"] || b["ACCTNO"]) ? 1 : -1));
 
         for (const row of newRows as any[]) {
-          const writeOffFlag = (row["WRITE_OFF_FLAG"] || "").trim();
+          const writeOffFlag = (row["WRITE_OFF_FLAG"] || "").trim().toUpperCase();
           const writeOffAmount = parseFloat(row["WRITE_OFF_AMOUNT"] || "0") || 0;
-          const writeOffDate = (row["WRITE_OFF_DATE"] || "").trim();
+          const writeOffDateRaw = (row["WRITE_OFF_DATE"] || "").trim();
+          const writeOffDate = writeOffDateRaw;
           const newirac = (row["NEWIRAC"] || "").trim();
-          const isWrittenOff = writeOffFlag !== "" || writeOffAmount > 0 || writeOffDate !== "" || newirac === "08";
+
+          // A positive write-off signal requires an EXPLICIT affirmative value.
+          // Many CBS exports include the column for every row with values like "0", "N",
+          // "NO", "null", "N/A" — these must NOT be treated as written-off.
+          const flagIsPositive = ["Y", "YES", "1", "TRUE", "W", "WO", "WRITTEN OFF", "WRITTENOFF"].includes(writeOffFlag);
+          const amountIsPositive = writeOffAmount > 0;
+          // A write-off date is valid only when it looks like an actual date (not "0", "null", "N/A", "NA", empty, etc.)
+          const NULL_LIKE = new Set(["", "0", "NULL", "N/A", "NA", "NIL", "NONE", "-", "--"]);
+          const dateIsPositive = writeOffDateRaw !== "" && !NULL_LIKE.has(writeOffDateRaw.toUpperCase()) && writeOffDateRaw.length >= 6;
+          // IRAC 08 (or "8") = Loss asset — typically written off per RBI IRAC norms.
+          // D3 (07) is Doubtful but NOT yet written off; only Loss (08) is treated as written off.
+          const newiracIsLoss = newirac === "08" || newirac === "8";
+
+          const isWrittenOff = flagIsPositive || amountIsPositive || dateIsPositive || newiracIsLoss;
           allCandidates.push({
             accountNo: (row["LoanKey"] || row["ACCTNO"] || "").trim(),
             accountDesc: (row["ACCTDESC"] || "").trim(),
