@@ -113,6 +113,7 @@ function buildPrintHTML(params: {
   netMeteringNo: string;
   annualGeneration: string;
   logoB64: string;
+  isClosed?: boolean;
 }): string {
   const {
     serialNo, custName, cifNo, acctNo, acctDesc,
@@ -120,6 +121,7 @@ function buildPrintHTML(params: {
     address, mobile, propertyAddress, solarCapacity, installerName,
     installerRegNo, subsidyAmount, discomName, consumerNo, netMeteringNo,
     annualGeneration, logoB64,
+    isClosed = false,
   } = params;
 
   const blank = (minW = "60mm") => `<span style="border-bottom:1px solid #999;display:inline-block;min-width:${minW};">&nbsp;</span>`;
@@ -182,11 +184,14 @@ function buildPrintHTML(params: {
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#000;background:white;}
     @page{size:A4 portrait;margin:0;}
-    .page{width:210mm;min-height:297mm;padding:10mm 13mm;}
+    .page{width:210mm;min-height:297mm;padding:10mm 13mm;position:relative;overflow:hidden;}
     table{border-collapse:collapse;width:100%;}
+    .closed-wm{position:fixed;top:0;left:0;width:210mm;height:297mm;pointer-events:none;z-index:999;}
+    .closed-wm-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:56pt;font-weight:900;letter-spacing:10px;color:rgba(180,0,0,0.20);white-space:nowrap;font-family:Arial,Helvetica,sans-serif;text-transform:uppercase;border-top:3.5px solid rgba(180,0,0,0.25);border-bottom:3.5px solid rgba(180,0,0,0.25);padding:5mm 12mm;line-height:1;}
   </style>
 </head>
 <body>
+${isClosed ? '<div class="closed-wm"><span class="closed-wm-text">CLOSED</span></div>' : ''}
 <div class="page">
   <!-- Header -->
   <div style="border-bottom:3px solid #0e7490;margin-bottom:4mm;padding-bottom:3mm;">
@@ -316,6 +321,7 @@ export default function PMSuryaGharFrontPage({ record, onClose }: Props) {
       propertyAddress, solarCapacity, installerName, installerRegNo,
       subsidyAmount, discomName, consumerNo, netMeteringNo, annualGeneration,
       logoB64: SBI_LOGO_B64,
+      isClosed: record.status === 'CLOSED',
     });
 
     const iframe = iframeRef.current;

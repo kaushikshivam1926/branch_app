@@ -42,6 +42,33 @@ interface LoanFileRecord {
   category: CategoryCode;
 }
 
+// Option D types
+interface ExcludedAccount {
+  accountNo: string;
+  accountDesc: string;
+  customerName: string;
+  cifNo: string;
+  category: CategoryCode;
+  excludedOn: string;
+  reason: string;
+}
+interface ReviewCandidate {
+  accountNo: string;
+  accountDesc: string;
+  customerName: string;
+  cifNo: string;
+  sanctionDate: string;
+  limit: string;
+  category: CategoryCode;
+  writeOffFlag: string;
+  writeOffAmount: number;
+  writeOffDate: string;
+  newirac: string;
+  isWrittenOff: boolean;
+  include: boolean; // user decision
+  // raw row for record creation after confirmation
+  _row: Record<string, string>;
+}
 interface SyncResult {
   newAccounts: number;
   closedAccounts: number;
@@ -72,9 +99,10 @@ const CATEGORY_ORDER: CategoryCode[] = ["PERLOAN", "PENLOAN", "GOLDLON", "PMSURY
 
 // ─── Storage Keys ──────────────────────────────────────────────────────────────
 
-const STORE_PRODUCT_LIST = "lfn-product-list";
-const STORE_ACCOUNTS     = "lfn-accounts";
-const STORE_SYNC_LOG     = "lfn-sync-log";
+const STORE_PRODUCT_LIST  = "lfn-product-list";
+const STORE_ACCOUNTS      = "lfn-accounts";
+const STORE_SYNC_LOG      = "lfn-sync-log";
+const STORE_EXCLUSIONS    = "lfn-exclusions"; // Option D: persistent exclusion list
 
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -193,6 +221,18 @@ export default function LoanFileManager() {
   const [setupStatus, setSetupStatus] = useState<{ type: "success" | "error" | ""; message: string }>({ type: "", message: "" });
   const [syncStatus, setSyncStatus] = useState<{ type: "success" | "error" | ""; message: string; result?: SyncResult }>({ type: "", message: "" });
   const [isSyncing, setIsSyncing] = useState(false);
+  // Option D state
+  const [exclusions, setExclusions] = useState<ExcludedAccount[]>([]);
+  const [reviewCandidates, setReviewCandidates] = useState<ReviewCandidate[]>([]);
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [pendingSyncData, setPendingSyncData] = useState<{
+    updatedAccounts: LoanFileRecord[];
+    snapshotDate: string;
+    totalActive: number;
+    totalClosed: number;
+    logEntry: { date: string; message: string };
+  } | null>(null);
+  const [showExclusionList, setShowExclusionList] = useState(false);
 
   // Register view state
   const [selectedCategory, setSelectedCategory] = useState<CategoryCode>("PERLOAN");
@@ -215,14 +255,16 @@ export default function LoanFileManager() {
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
-      const [pm, ac, sl] = await Promise.all([
+      const [pm, ac, sl, ex] = await Promise.all([
         loadData(STORE_PRODUCT_LIST),
         loadData(STORE_ACCOUNTS),
         loadData(STORE_SYNC_LOG),
+        loadData(STORE_EXCLUSIONS),
       ]);
       if (pm) setProductMappings(pm);
       if (ac) setAccounts(ac);
       if (sl) setSyncLog(sl);
+      if (ex) setExclusions(ex);
       setIsLoading(false);
     };
     load();
@@ -341,7 +383,7 @@ export default function LoanFileManager() {
     }
   };
 
-  // ── Loan Balance Sync from IndexedDB ──────────────────────────────────────
+  // ── Loan Balance Sync from IndexedDB (Option D: Review dialog before serial assignment) ──
   const handleSyncFromDashboard = async () => {
     if (productMappings.length === 0) {
       setSyncStatus({ type: "error", message: "No product mappings loaded. Please upload PRODUCT_LIST.csv in Setup first." });
@@ -350,7 +392,6 @@ export default function LoanFileManager() {
     setIsSyncing(true);
     setSyncStatus({ type: "", message: "" });
     try {
-      // Read from both LOAN_DATA and CCOD_DATA stores
       const [loanRows, ccodRows] = await Promise.all([
         getAllRecords(STORES.LOAN_DATA),
         getAllRecords(STORES.CCOD_DATA),
@@ -363,16 +404,13 @@ export default function LoanFileManager() {
         return;
       }
 
-      // Get snapshot date from settings
       const settingDate = await getSetting("loan-balance-date");
       const snapshotDate = settingDate || new Date().toISOString().slice(0, 10);
       setLoanBalanceDate(snapshotDate);
 
-      // Build lookup: ACCTDESC → category
       const descToCategory = new Map<string, CategoryCode>();
       productMappings.forEach(m => descToCategory.set(m.desc.trim(), m.category));
 
-      // Filter rows that match our product mappings
       const liveByCategory = new Map<CategoryCode, Map<string, Record<string, string>>>();
       CATEGORY_ORDER.forEach(cat => liveByCategory.set(cat, new Map()));
 
@@ -384,17 +422,19 @@ export default function LoanFileManager() {
         if (cat) liveByCategory.get(cat)!.set(acctNo, row);
       });
 
-      // Process each category
-      let totalNew = 0, totalClosed = 0, totalActive = 0;
-      const updatedAccounts: LoanFileRecord[] = [];
+      // Build exclusion set from persisted list
+      const exclusionSet = new Set(exclusions.map(e => e.accountNo));
+
+      let totalClosed = 0, totalActive = 0;
+      const updatedExistingAccounts: LoanFileRecord[] = [];
+      const allCandidates: ReviewCandidate[] = [];
 
       for (const cat of CATEGORY_ORDER) {
-        const cfg = CATEGORY_CONFIG[cat];
         const liveMap = liveByCategory.get(cat)!;
         const existingForCat = accounts.filter(a => a.category === cat);
-
-        // Update existing records
         const existingAccountNos = new Set(existingForCat.map(a => a.accountNo));
+
+        // Update existing records (no review needed for these)
         const updatedExisting = existingForCat.map(rec => {
           if (liveMap.has(rec.accountNo)) {
             totalActive++;
@@ -404,57 +444,150 @@ export default function LoanFileManager() {
             return { ...rec, status: "CLOSED" as const };
           }
         });
+        updatedExistingAccounts.push(...updatedExisting);
 
-        // Find new accounts (in live but not in existing)
+        // Collect new accounts (not in existing, not in exclusion list)
         const newRows = Array.from(liveMap.entries())
-          .filter(([acctNo]) => !existingAccountNos.has(acctNo))
+          .filter(([acctNo]) => !existingAccountNos.has(acctNo) && !exclusionSet.has(acctNo))
           .map(([, row]) => row)
           .sort((a: any, b: any) => ((a["LoanKey"] || a["ACCTNO"]) > (b["LoanKey"] || b["ACCTNO"]) ? 1 : -1));
 
-        const maxSerial = getMaxSerial(existingForCat, cfg.prefix);
-        const newRecords: LoanFileRecord[] = newRows.map((row: any, idx: number) => ({
-          serialNo: generateSerial(cfg.prefix, cfg.padCount, maxSerial, idx),
-          accountNo: (row["LoanKey"] || row["ACCTNO"] || "").trim(),
-          accountDesc: (row["ACCTDESC"] || "").trim(),
-          cifNo: (row["CIF"] || row["CUSTNUMBER"] || "").trim(),
-          customerName: (row["CUSTNAME"] || "").trim(),
-          limit: String(row["LIMIT"] || ""),
-          sanctionDate: (row["SANCTDT"] || "").trim(),
-          status: "ACTIVE",
-          lastSeen: snapshotDate,
-          category: cat,
-        }));
-
-        totalNew += newRecords.length;
-        updatedAccounts.push(...updatedExisting, ...newRecords);
+        for (const row of newRows as any[]) {
+          const writeOffFlag = (row["WRITE_OFF_FLAG"] || "").trim();
+          const writeOffAmount = parseFloat(row["WRITE_OFF_AMOUNT"] || "0") || 0;
+          const writeOffDate = (row["WRITE_OFF_DATE"] || "").trim();
+          const newirac = (row["NEWIRAC"] || "").trim();
+          const isWrittenOff = writeOffFlag !== "" || writeOffAmount > 0 || writeOffDate !== "" || newirac === "08";
+          allCandidates.push({
+            accountNo: (row["LoanKey"] || row["ACCTNO"] || "").trim(),
+            accountDesc: (row["ACCTDESC"] || "").trim(),
+            customerName: (row["CUSTNAME"] || "").trim(),
+            cifNo: (row["CIF"] || row["CUSTNUMBER"] || "").trim(),
+            sanctionDate: (row["SANCTDT"] || "").trim(),
+            limit: String(row["LIMIT"] || ""),
+            category: cat,
+            writeOffFlag,
+            writeOffAmount,
+            writeOffDate,
+            newirac,
+            isWrittenOff,
+            include: !isWrittenOff, // pre-select: written-off = exclude, normal = include
+            _row: row,
+          });
+        }
       }
 
-      setAccounts(updatedAccounts);
-      await saveData(STORE_ACCOUNTS, updatedAccounts);
-
-      const result: SyncResult = {
-        newAccounts: totalNew,
-        closedAccounts: totalClosed,
-        activeAccounts: totalActive,
+      // Store the already-updated existing accounts and snapshot data for later
+      setPendingSyncData({
+        updatedAccounts: updatedExistingAccounts,
         snapshotDate,
-        totalProcessed: allRows.length,
-      };
+        totalActive,
+        totalClosed,
+        logEntry: {
+          date: snapshotDate,
+          message: `Sync from Dashboard: ${totalActive} active, ${totalClosed} newly closed. (${allRows.length} loan records read)`
+        },
+      });
 
-      const logEntry = {
-        date: snapshotDate,
-        message: `Sync from Dashboard: ${totalNew} new, ${totalActive} active, ${totalClosed} newly closed. (${allRows.length} loan records read)`
-      };
-      const newLog = [logEntry, ...syncLog].slice(0, 50);
-      setSyncLog(newLog);
-      await saveData(STORE_SYNC_LOG, newLog);
-
-      setSyncStatus({ type: "success", message: "Sync completed successfully.", result });
-      setTab("register");
+      if (allCandidates.length === 0) {
+        // No new accounts — just apply the existing updates directly
+        setAccounts(updatedExistingAccounts);
+        await saveData(STORE_ACCOUNTS, updatedExistingAccounts);
+        const logEntry = {
+          date: snapshotDate,
+          message: `Sync from Dashboard: 0 new, ${totalActive} active, ${totalClosed} newly closed. (${allRows.length} loan records read)`
+        };
+        const newLog = [logEntry, ...syncLog].slice(0, 50);
+        setSyncLog(newLog);
+        await saveData(STORE_SYNC_LOG, newLog);
+        setSyncStatus({ type: "success", message: "Sync completed. No new accounts detected.", result: { newAccounts: 0, closedAccounts: totalClosed, activeAccounts: totalActive, snapshotDate, totalProcessed: allRows.length } });
+        setTab("register");
+      } else {
+        // Show review dialog
+        setReviewCandidates(allCandidates);
+        setShowReviewDialog(true);
+      }
     } catch (err: unknown) {
       setSyncStatus({ type: "error", message: `Sync error: ${err instanceof Error ? err.message : String(err)}` });
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  // ── Confirm Review Dialog: assign serials to included, save exclusions for excluded ──
+  const handleConfirmReview = async () => {
+    if (!pendingSyncData) return;
+    const { updatedAccounts, snapshotDate, totalActive, totalClosed, logEntry } = pendingSyncData;
+
+    const included = reviewCandidates.filter(c => c.include);
+    const excluded = reviewCandidates.filter(c => !c.include);
+
+    // Build serial numbers for included accounts (per category)
+    const newRecords: LoanFileRecord[] = [];
+    for (const cat of CATEGORY_ORDER) {
+      const cfg = CATEGORY_CONFIG[cat];
+      const catIncluded = included.filter(c => c.category === cat);
+      const existingForCat = updatedAccounts.filter(a => a.category === cat);
+      const maxSerial = getMaxSerial(existingForCat, cfg.prefix);
+      catIncluded.forEach((c, idx) => {
+        newRecords.push({
+          serialNo: generateSerial(cfg.prefix, cfg.padCount, maxSerial, idx),
+          accountNo: c.accountNo,
+          accountDesc: c.accountDesc,
+          cifNo: c.cifNo,
+          customerName: c.customerName,
+          limit: c.limit,
+          sanctionDate: c.sanctionDate,
+          status: "ACTIVE",
+          lastSeen: snapshotDate,
+          category: cat,
+        });
+      });
+    }
+
+    const finalAccounts = [...updatedAccounts, ...newRecords];
+    setAccounts(finalAccounts);
+    await saveData(STORE_ACCOUNTS, finalAccounts);
+
+    // Save new exclusions
+    const today = new Date().toISOString().slice(0, 10);
+    const newExclusions: ExcludedAccount[] = excluded.map(c => ({
+      accountNo: c.accountNo,
+      accountDesc: c.accountDesc,
+      customerName: c.customerName,
+      cifNo: c.cifNo,
+      category: c.category,
+      excludedOn: today,
+      reason: c.isWrittenOff ? "Written Off" : "Manual exclusion",
+    }));
+    const mergedExclusions = [...exclusions, ...newExclusions];
+    setExclusions(mergedExclusions);
+    await saveData(STORE_EXCLUSIONS, mergedExclusions);
+
+    const finalLogEntry = {
+      date: logEntry.date,
+      message: `${logEntry.message} | New: ${newRecords.length} assigned, ${excluded.length} excluded.`
+    };
+    const newLog = [finalLogEntry, ...syncLog].slice(0, 50);
+    setSyncLog(newLog);
+    await saveData(STORE_SYNC_LOG, newLog);
+
+    setSyncStatus({
+      type: "success",
+      message: "Sync completed successfully.",
+      result: { newAccounts: newRecords.length, closedAccounts: totalClosed, activeAccounts: totalActive, snapshotDate, totalProcessed: 0 }
+    });
+    setShowReviewDialog(false);
+    setReviewCandidates([]);
+    setPendingSyncData(null);
+    setTab("register");
+  };
+
+  // ── Remove an account from the exclusion list ──────────────────────────────
+  const handleRemoveExclusion = async (accountNo: string) => {
+    const updated = exclusions.filter(e => e.accountNo !== accountNo);
+    setExclusions(updated);
+    await saveData(STORE_EXCLUSIONS, updated);
   };
 
   // ── Register View ──────────────────────────────────────────────────────────
@@ -779,6 +912,18 @@ export default function LoanFileManager() {
                 </div>
               </div>
 
+              {/* Exclusion list info */}
+              {exclusions.length > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
+                  <span className="text-amber-700">
+                    <strong>{exclusions.length}</strong> account{exclusions.length !== 1 ? "s" : ""} permanently excluded from serial assignment.
+                  </span>
+                  <button
+                    onClick={() => setShowExclusionList(true)}
+                    className="text-xs text-amber-700 underline hover:text-amber-900 font-medium"
+                  >View / Manage</button>
+                </div>
+              )}
               {/* Sync button */}
               <button
                 onClick={handleSyncFromDashboard}
@@ -1079,6 +1224,197 @@ export default function LoanFileManager() {
                   {showResetDialog === "full" ? "Reset Everything" : `Clear ${CATEGORY_CONFIG[showResetDialog as CategoryCode].prefix} Data`}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Option D: Review New Accounts Dialog ── */}
+      {showReviewDialog && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Review New Accounts Before Serial Assignment</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {reviewCandidates.length} new account{reviewCandidates.length !== 1 ? "s" : ""} detected.
+                  {reviewCandidates.filter(c => c.isWrittenOff).length > 0 && (
+                    <span className="ml-2 text-amber-600 font-medium">
+                      ⚠ {reviewCandidates.filter(c => c.isWrittenOff).length} written-off account{reviewCandidates.filter(c => c.isWrittenOff).length !== 1 ? "s" : ""} pre-flagged for exclusion.
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button onClick={() => { setShowReviewDialog(false); setReviewCandidates([]); setPendingSyncData(null); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">
+                ✕
+              </button>
+            </div>
+
+            {/* Legend */}
+            <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex gap-4 text-xs">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-500 inline-block"></span> Include — will receive serial number</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-400 inline-block"></span> Exclude — will be permanently skipped on future syncs</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-400 inline-block"></span> Written-off signal detected (pre-excluded)</span>
+            </div>
+
+            {/* Bulk actions */}
+            <div className="px-5 py-2 border-b border-gray-100 flex gap-2">
+              <button
+                onClick={() => setReviewCandidates(prev => prev.map(c => ({ ...c, include: true })))}
+                className="text-xs px-3 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 font-medium"
+              >Include All</button>
+              <button
+                onClick={() => setReviewCandidates(prev => prev.map(c => ({ ...c, include: false })))}
+                className="text-xs px-3 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-medium"
+              >Exclude All</button>
+              <button
+                onClick={() => setReviewCandidates(prev => prev.map(c => ({ ...c, include: !c.isWrittenOff })))}
+                className="text-xs px-3 py-1 rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-medium"
+              >Reset to Auto-detect</button>
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium w-16">Include</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">Account No.</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">Customer Name</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">Product</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">Category</th>
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">Signals</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviewCandidates.map((c, idx) => (
+                    <tr
+                      key={c.accountNo}
+                      className={`border-b border-gray-100 ${
+                        c.isWrittenOff ? "bg-amber-50" : c.include ? "bg-green-50/30" : "bg-red-50/30"
+                      }`}
+                    >
+                      <td className="py-2 px-3">
+                        <input
+                          type="checkbox"
+                          checked={c.include}
+                          onChange={e => {
+                            const val = e.target.checked;
+                            setReviewCandidates(prev => prev.map((x, i) => i === idx ? { ...x, include: val } : x));
+                          }}
+                          className="w-4 h-4 accent-green-600"
+                        />
+                      </td>
+                      <td className="py-2 px-3 font-mono text-xs text-gray-700">{c.accountNo}</td>
+                      <td className="py-2 px-3">
+                        <div className="font-medium text-gray-800 text-xs">{c.customerName || "—"}</div>
+                        <div className="text-gray-400 text-xs">CIF: {c.cifNo || "—"}</div>
+                      </td>
+                      <td className="py-2 px-3 text-xs text-gray-600">{c.accountDesc}</td>
+                      <td className="py-2 px-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          CATEGORY_CONFIG[c.category]?.badgeClass || "bg-gray-100 text-gray-700"
+                        }`}>{CATEGORY_CONFIG[c.category]?.prefix}</span>
+                      </td>
+                      <td className="py-2 px-3">
+                        {c.isWrittenOff ? (
+                          <div className="flex flex-wrap gap-1">
+                            {c.writeOffFlag && <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded">Flag: {c.writeOffFlag}</span>}
+                            {c.writeOffAmount > 0 && <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded">W/O Amt: ₹{c.writeOffAmount.toLocaleString("en-IN")}</span>}
+                            {c.writeOffDate && <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded">W/O Date: {c.writeOffDate}</span>}
+                            {c.newirac === "08" && <span className="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded">IRAC: Loss</span>}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-gray-200 flex items-center justify-between bg-gray-50 rounded-b-2xl">
+              <div className="text-sm text-gray-600">
+                <span className="text-green-700 font-semibold">{reviewCandidates.filter(c => c.include).length} will be assigned serial numbers</span>
+                <span className="mx-2 text-gray-300">|</span>
+                <span className="text-red-600 font-semibold">{reviewCandidates.filter(c => !c.include).length} will be permanently excluded</span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowReviewDialog(false); setReviewCandidates([]); setPendingSyncData(null); }}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100"
+                >Cancel Sync</button>
+                <button
+                  onClick={handleConfirmReview}
+                  className="px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow"
+                >Confirm & Assign Serials</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Option D: Exclusion List Panel ── */}
+      {showExclusionList && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Permanently Excluded Accounts</h2>
+                <p className="text-sm text-gray-500 mt-0.5">These accounts will never appear in the review dialog or receive serial numbers.</p>
+              </div>
+              <button onClick={() => setShowExclusionList(false)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {exclusions.length === 0 ? (
+                <div className="p-8 text-center text-gray-400 text-sm">No excluded accounts yet.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left py-2 px-3 text-gray-500 font-medium">Account No.</th>
+                      <th className="text-left py-2 px-3 text-gray-500 font-medium">Customer</th>
+                      <th className="text-left py-2 px-3 text-gray-500 font-medium">Category</th>
+                      <th className="text-left py-2 px-3 text-gray-500 font-medium">Reason</th>
+                      <th className="text-left py-2 px-3 text-gray-500 font-medium">Excluded On</th>
+                      <th className="text-left py-2 px-3 text-gray-500 font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {exclusions.map(e => (
+                      <tr key={e.accountNo} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2 px-3 font-mono text-xs text-gray-700">{e.accountNo}</td>
+                        <td className="py-2 px-3">
+                          <div className="text-xs font-medium text-gray-800">{e.customerName || "—"}</div>
+                          <div className="text-xs text-gray-400">CIF: {e.cifNo || "—"}</div>
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            CATEGORY_CONFIG[e.category]?.badgeClass || "bg-gray-100 text-gray-700"
+                          }`}>{CATEGORY_CONFIG[e.category]?.prefix}</span>
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">{e.reason}</span>
+                        </td>
+                        <td className="py-2 px-3 text-xs text-gray-500">{e.excludedOn}</td>
+                        <td className="py-2 px-3">
+                          <button
+                            onClick={() => handleRemoveExclusion(e.accountNo)}
+                            className="text-xs text-blue-600 hover:underline"
+                            title="Remove from exclusion list — account will appear in next sync review"
+                          >Remove</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-100 text-xs text-gray-400 bg-gray-50 rounded-b-2xl">
+              To re-include an excluded account, click Remove. It will appear in the Review dialog on the next sync.
             </div>
           </div>
         </div>
