@@ -86,15 +86,16 @@ function buildAddress(loan: LoanDataRecord): string {
 
 const CHECKLIST_ROWS: { left: string; right: string }[] = [
   { left: "Pension Loan Application Form", right: "PPO Copy (Self-attested)" },
-  { left: "KYC Documents", right: "Pension Slip (Last 3 months)" },
-  { left: "UID / Voter ID / Passport", right: "Bank Mandate / ECS Form" },
-  { left: "Photograph (Passport Size)", right: "Life Certificate" },
-  { left: "PAN Card (Self-attested)", right: "Sanction Letter" },
-  { left: "Address Proof", right: "Loan Agreement" },
-  { left: "IT Undertaking", right: "NeSL Disclosure Consent" },
-  { left: "Borrower Acknowledgement", right: "SI Letter (PL-12)" },
-  { left: "NDC / No Dues Certificate", right: "Control Return" },
-  { left: "Register Entry", right: "" },
+  { left: "e-KYC / Electoral Search", right: "Pension Slip (Last 3 months)" },
+  { left: "Aadhaar / Voter ID / Passport (Borrower)", right: "Loan Arrangement" },
+  { left: "Aadhaar / Voter ID / Passport (Guarantor)", right: "DP Note and DP Note Take Delivery" },
+  { left: "Photograph", right: "Key Fact Statement" },
+  { left: "Photograph (Guarantor)", right: "NeSL Disclosure Consent" },
+  { left: "PAN Card (Borrower)", right: "Borrower Acknowledgement" },
+  { left: "PAN Card (Guarantor)", right: "SI Letter" },
+  { left: "IT Undertaking", right: "No Dues: Required \u2610 / Not Required \u2610" },
+  { left: "Control Return", right: "Appraisal cum Sanction Report" },
+  { left: "Stamp Paid & Pasted", right: "" },
 ];
 
 function buildPrintHTML(params: {
