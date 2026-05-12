@@ -141,7 +141,7 @@ function getLoanTypeLabel(loanCategory: string, acctDesc: string): string {
   if (cat.includes("pension")) return "Pension Loan";
   if (cat.includes("gold")) return "Gold Loan";
   if (cat.includes("education")) return "Education Loan";
-  if (cat.includes("pm surya") || cat.includes("pmsg") || cat.includes("solar")) return "PM Surya Ghar Loan";
+  if (cat.includes("pm surya") || cat.includes("sbi surya") || cat.includes("pmsg") || cat.includes("solar")) return "SBI Surya Ghar Loan";
   if (cat.includes("msme") || cat.includes("business")) return "Business Loan";
   return acctDesc || "Loan";
 }

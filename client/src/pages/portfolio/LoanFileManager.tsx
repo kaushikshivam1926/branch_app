@@ -2,7 +2,7 @@
  * Loan File Number Manager
  * 
  * Design: SBI Dashboard style — consistent with Branch Portfolio Dashboard
- * Manages loan file serial numbers per category (PER, PEN, GOLD, PMSG)
+ * Manages loan file serial numbers per category (PER, PEN, GOLD, SOLAR)
  * Data persisted in IndexedDB. One-time setup: PRODUCT_LIST + historical CSVs.
  * Recurring: Upload Loan Balance file to sync active/closed status and assign new serials.
  */
@@ -92,7 +92,7 @@ const CATEGORY_CONFIG: Record<CategoryCode, {
   PERLOAN: { label: "Xpress Credit / Personal Loans", prefix: "PER", padCount: 4, color: "blue", bgClass: "bg-blue-50", textClass: "text-blue-800", borderClass: "border-blue-400", badgeClass: "bg-blue-100 text-blue-800" },
   PENLOAN: { label: "Pension Loans", prefix: "PEN", padCount: 4, color: "green", bgClass: "bg-green-50", textClass: "text-green-800", borderClass: "border-green-400", badgeClass: "bg-green-100 text-green-800" },
   GOLDLON: { label: "Gold Loans", prefix: "GOLD", padCount: 3, color: "amber", bgClass: "bg-amber-50", textClass: "text-amber-800", borderClass: "border-amber-400", badgeClass: "bg-amber-100 text-amber-800" },
-  PMSURYA: { label: "PM Surya Ghar Loans", prefix: "PMSG", padCount: 4, color: "teal", bgClass: "bg-teal-50", textClass: "text-teal-800", borderClass: "border-teal-400", badgeClass: "bg-teal-100 text-teal-800" },
+  PMSURYA: { label: "SBI Surya Ghar Loans", prefix: "SOLAR", padCount: 3, color: "teal", bgClass: "bg-teal-50", textClass: "text-teal-800", borderClass: "border-teal-400", badgeClass: "bg-teal-100 text-teal-800" },
 };
 
 const CATEGORY_ORDER: CategoryCode[] = ["PERLOAN", "PENLOAN", "GOLDLON", "PMSURYA"];
@@ -656,7 +656,7 @@ export default function LoanFileManager() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold" style={{ color: "#1a1a2e" }}>Loan File Number Register</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Manage running serial numbers for loan files — Xpress Credit, Pension, Gold, and PM Surya Ghar
+          Manage running serial numbers for loan files — Xpress Credit, Pension, Gold, and SBI Surya Ghar
         </p>
       </div>
 
@@ -863,7 +863,7 @@ export default function LoanFileManager() {
                                 {selectedCategory === "PMSURYA" && (
                                   <button
                                     onClick={() => setPrintRecord(row)}
-                                    title="Print PM Surya Ghar Front Page"
+                                    title="Print SBI Surya Ghar Front Page"
                                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 transition-colors"
                                   >
                                     <Printer className="w-3.5 h-3.5" />
@@ -1098,7 +1098,7 @@ export default function LoanFileManager() {
                               <option value="PERLOAN">PERLOAN (Xpress Credit)</option>
                               <option value="PENLOAN">PENLOAN (Pension Loan)</option>
                               <option value="GOLDLON">GOLDLON (Gold Loan)</option>
-                              <option value="PMSURYA">PMSURYA (PM Surya Ghar)</option>
+                              <option value="PMSURYA">PMSURYA (SBI Surya Ghar)</option>
                             </select>
                           </td>
                           <td className="px-4 py-2 text-center">

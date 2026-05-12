@@ -1,11 +1,11 @@
 /*
  * PMSuryaGharFrontPage.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Renders a pre-filled A4 front-page cover sheet for a PM Surya Ghar Loan
- * (PMSG series) file. Data is fetched from LOAN_DATA in IndexedDB.
+ * Renders a pre-filled A4 front-page cover sheet for a SBI Surya Ghar Loan
+ * (SOLAR series) file. Data is fetched from LOAN_DATA in IndexedDB.
  * Print uses an isolated iframe (same approach as LetterGenerator).
  *
- * PM Surya Ghar Muft Bijli Yojana-specific fields:
+ * SBI Surya Ghar Muft Bijli Yojana-specific fields:
  *   - Property Address (editable)
  *   - Solar Panel Capacity in kW (editable)
  *   - Solar Installer Name (editable)
@@ -78,7 +78,7 @@ function buildAddress(loan: LoanDataRecord): string {
 }
 
 const CHECKLIST_ROWS: { left: string; right: string }[] = [
-  { left: "PM Surya Ghar Application Form", right: "Property Ownership Documents" },
+  { left: "SBI Surya Ghar Application Form", right: "Property Ownership Documents" },
   { left: "KYC Documents", right: "Solar Installation Quote / Agreement" },
   { left: "UID / Voter ID / Passport", right: "DISCOM Approval / NOC" },
   { left: "Photograph (Passport Size)", right: "Net Metering Application" },
@@ -199,18 +199,18 @@ ${isClosed ? '<div class="closed-wm"><span class="closed-wm-text">CLOSED</span><
       <img src="${logoB64}" style="width:16mm;height:16mm;object-fit:contain;flex-shrink:0;" alt="SBI"/>
       <div style="flex:1;">
         <div style="font-size:13pt;font-weight:bold;color:#003399;letter-spacing:0.5px;">STATE BANK OF INDIA</div>
-        <div style="font-size:8.5pt;color:#555;margin-top:0.5mm;">PM Surya Ghar Muft Bijli Yojana — Loan File</div>
+        <div style="font-size:8.5pt;color:#555;margin-top:0.5mm;">SBI Surya Ghar Muft Bijli Yojana — Loan File</div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:17pt;font-weight:bold;color:#0e7490;border:2px solid #0e7490;padding:1.5mm 4mm;border-radius:4px;letter-spacing:1px;">${serialNo}</div>
-        <div style="font-size:7pt;color:#888;margin-top:0.5mm;">PMSG File No.</div>
+        <div style="font-size:7pt;color:#888;margin-top:0.5mm;">SOLAR File No.</div>
       </div>
     </div>
   </div>
 
   <!-- Scheme Banner -->
   <div style="background:#0e7490;color:white;padding:1.5mm 4mm;font-size:7.5pt;text-align:center;margin-bottom:3mm;border-radius:2px;">
-    PM Surya Ghar Muft Bijli Yojana — Central Subsidy up to ₹78,000 for 3 kW systems
+    SBI Surya Ghar Muft Bijli Yojana — Central Subsidy up to ₹78,000 for 3 kW systems
   </div>
 
   <!-- Customer Details -->
@@ -368,7 +368,7 @@ export default function PMSuryaGharFrontPage({ record, onClose }: Props) {
         {/* Toolbar */}
         <div className="w-full max-w-[220mm] flex items-center justify-between mb-4 flex-shrink-0">
           <div className="text-white font-semibold text-lg">
-            PM Surya Ghar Front Page — <span className="font-mono text-cyan-300">{record.serialNo}</span>
+            SBI Surya Ghar Front Page — <span className="font-mono text-cyan-300">{record.serialNo}</span>
           </div>
           <div className="flex gap-2">
             <button onClick={handlePrint} disabled={loading || printing}
@@ -399,20 +399,20 @@ export default function PMSuryaGharFrontPage({ record, onClose }: Props) {
                 <img src={SBI_LOGO_B64} style={{ width: "16mm", height: "16mm", objectFit: "contain", flexShrink: 0 }} alt="SBI" />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: "13pt", fontWeight: "bold", color: "#003399" }}>STATE BANK OF INDIA</div>
-                  <div style={{ fontSize: "8.5pt", color: "#555", marginTop: "0.5mm" }}>PM Surya Ghar Muft Bijli Yojana — Loan File</div>
+                  <div style={{ fontSize: "8.5pt", color: "#555", marginTop: "0.5mm" }}>SBI Surya Ghar Muft Bijli Yojana — Loan File</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "17pt", fontWeight: "bold", color: "#0e7490", border: "2px solid #0e7490", padding: "1.5mm 4mm", borderRadius: "4px", letterSpacing: "1px" }}>
                     {record.serialNo}
                   </div>
-                  <div style={{ fontSize: "7pt", color: "#888", marginTop: "0.5mm" }}>PMSG File No.</div>
+                  <div style={{ fontSize: "7pt", color: "#888", marginTop: "0.5mm" }}>SOLAR File No.</div>
                 </div>
               </div>
             </div>
 
             {/* Scheme Banner */}
             <div style={{ background: "#0e7490", color: "white", padding: "1.5mm 4mm", fontSize: "7.5pt", textAlign: "center", marginBottom: "3mm", borderRadius: "2px" }}>
-              PM Surya Ghar Muft Bijli Yojana — Central Subsidy up to ₹78,000 for 3 kW systems
+              SBI Surya Ghar Muft Bijli Yojana — Central Subsidy up to ₹78,000 for 3 kW systems
             </div>
 
             {/* Customer Details */}
