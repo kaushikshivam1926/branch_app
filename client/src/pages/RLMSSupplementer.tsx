@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, ChangeEvent } from "react";
+import CFRPortal from "./CFRPortal";
 import { Link } from "wouter";
 import { ArrowLeft, FileText, Lock } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
@@ -472,7 +473,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const TABS = ['Application Details', 'Personal', 'Addresses', 'Employment', 'Bank Details', 'References & Assets', 'Loan Info', 'Finalise & Print'];
+const TABS = ['Application Details', 'Personal', 'Addresses', 'Employment', 'Bank Details', 'References & Assets', 'Loan Info', 'Finalise & Print', 'CFR Search'];
 
 export default function RLMSSupplementer() {
   const [data, setData] = useState<DataModel>(initialData);
@@ -1122,6 +1123,8 @@ export default function RLMSSupplementer() {
             )}
           </div>
         );
+      case 'CFR Search':
+        return <CFRPortal />;
       default: return null;
     }
   };
