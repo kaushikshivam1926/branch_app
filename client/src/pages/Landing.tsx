@@ -201,7 +201,7 @@ export default function Landing() {
           // Check if the data has the new iconName field
           if (savedSettings.length > 0 && savedSettings[0].iconName) {
             // Migrate old cards to new versions
-            let migratedSettings = savedSettings.map((card: AppCard) => {
+            let migratedSettings = (savedSettings.map((card: AppCard) => {
               if (card.id === "security-docs") {
                 return {
                   ...card,
@@ -219,6 +219,22 @@ export default function Landing() {
                   iconName: "IndianRupee" as IconName
                 };
               }
+              // Migrate emi-calculator to financial-toolkit
+              if (card.id === "emi-calculator") {
+                return {
+                  ...card,
+                  id: "financial-toolkit",
+                  title: "Financial Planning Toolkit",
+                  description: "Comprehensive suite of 9 financial calculators for retirement, SIP, EMI, insurance and more",
+                  iconName: "Calculator" as IconName,
+                  path: "/financial-toolkit",
+                  color: "#0066b3"
+                };
+              }
+              // Remove legacy misc-reports card (replaced by rlms-supplementer)
+              if (card.id === "misc-reports") {
+                return null;
+              }
               // Migrate branch-info to branch-portfolio
               if (card.id === "branch-info") {
                 return {
@@ -232,7 +248,7 @@ export default function Landing() {
                 };
               }
               return card;
-            });
+            }) as (AppCard | null)[]).filter((c): c is AppCard => c !== null);
             // Ensure branch-portfolio exists and is first
             const hasPortfolio = migratedSettings.some((c: AppCard) => c.id === "branch-portfolio");
             if (!hasPortfolio) {
@@ -244,9 +260,21 @@ export default function Landing() {
               // Move branch-portfolio to first position
               const portfolioCard = migratedSettings.find((c: AppCard) => c.id === "branch-portfolio");
               migratedSettings = [
-                portfolioCard,
+                portfolioCard!,
                 ...migratedSettings.filter((c: AppCard) => c.id !== "branch-portfolio")
               ].map((c: AppCard, i: number) => ({ ...c, order: i }));
+            }
+            // Ensure any new default cards added since last save are present
+            const existingIds = new Set(migratedSettings.map((c: AppCard) => c.id));
+            const missingDefaults = defaultAppCards.filter(d => !existingIds.has(d.id));
+            if (missingDefaults.length > 0) {
+              const maxOrder = migratedSettings.reduce((m: number, c: AppCard) => Math.max(m, c.order ?? 0), 0);
+              missingDefaults.forEach((d, i) => {
+                migratedSettings = [
+                  ...migratedSettings,
+                  { ...d, visible: true, order: maxOrder + i + 1 }
+                ];
+              });
             }
             setAppCards(migratedSettings);
             // Save migrated settings
