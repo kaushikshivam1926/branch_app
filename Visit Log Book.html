@@ -1,0 +1,1466 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.5">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px '.AppleSystemUIFontMonospaced'; color: #000000; color: rgba(0, 0, 0, 0.85)}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px '.AppleSystemUIFontMonospaced'; color: #000000; color: rgba(0, 0, 0, 0.85); min-height: 17.0px}
+  </style>
+</head>
+<body>
+<p class="p1">import React, { useState, useEffect } from 'react';</p>
+<p class="p1">import {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>FileText,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Users,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>PlusCircle,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Layers,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>BarChart2,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Search,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Calendar,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>User,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Building,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>MapPin,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Mail,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Briefcase,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Activity,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>TrendingUp,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>AlertTriangle,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>CheckSquare,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Sparkles,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Copy,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Share2,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Trash2,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Check,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>X,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>ChevronRight,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Filter,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>ThumbsUp,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Clock,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>Eye,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>RefreshCw,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Zap,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>IndianRupee,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Phone,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Store,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>UserCheck,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Printer,</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Edit</p>
+<p class="p1">} from 'lucide-react';</p>
+<p class="p2"><br></p>
+<p class="p1">// ==========================================</p>
+<p class="p1">// MOCK DATA: INDIAN BANKING CONTEXT</p>
+<p class="p1">// ==========================================</p>
+<p class="p1">const INITIAL_REPORTS = [</p>
+<p class="p1"><span class="Apple-converted-space">  </span>{</p>
+<p class="p1"><span class="Apple-converted-space">    </span>id: "rep-1",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>visitDate: "2026-06-01",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>companyName: "Sharma Enterprises",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>visitorName: "Rajesh Kumar (RM - SME)",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>customerType: "prospective",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>locationType: "In-Person",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>locationDetail: "Andheri East Industrial Estate, Mumbai",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>contacts: [</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{ name: "Anil Sharma", role: "Managing Director", email: "anil@sharmaent.in" },</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{ name: "Priya Desai", role: "Chief Accountant", email: "accounts@sharmaent.in" }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>],</p>
+<p class="p1"><span class="Apple-converted-space">    </span>prospectiveData: {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>dealSize: "25000000", // 2.5 Cr</p>
+<p class="p1"><span class="Apple-converted-space">      </span>leadStage: "Proposal",</p>
+<p class="p1"><span class="Apple-converted-space">      </span>competitors: "HDFC Bank, ICICI Bank",</p>
+<p class="p1"><span class="Apple-converted-space">      </span>decisionMakerMet: true,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>keyPainPoints: "High interest rate on current OD limit with HDFC. Need better FX conversion rates for their raw material imports from China."</p>
+<p class="p1"><span class="Apple-converted-space">    </span>},</p>
+<p class="p1"><span class="Apple-converted-space">    </span>existingData: { healthScore: 5, renewalDate: "", supportIssues: false, upsellPotential: "0" },</p>
+<p class="p1"><span class="Apple-converted-space">    </span>discussionNotes: "Met with Anil Ji to discuss migrating their primary Current Account and an enhanced Working Capital / OD Limit of ₹2.5 Cr. He is interested in our Trade Forex pricing. Priya asked about API integration with Tally Prime for bulk payout processing.",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>actionItems: [</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{ id: "act-1-1", task: "Share customized OD Limit proposal and Forex margin matrix", owner: "Rajesh Kumar", deadline: "2026-06-08", completed: true },</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{ id: "act-1-2", task: "Arrange a call with the CMS Tech Team regarding Tally API", owner: "Rajesh Kumar", deadline: "2026-06-12", completed: false }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>],</p>
+<p class="p1"><span class="Apple-converted-space">    </span>createdAt: "2026-06-01T16:30:00.000Z"</p>
+<p class="p1"><span class="Apple-converted-space">  </span>},</p>
+<p class="p1"><span class="Apple-converted-space">  </span>{</p>
+<p class="p1"><span class="Apple-converted-space">    </span>id: "rep-2",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>visitDate: "2026-06-03",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>companyName: "Dr. Ramesh Gupta (HNI)",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>visitorName: "Sneha Patel (RM - Wealth)",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>customerType: "existing",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>locationType: "In-Person",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>locationDetail: "Customer Residence, Banjara Hills",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>contacts: [</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{ name: "Dr. Ramesh Gupta", role: "Account Holder", email: "dr.ramesh.g@gmail.com" }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>],</p>
+<p class="p1"><span class="Apple-converted-space">    </span>prospectiveData: { dealSize: "0", leadStage: "Discovery", competitors: "", decisionMakerMet: false, keyPainPoints: "" },</p>
+<p class="p1"><span class="Apple-converted-space">    </span>existingData: {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>healthScore: 4,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>renewalDate: "2026-11-15", // FD Maturity</p>
+<p class="p1"><span class="Apple-converted-space">      </span>supportIssues: false,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>upsellPotential: "5000000" // 50 Lakhs Mutual Fund</p>
+<p class="p1"><span class="Apple-converted-space">    </span>},</p>
+<p class="p1"><span class="Apple-converted-space">    </span>discussionNotes: "Quarterly portfolio review. Dr. Gupta is satisfied with his current FD yields but is looking to diversify ₹50 Lakhs into Equity Mutual Funds due to recent tax changes. Highlighted the new Flexi-Cap NFO we are distributing.",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>actionItems: [</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{ id: "act-2-1", task: "Send NFO product brochure and historical return comparisons", owner: "Sneha Patel", deadline: "2026-06-05", completed: true },</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{ id: "act-2-2", task: "Schedule branch visit for KYC updation for demat account", owner: "Branch Operations", deadline: "2026-06-10", completed: false }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>],</p>
+<p class="p1"><span class="Apple-converted-space">    </span>createdAt: "2026-06-03T11:15:00.000Z"</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1">];</p>
+<p class="p2"><br></p>
+<p class="p1">const INITIAL_WALKINS = [</p>
+<p class="p1"><span class="Apple-converted-space">  </span>{</p>
+<p class="p1"><span class="Apple-converted-space">    </span>id: "walkin-1",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>timestamp: "2026-06-06T09:15:00.000Z",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>name: "Vikash Singh",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>phone: "+91 98765 43210",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>purpose: "Personal Loan",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>assignedTo: "Amit Verma",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>status: "In Progress",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>notes: "Looking for a ₹5L personal loan for home renovation. Provided CIBIL consent.",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>expectedValue: "500000"</p>
+<p class="p1"><span class="Apple-converted-space">  </span>},</p>
+<p class="p1"><span class="Apple-converted-space">  </span>{</p>
+<p class="p1"><span class="Apple-converted-space">    </span>id: "walkin-2",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>timestamp: "2026-06-06T14:30:00.000Z",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>name: "Meera Reddy",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>phone: "+91 91234 56789",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>purpose: "New Savings Account",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>assignedTo: "Pending",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>status: "New Lead",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>notes: "Wants to open a joint savings account. Has PAN and Aadhaar ready.",</p>
+<p class="p1"><span class="Apple-converted-space">    </span>expectedValue: "25000"</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1">];</p>
+<p class="p2"><br></p>
+<p class="p1">export default function App() {</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// STATE MANAGEMENT</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [reports, setReports] = useState(() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const saved = localStorage.getItem('bank_visit_reports');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>return saved ? JSON.parse(saved) : INITIAL_REPORTS;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [walkins, setWalkins] = useState(() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const saved = localStorage.getItem('bank_walkin_leads');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>return saved ? JSON.parse(saved) : INITIAL_WALKINS;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [activeTab, setActiveTab] = useState('walkin'); // 'walkin' | 'new_visit' | 'dashboard' | 'insights'</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [searchQuery, setSearchQuery] = useState('');</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [filterType, setFilterType] = useState('all');<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [selectedReport, setSelectedReport] = useState(null);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [editingReportId, setEditingReportId] = useState(null);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [notification, setNotification] = useState(null);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Gemini state</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [aiLoading, setAiLoading] = useState(false);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [aiOutput, setAiOutput] = useState(null);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [aiOutputTab, setAiOutputTab] = useState('email');</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// New Visit Report Form State</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const initialFormState = {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>visitDate: new Date().toISOString().split('T')[0],</p>
+<p class="p1"><span class="Apple-converted-space">    </span>companyName: '',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>visitorName: '',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>customerType: 'prospective',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>locationType: 'In-Person',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>locationDetail: '',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>contacts: [{ name: '', role: '', email: '' }],</p>
+<p class="p1"><span class="Apple-converted-space">    </span>prospectiveData: {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>dealSize: '',</p>
+<p class="p1"><span class="Apple-converted-space">      </span>leadStage: 'Discovery',</p>
+<p class="p1"><span class="Apple-converted-space">      </span>competitors: '',</p>
+<p class="p1"><span class="Apple-converted-space">      </span>decisionMakerMet: false,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>keyPainPoints: ''</p>
+<p class="p1"><span class="Apple-converted-space">    </span>},</p>
+<p class="p1"><span class="Apple-converted-space">    </span>existingData: {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>healthScore: 5,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>renewalDate: '',</p>
+<p class="p1"><span class="Apple-converted-space">      </span>supportIssues: false,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>upsellPotential: ''</p>
+<p class="p1"><span class="Apple-converted-space">    </span>},</p>
+<p class="p1"><span class="Apple-converted-space">    </span>discussionNotes: '',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>actionItems: [{ id: '1', task: '', owner: '', deadline: '', completed: false }]</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [formData, setFormData] = useState(initialFormState);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Walk-in Form State</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const initialWalkinState = {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>name: '',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>phone: '',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>purpose: 'New Savings Account',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>notes: '',</p>
+<p class="p1"><span class="Apple-converted-space">    </span>expectedValue: ''</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const [walkinForm, setWalkinForm] = useState(initialWalkinState);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Sync state with LocalStorage</p>
+<p class="p1"><span class="Apple-converted-space">  </span>useEffect(() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>localStorage.setItem('bank_visit_reports', JSON.stringify(reports));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}, [reports]);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>useEffect(() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>localStorage.setItem('bank_walkin_leads', JSON.stringify(walkins));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}, [walkins]);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// Toast notification helper</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const triggerNotification = (message, type = 'success') =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setNotification({ message, type });</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setTimeout(() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setNotification(null);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}, 4000);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// WALK-IN HANDLERS</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleWalkinSubmit = (e) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>e.preventDefault();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (!walkinForm.name.trim() || !walkinForm.phone.trim()) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>return triggerNotification("Name and Phone are required", "error");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const newWalkin = {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>...walkinForm,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>id: "walkin-" + Date.now(),</p>
+<p class="p1"><span class="Apple-converted-space">      </span>timestamp: new Date().toISOString(),</p>
+<p class="p1"><span class="Apple-converted-space">      </span>assignedTo: "Pending",</p>
+<p class="p1"><span class="Apple-converted-space">      </span>status: "New Lead"</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>setWalkins([newWalkin, ...walkins]);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setWalkinForm(initialWalkinState);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>triggerNotification("Walk-in lead registered successfully!");</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const updateWalkinStatus = (id, newStatus, newAssignee = null) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const updated = walkins.map(w =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (w.id === id) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">          </span>...w,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">          </span>status: newStatus,<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">          </span>...(newAssignee &amp;&amp; { assignedTo: newAssignee })<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>};</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>return w;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setWalkins(updated);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>triggerNotification(`Lead marked as ${newStatus}`);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const deleteWalkin = (id) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if(window.confirm("Remove this walk-in from the queue?")) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setWalkins(walkins.filter(w =&gt; w.id !== id));</p>
+<p class="p1"><span class="Apple-converted-space">      </span>triggerNotification("Walk-in removed");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// VISIT REPORT FORM HANDLERS</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleInputChange = (field, value, section = null) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (section) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setFormData(prev =&gt; ({ ...prev, [section]: { ...prev[section], [field]: value } }));</p>
+<p class="p1"><span class="Apple-converted-space">    </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setFormData(prev =&gt; ({ ...prev, [field]: value }));</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleContactChange = (index, field, value) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const updatedContacts = [...formData.contacts];</p>
+<p class="p1"><span class="Apple-converted-space">    </span>updatedContacts[index][field] = value;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setFormData(prev =&gt; ({ ...prev, contacts: updatedContacts }));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const addContactRow = () =&gt; setFormData(prev =&gt; ({ ...prev, contacts: [...prev.contacts, { name: '', role: '', email: '' }] }));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const removeContactRow = (index) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (formData.contacts.length === 1) return;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setFormData(prev =&gt; ({ ...prev, contacts: formData.contacts.filter((_, i) =&gt; i !== index) }));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleActionItemChange = (index, field, value) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const updatedActions = [...formData.actionItems];</p>
+<p class="p1"><span class="Apple-converted-space">    </span>updatedActions[index][field] = value;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setFormData(prev =&gt; ({ ...prev, actionItems: updatedActions }));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const addActionItemRow = () =&gt; setFormData(prev =&gt; ({ ...prev, actionItems: [...prev.actionItems, { id: Date.now().toString(), task: '', owner: '', deadline: '', completed: false }] }));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const removeActionItemRow = (index) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (formData.actionItems.length === 1) return;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setFormData(prev =&gt; ({ ...prev, actionItems: formData.actionItems.filter((_, i) =&gt; i !== index) }));</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleEditReport = (report) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setEditingReportId(report.id);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Deep copy to avoid accidental state mutation</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setFormData(JSON.parse(JSON.stringify(report)));</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setActiveTab('new_visit');</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleSubmitReport = (e) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>e.preventDefault();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (!formData.companyName.trim()) return triggerNotification("Customer Name is required", "error");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (!formData.visitorName.trim()) return triggerNotification("RM Name is required", "error");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (!formData.discussionNotes.trim()) return triggerNotification("Discussion notes cannot be empty", "error");</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const cleanedContacts = formData.contacts.filter(c =&gt; c.name.trim() !== '');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const cleanedActions = formData.actionItems.filter(a =&gt; a.task.trim() !== '');</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const finalReport = {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>...formData,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>id: editingReportId || "rep-" + Date.now(),</p>
+<p class="p1"><span class="Apple-converted-space">      </span>contacts: cleanedContacts.length &gt; 0 ? cleanedContacts : [{ name: 'N/A', role: 'N/A', email: 'N/A' }],</p>
+<p class="p1"><span class="Apple-converted-space">      </span>actionItems: cleanedActions,</p>
+<p class="p1"><span class="Apple-converted-space">      </span>createdAt: editingReportId ? formData.createdAt : new Date().toISOString()</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (editingReportId) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setReports(reports.map(r =&gt; r.id === editingReportId ? finalReport : r));</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (selectedReport?.id === editingReportId) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>setSelectedReport(finalReport);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>triggerNotification("Visit report updated successfully!");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setReports([finalReport, ...reports]);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>triggerNotification("Visit report logged successfully!");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>setFormData(initialFormState);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setEditingReportId(null);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setActiveTab('dashboard');</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const toggleActionComplete = (reportId, actionId) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const updatedReports = reports.map(r =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (r.id === reportId) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return { ...r, actionItems: r.actionItems.map(a =&gt; a.id === actionId ? { ...a, completed: !a.completed } : a) };</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>return r;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setReports(updatedReports);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (selectedReport?.id === reportId) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setSelectedReport(prev =&gt; ({ ...prev, actionItems: prev.actionItems.map(a =&gt; a.id === actionId ? { ...a, completed: !a.completed } : a) }));</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleDeleteReport = (id) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (window.confirm("Permanently delete this visit report?")) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setReports(prev =&gt; prev.filter(r =&gt; r.id !== id));</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setSelectedReport(null);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setAiOutput(null);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>triggerNotification("Report deleted", "error");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const handleCopyReportToClipboard = (report) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const summaryText = `</p>
+<p class="p1">CUSTOMER VISIT REPORT: ${report.companyName.toUpperCase()}</p>
+<p class="p1">Date: ${report.visitDate}</p>
+<p class="p1">Logged By (RM): ${report.visitorName}</p>
+<p class="p1">Type: ${report.customerType === 'prospective' ? 'NEW PROSPECT' : 'EXISTING CUSTOMER'}</p>
+<p class="p1">Location: ${report.locationType} (${report.locationDetail || 'N/A'})</p>
+<p class="p2"><br></p>
+<p class="p1">CONTACTS MET:</p>
+<p class="p1">${report.contacts.map(c =&gt; `- ${c.name} (${c.role}) - ${c.email}`).join('\n')}</p>
+<p class="p2"><br></p>
+<p class="p1">${report.customerType === 'prospective' ? `</p>
+<p class="p1">PROSPECTIVE METRICS:</p>
+<p class="p1">- Expected Business Value: ₹${Number(report.prospectiveData.dealSize).toLocaleString('en-IN')}</p>
+<p class="p1">- Lead Stage: ${report.prospectiveData.leadStage}</p>
+<p class="p1">- Competing Banks: ${report.prospectiveData.competitors || 'None'}</p>
+<p class="p1">- Decision Maker Present: ${report.prospectiveData.decisionMakerMet ? 'Yes' : 'No'}</p>
+<p class="p1">- Key Pain Points: ${report.prospectiveData.keyPainPoints}</p>
+<p class="p1">` : `</p>
+<p class="p1">EXISTING CUSTOMER REVIEW:</p>
+<p class="p1">- Relationship Score: ${report.existingData.healthScore}/5</p>
+<p class="p1">- Upcoming Renewal/Maturity: ${report.existingData.renewalDate || 'N/A'}</p>
+<p class="p1">- Service Issues: ${report.existingData.supportIssues ? 'Yes' : 'No'}</p>
+<p class="p1">- Cross-sell Potential: ₹${Number(report.existingData.upsellPotential).toLocaleString('en-IN')}</p>
+<p class="p1">`}</p>
+<p class="p2"><br></p>
+<p class="p1">DISCUSSION SUMMARY:</p>
+<p class="p1">${report.discussionNotes}</p>
+<p class="p2"><br></p>
+<p class="p1">ACTION ITEMS:</p>
+<p class="p1">${report.actionItems.map(a =&gt; `- [${a.completed ? 'X' : ' '}] ${a.task} (Owner: ${a.owner}, Due: ${a.deadline || 'N/A'})`).join('\n')}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const textArea = document.createElement("textarea");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>textArea.value = summaryText.trim();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.body.appendChild(textArea);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>textArea.select();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>try {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.execCommand('copy');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>triggerNotification("Report details copied to clipboard!");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>} catch (err) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>triggerNotification("Could not copy. Please select and copy manually.", "error");</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.body.removeChild(textArea);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// GEMINI AI ASSISTANT</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const generateAIAssistance = async (report) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setAiLoading(true);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>setAiOutput(null);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const apiKey = "";<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const reportDetails = JSON.stringify(report, null, 2);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const systemPrompt = "You are an elite Branch Manager and Senior Relationship Manager at an Indian Bank. Draft professional business follow-ups and intelligence summaries from customer site visits. Write with clarity, warmth, and action-driven structure. Assume amounts are in INR (Rupees).";</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const userPrompt = `</p>
+<p class="p1"><span class="Apple-converted-space">      </span>Analyze the Customer Visit Report and generate TWO options. Mark them clearly with [EMAIL_START] and [SUMMARY_START] delimiters.</p>
+<p class="p2"><span class="Apple-converted-space">      </span></p>
+<p class="p1"><span class="Apple-converted-space">      </span>Option 1: A professional Follow-Up Email.</p>
+<p class="p1"><span class="Apple-converted-space">      </span>- Make the tone warm, precise, and appreciative.</p>
+<p class="p1"><span class="Apple-converted-space">      </span>- Recap primary banking pain points addressed (loans, deposits, forex, etc.).</p>
+<p class="p1"><span class="Apple-converted-space">      </span>- Clearly outline assigned action items.</p>
+<p class="p1"><span class="Apple-converted-space">      </span>- Ready to send to ${report.contacts[0]?.name || 'the customer'} from ${report.visitorName}.</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>Option 2: An Internal Branch Summary.</p>
+<p class="p1"><span class="Apple-converted-space">      </span>- A 3-bullet point executive digest of the meeting emphasizing business opportunities (CASA, Loans, Fee Income).</p>
+<p class="p1"><span class="Apple-converted-space">      </span>- Strategic next steps to secure business.</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>Report Data:</p>
+<p class="p1"><span class="Apple-converted-space">      </span>${reportDetails}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const payload = { contents: [{ parts: [{ text: userPrompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const maxRetries = 5;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let delay = 1000;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>for (let attempt = 0; attempt &lt; maxRetries; attempt++) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const response = await fetch(endpoint, {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>method: 'POST',</p>
+<p class="p1"><span class="Apple-converted-space">          </span>headers: { 'Content-Type': 'application/json' },</p>
+<p class="p1"><span class="Apple-converted-space">          </span>body: JSON.stringify(payload)</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);</p>
+<p class="p2"><span class="Apple-converted-space">        </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>const data = await response.json();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const textOutput = data?.candidates?.[0]?.content?.parts?.[0]?.text;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (textOutput) {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>let emailPart = textOutput;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>let summaryPart = textOutput;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>if (textOutput.includes('[EMAIL_START]') || textOutput.includes('[SUMMARY_START]')) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const emailRegex = /\[EMAIL_START\]([\s\S]*?)(?=\[SUMMARY_START\]|$)/;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const summaryRegex = /\[SUMMARY_START\]([\s\S]*?)$/;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const emailMatch = textOutput.match(emailRegex);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const summaryMatch = textOutput.match(summaryRegex);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>emailPart = emailMatch ? emailMatch[1].trim() : textOutput;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>summaryPart = summaryMatch ? summaryMatch[1].trim() : "Internal summary could not be cleanly separated.";</p>
+<p class="p1"><span class="Apple-converted-space">          </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const splitIndex = textOutput.indexOf("Option 2");</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if (splitIndex !== -1) {</p>
+<p class="p1"><span class="Apple-converted-space">              </span>emailPart = textOutput.substring(0, splitIndex).replace("Option 1:", "").trim();</p>
+<p class="p1"><span class="Apple-converted-space">              </span>summaryPart = textOutput.substring(splitIndex).replace("Option 2:", "").trim();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>setAiOutput({ email: emailPart, summary: summaryPart });</p>
+<p class="p1"><span class="Apple-converted-space">          </span>setAiLoading(false);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>triggerNotification("AI drafted content successfully!");</p>
+<p class="p1"><span class="Apple-converted-space">          </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>throw new Error("Empty response from AI");</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>} catch (err) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (attempt === maxRetries - 1) {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>setAiLoading(false);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>triggerNotification("AI service unavailable. Please try again later.", "error");</p>
+<p class="p1"><span class="Apple-converted-space">          </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>await new Promise(res =&gt; setTimeout(res, delay));</p>
+<p class="p1"><span class="Apple-converted-space">        </span>delay *= 2;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// METRICS (INSIGHTS)</p>
+<p class="p1"><span class="Apple-converted-space">  </span>// ==========================================</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const totalVisits = reports.length;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const prospectiveCount = reports.filter(r =&gt; r.customerType === 'prospective').length;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const existingCount = reports.filter(r =&gt; r.customerType === 'existing').length;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const totalPipelineValue = reports</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.filter(r =&gt; r.customerType === 'prospective')</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.reduce((sum, r) =&gt; sum + Number(r.prospectiveData.dealSize || 0), 0);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const upsellPotentialTotal = reports</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.filter(r =&gt; r.customerType === 'existing')</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.reduce((sum, r) =&gt; sum + Number(r.existingData.upsellPotential || 0), 0);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const activeExistingVisits = reports.filter(r =&gt; r.customerType === 'existing');</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const averageHealthScore = activeExistingVisits.length<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>? (activeExistingVisits.reduce((sum, r) =&gt; sum + r.existingData.healthScore, 0) / activeExistingVisits.length).toFixed(1)</p>
+<p class="p1"><span class="Apple-converted-space">    </span>: "N/A";</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const activeLeads = walkins.filter(w =&gt; w.status === 'New Lead' || w.status === 'In Progress').length;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>const convertedLeads = walkins.filter(w =&gt; w.status === 'Converted').length;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>const filteredReports = reports.filter(report =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const matchesSearch =<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">      </span>report.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||</p>
+<p class="p1"><span class="Apple-converted-space">      </span>report.visitorName.toLowerCase().includes(searchQuery.toLowerCase()) ||</p>
+<p class="p1"><span class="Apple-converted-space">      </span>report.discussionNotes.toLowerCase().includes(searchQuery.toLowerCase());</p>
+<p class="p1"><span class="Apple-converted-space">    </span>if (filterType === 'all') return matchesSearch;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>return matchesSearch &amp;&amp; report.customerType === filterType;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>return (</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans antialiased"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{/* GLOBAL TOAST */}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{notification &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div className={`fixed bottom-6 right-6 z-50 px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 border transition-all transform duration-300 translate-y-0 ${</p>
+<p class="p1"><span class="Apple-converted-space">          </span>notification.type === 'error' ? 'bg-rose-950/90 text-rose-200 border-rose-500' : 'bg-emerald-950/90 text-emerald-200 border-emerald-500'</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}`}&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>{notification.type === 'error' ? &lt;AlertTriangle className="h-5 w-5 text-rose-400" /&gt; : &lt;Check className="h-5 w-5 text-emerald-400" /&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;span className="font-medium text-sm"&gt;{notification.message}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>)}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>{/* HEADER BAR */}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;header className="print:hidden bg-slate-950 border-b border-slate-800 py-4 px-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-40"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div className="flex items-center gap-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/20 flex items-center justify-center"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;Store className="h-6 w-6" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-blue-300 bg-clip-text text-transparent"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>BranchSphere</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/h1&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;p className="text-xs text-slate-400 font-medium"&gt;Bank Branch Walk-in &amp; RM Visit Management&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>{/* NAVIGATION CONTROLS */}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;button</p>
+<p class="p1"><span class="Apple-converted-space">            </span>onClick={() =&gt; { setActiveTab('walkin'); setSelectedReport(null); }}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${</p>
+<p class="p1"><span class="Apple-converted-space">              </span>activeTab === 'walkin' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}`}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;Users className="h-4 w-4" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>Branch Leads</p>
+<p class="p1"><span class="Apple-converted-space">            </span>{activeLeads &gt; 0 &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"&gt;{activeLeads}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="w-px h-6 bg-slate-700 mx-1"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;button</p>
+<p class="p1"><span class="Apple-converted-space">            </span>onClick={() =&gt; { setActiveTab('dashboard'); setSelectedReport(null); }}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${</p>
+<p class="p1"><span class="Apple-converted-space">              </span>activeTab === 'dashboard' ? 'bg-slate-800 text-white border border-blue-500/30' : 'text-slate-400 hover:text-white'</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}`}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;FileText className="h-4 w-4" /&gt; RM Visits</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;button</p>
+<p class="p1"><span class="Apple-converted-space">            </span>onClick={() =&gt; { setActiveTab('new_visit'); setSelectedReport(null); setEditingReportId(null); setFormData(initialFormState); }}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${</p>
+<p class="p1"><span class="Apple-converted-space">              </span>activeTab === 'new_visit' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}`}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;PlusCircle className="h-4 w-4" /&gt; Log RM Visit</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;button</p>
+<p class="p1"><span class="Apple-converted-space">            </span>onClick={() =&gt; { setActiveTab('insights'); setSelectedReport(null); }}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${</p>
+<p class="p1"><span class="Apple-converted-space">              </span>activeTab === 'insights' ? 'bg-slate-800 text-white border border-blue-500/30' : 'text-slate-400 hover:text-white'</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}`}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;BarChart2 className="h-4 w-4" /&gt; Branch Analytics</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/header&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>{/* CORE CONTENT LAYOUT */}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;main className="print:hidden flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex flex-col gap-6"&gt;</p>
+<p class="p2"><span class="Apple-converted-space">        </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>{/* TAB: WALK-IN LEAD MANAGEMENT */}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>{activeTab === 'walkin' &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"&gt;</p>
+<p class="p2"><span class="Apple-converted-space">            </span></p>
+<p class="p1"><span class="Apple-converted-space">            </span>{/* NEW WALK-IN FORM (4 COLS) */}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="lg:col-span-4 bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden sticky top-28"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-gradient-to-r from-blue-900/40 to-slate-950 p-5 border-b border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;h2 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;UserCheck className="text-blue-400 h-5 w-5" /&gt; New Lead Entry</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;p className="text-[10px] text-slate-400 mt-1"&gt;Register walk-in sourcing and assign to RM for conversion.&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;form onSubmit={handleWalkinSubmit} className="p-5 space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5"&gt;Customer Name *&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>type="text" required placeholder="e.g. Ramesh Kumar"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>value={walkinForm.name} onChange={(e) =&gt; setWalkinForm({...walkinForm, name: e.target.value})}</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2.5 px-3 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="grid grid-cols-2 gap-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="col-span-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5"&gt;Mobile Number *&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;Phone className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>type="tel" required placeholder="+91"</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>value={walkinForm.phone} onChange={(e) =&gt; setWalkinForm({...walkinForm, phone: e.target.value})}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2.5 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="grid grid-cols-2 gap-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5"&gt;Product Interest&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;select</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>value={walkinForm.purpose} onChange={(e) =&gt; setWalkinForm({...walkinForm, purpose: e.target.value})}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2.5 px-3 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option&gt;New Savings Account&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option&gt;Current / Business Account&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option&gt;Personal Loan&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option&gt;Home Loan&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option&gt;Credit Card Enquiry&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option&gt;Mutual Funds / Investments&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option&gt;Forex / Remittance&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/select&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5"&gt;Expected Value (₹)&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>type="number" placeholder="Optional"</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>value={walkinForm.expectedValue} onChange={(e) =&gt; setWalkinForm({...walkinForm, expectedValue: e.target.value})}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2.5 px-3 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5"&gt;Initial Requirements / Notes&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;textarea</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>rows={2} placeholder="Customer needs..."</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>value={walkinForm.notes} onChange={(e) =&gt; setWalkinForm({...walkinForm, notes: e.target.value})}</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;button type="submit" className="w-full py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-lg shadow-blue-600/25 transition-all"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>Log Branch Lead</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/form&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>{/* LEAD MANAGEMENT BOARD (8 COLS) */}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="lg:col-span-8 space-y-6"&gt;</p>
+<p class="p2"><span class="Apple-converted-space">              </span></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* ACTIVE LEADS */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-lg p-5"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;TrendingUp className="h-4 w-4 text-blue-400" /&gt; Active Walk-in Leads</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;span className="bg-slate-800 text-slate-300 text-xs px-2.5 py-1 rounded-full font-semibold"&gt;{activeLeads} Active&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="space-y-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{walkins.filter(w =&gt; w.status === 'New Lead' || w.status === 'In Progress').length === 0 ? (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;p className="text-xs text-slate-500 italic py-4 text-center"&gt;No active leads currently in pipeline.&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>) : (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>walkins.filter(w =&gt; w.status === 'New Lead' || w.status === 'In Progress').map(walkin =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div key={walkin.id} className="bg-slate-900 border border-slate-700/50 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{walkin.status === 'New Lead' &amp;&amp; &lt;div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"&gt;&lt;/div&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{walkin.status === 'In Progress' &amp;&amp; &lt;div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"&gt;&lt;/div&gt;}</p>
+<p class="p2"><span class="Apple-converted-space">                        </span></p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="flex-1 pl-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;div className="flex items-center gap-2 mb-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;span className="font-bold text-white text-sm"&gt;{walkin.name}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;span className="text-xs text-slate-400"&gt;• {walkin.phone}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>{walkin.expectedValue &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">                               </span>&lt;span className="ml-2 text-xs font-bold text-emerald-400"&gt;₹{Number(walkin.expectedValue).toLocaleString('en-IN')}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;div className="flex items-center gap-2 text-xs mt-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;span className="bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded font-medium"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>{walkin.purpose}</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;span className="text-slate-500 text-[10px]"&gt;Logged: {new Date(walkin.timestamp).toLocaleDateString()}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>{walkin.notes &amp;&amp; &lt;p className="text-xs text-slate-400 mt-2 font-serif italic"&gt;"{walkin.notes}"&lt;/p&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p2"><span class="Apple-converted-space">                        </span></p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="flex flex-col items-end gap-2 shrink-0 border-t border-slate-800 pt-3 md:border-0 md:pt-0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;input<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">                            </span>type="text"<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">                            </span>placeholder="Assign RM Name..."<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">                            </span>className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 w-40 text-right"</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>onBlur={(e) =&gt; updateWalkinStatus(walkin.id, walkin.status, e.target.value)}</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>defaultValue={walkin.assignedTo === 'Pending' ? '' : walkin.assignedTo}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;div className="flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;select<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">                              </span>value={walkin.status}</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>onChange={(e) =&gt; updateWalkinStatus(walkin.id, e.target.value)}</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>className={`text-xs font-bold px-2 py-1.5 rounded-lg border focus:outline-none ${walkin.status === 'New Lead' ? 'bg-amber-900/30 text-amber-400 border-amber-800/50' : 'bg-blue-900/30 text-blue-400 border-blue-800/50'}`}</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;option value="New Lead"&gt;New Lead&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;option value="In Progress"&gt;In Progress&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;option value="Converted"&gt;Converted ✅&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;option value="Dropped"&gt;Dropped ❌&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/select&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;button onClick={() =&gt; deleteWalkin(walkin.id)} className="text-rose-400 hover:text-rose-300 p-1.5 hover:bg-rose-950 rounded-lg"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;Trash2 className="h-4 w-4" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>))</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* CLOSED LEADS */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-lg p-5 opacity-80"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;CheckSquare className="h-4 w-4 text-emerald-400" /&gt; Closed / Processed Leads</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;span className="bg-slate-800 text-slate-400 text-xs px-2.5 py-1 rounded-full font-semibold"&gt;{convertedLeads} Converted&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="space-y-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{walkins.filter(w =&gt; w.status === 'Converted' || w.status === 'Dropped').map(walkin =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div key={walkin.id} className="bg-slate-900 border border-slate-800 rounded-lg p-3 flex items-center justify-between"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span className="font-semibold text-slate-300 text-xs"&gt;{walkin.name}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span className="text-[10px] text-slate-500 ml-2"&gt;({walkin.purpose})&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="flex items-center gap-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span className="text-[10px] text-slate-500"&gt;RM: &lt;span className="font-medium text-slate-300"&gt;{walkin.assignedTo}&lt;/span&gt;&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span className={`text-[10px] px-2 py-0.5 rounded font-bold ${walkin.status === 'Converted' ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}&gt;{walkin.status}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>)}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>{/* TAB: SUBMIT NEW RM VISIT REPORT */}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>{activeTab === 'new_visit' &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden max-w-4xl mx-auto w-full"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="bg-gradient-to-r from-blue-900/50 via-slate-950 to-slate-950 p-6 border-b border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;h2 className="text-lg font-bold text-white flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;Briefcase className="text-blue-400 h-5 w-5" /&gt; {editingReportId ? 'Edit RM Customer Visit Report' : 'RM Customer Visit Report'}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-xs text-slate-400 mt-1"&gt;Log external client meetings, business sourcing, and account reviews.&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;form onSubmit={handleSubmitReport} className="p-6 md:p-8 space-y-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* PRIMARY METADATA */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="grid grid-cols-1 md:grid-cols-2 gap-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"&gt;Customer / Business Name *&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;Building className="absolute left-3 top-3.5 h-4 w-4 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>type="text" required placeholder="e.g. Gupta Enterprises"</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>value={formData.companyName} onChange={(e) =&gt; handleInputChange('companyName', e.target.value)}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"&gt;RM Name (Logged By) *&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;User className="absolute left-3 top-3.5 h-4 w-4 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>type="text" required placeholder="e.g. Anil Sharma"</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>value={formData.visitorName} onChange={(e) =&gt; handleInputChange('visitorName', e.target.value)}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"&gt;Date of Visit&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;Calendar className="absolute left-3 top-3.5 h-4 w-4 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>type="date" value={formData.visitDate} onChange={(e) =&gt; handleInputChange('visitDate', e.target.value)}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="grid grid-cols-2 gap-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"&gt;Meeting Format&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;select</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>value={formData.locationType} onChange={(e) =&gt; handleInputChange('locationType', e.target.value)}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-3 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option value="In-Person"&gt;Customer Premise&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option value="At Branch"&gt;At Branch&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;option value="Virtual"&gt;Virtual / Call&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/select&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"&gt;Location Details&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>type="text" placeholder="e.g. BKC Office"</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>value={formData.locationDetail} onChange={(e) =&gt; handleInputChange('locationDetail', e.target.value)}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-3 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* DYNAMIC BANKING RELATIONSHIP SWITCH */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="p-1.5 bg-slate-900 rounded-2xl border border-slate-800 flex gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;button</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>type="button" onClick={() =&gt; handleInputChange('customerType', 'prospective')}</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>formData.customerType === 'prospective' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10' : 'text-slate-400 hover:text-slate-200'</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>}`}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;TrendingUp className="h-4 w-4" /&gt; New Prospect (Loan/Account)</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;button</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>type="button" onClick={() =&gt; handleInputChange('customerType', 'existing')}</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>formData.customerType === 'existing' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10' : 'text-slate-400 hover:text-slate-200'</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>}`}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;Activity className="h-4 w-4" /&gt; Existing Customer (Review/Cross-sell)</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* CONDITIONAL BANKING FORMS */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>{formData.customerType === 'prospective' ? (</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="bg-slate-900/50 p-6 rounded-2xl border border-blue-500/15 space-y-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="flex items-center gap-2 pb-2 border-b border-slate-800/80"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;TrendingUp className="h-5 w-5 text-blue-400" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;h3 className="text-sm font-bold text-blue-300 uppercase tracking-wider"&gt;Prospective Business Detail&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="grid grid-cols-1 md:grid-cols-2 gap-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="block text-xs font-semibold text-slate-400 mb-2"&gt;Expected Value / Loan Amount (₹)&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;IndianRupee className="absolute left-3 top-3 h-4 w-4 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>type="number" placeholder="e.g. 5000000"</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>value={formData.prospectiveData.dealSize} onChange={(e) =&gt; handleInputChange('dealSize', e.target.value, 'prospective')}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="block text-xs font-semibold text-slate-400 mb-2"&gt;Lead Stage&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;select</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>value={formData.prospectiveData.leadStage} onChange={(e) =&gt; handleInputChange('leadStage', e.target.value, 'prospective')}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;option value="Discovery"&gt;Initial Contact / Discovery&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;option value="Presentation"&gt;Pitch / Document Collection&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;option value="Proposal"&gt;Credit Appraisal / Proposal&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;option value="Negotiation"&gt;Sanction / Closing&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/select&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="block text-xs font-semibold text-slate-400 mb-2"&gt;Competing Banks Mentioned&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>type="text" placeholder="e.g. HDFC, SBI, ICICI"</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>value={formData.prospectiveData.competitors} onChange={(e) =&gt; handleInputChange('competitors', e.target.value, 'prospective')}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-4 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="flex items-center pt-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="relative flex items-center gap-3 cursor-pointer"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>type="checkbox" checked={formData.prospectiveData.decisionMakerMet}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>onChange={(e) =&gt; handleInputChange('decisionMakerMet', e.target.checked, 'prospective')} className="sr-only peer"</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span className="text-sm font-semibold text-slate-300 select-none"&gt;Primary Decision Maker Met?&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;label className="block text-xs font-semibold text-slate-400 mb-2"&gt;Customer Pain Points / Requirements&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;textarea</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>rows={3} placeholder="Why are they looking for a new bank or loan? Rate issues, service issues..."</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>value={formData.prospectiveData.keyPainPoints} onChange={(e) =&gt; handleInputChange('keyPainPoints', e.target.value, 'prospective')}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>) : (</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="bg-slate-900/50 p-6 rounded-2xl border border-blue-500/15 space-y-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="flex items-center gap-2 pb-2 border-b border-slate-800/80"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;Activity className="h-5 w-5 text-blue-400" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;h3 className="text-sm font-bold text-blue-300 uppercase tracking-wider"&gt;Existing Customer Success Fields&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="grid grid-cols-1 md:grid-cols-2 gap-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="block text-xs font-semibold text-slate-400 mb-2"&gt;Relationship Rating (1-5)&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="flex items-center gap-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{[1, 2, 3, 4, 5].map((stars) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;button</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>key={stars} type="button" onClick={() =&gt; handleInputChange('healthScore', stars, 'existing')}</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>className={`p-2.5 rounded-xl border text-sm font-bold transition-all ${</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>formData.existingData.healthScore === stars ? 'bg-blue-600 text-white border-blue-400 shadow-md' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>}`}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>{stars} ⭐</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="block text-xs font-semibold text-slate-400 mb-2"&gt;Cross-sell / Expansion Value (₹)&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;IndianRupee className="absolute left-3 top-3 h-4 w-4 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>type="number" placeholder="e.g. 1000000"</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>value={formData.existingData.upsellPotential} onChange={(e) =&gt; handleInputChange('upsellPotential', e.target.value, 'existing')}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="block text-xs font-semibold text-slate-400 mb-2"&gt;Upcoming Renewal / FD Maturity Date&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;Calendar className="absolute left-3 top-3 h-4 w-4 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>type="date" value={formData.existingData.renewalDate} onChange={(e) =&gt; handleInputChange('renewalDate', e.target.value, 'existing')}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none"</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="flex items-center pt-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;label className="relative flex items-center gap-3 cursor-pointer"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>type="checkbox" checked={formData.existingData.supportIssues}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>onChange={(e) =&gt; handleInputChange('supportIssues', e.target.checked, 'existing')} className="sr-only peer"</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600 peer-checked:after:bg-white"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span className="text-sm font-semibold text-slate-300 select-none"&gt;Active Service / Complaint Escalation?&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>)}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* CONTACTS MET LIST */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="flex items-center justify-between pb-2 border-b border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;Users className="h-4 w-4 text-blue-400" /&gt; Persons Met</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;button type="button" onClick={addContactRow} className="text-xs bg-slate-800 text-blue-400 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;PlusCircle className="h-3.5 w-3.5" /&gt; Add Contact</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="space-y-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{formData.contacts.map((contact, index) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end bg-slate-900/40 p-4 rounded-xl border border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;label className="block text-[10px] uppercase font-semibold text-slate-400 mb-1"&gt;Full Name&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input type="text" required={index === 0} placeholder="Contact name" value={contact.name} onChange={(e) =&gt; handleContactChange(index, 'name', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;label className="block text-[10px] uppercase font-semibold text-slate-400 mb-1"&gt;Role / Designation&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input type="text" placeholder="e.g. Director / Individual" value={contact.role} onChange={(e) =&gt; handleContactChange(index, 'role', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="flex-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;label className="block text-[10px] uppercase font-semibold text-slate-400 mb-1"&gt;Email Address&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;input type="email" placeholder="name@domain.com" value={contact.email} onChange={(e) =&gt; handleContactChange(index, 'email', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{formData.contacts.length &gt; 1 &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;button type="button" onClick={() =&gt; removeContactRow(index)} className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg"&gt;&lt;Trash2 className="h-4 w-4" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* DETAILED DISCUSSION */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"&gt;Discussion Details &amp; Minutes *&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;textarea required rows={5} placeholder="Document banking requirements discussed, limits reviewed, document collection status..." value={formData.discussionNotes} onChange={(e) =&gt; handleInputChange('discussionNotes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm focus:border-blue-500 focus:outline-none" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* ACTION ITEMS SECTION */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="flex items-center justify-between pb-2 border-b border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;CheckSquare className="h-4 w-4 text-blue-400" /&gt; Action Items &amp; Deliverables</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;button type="button" onClick={addActionItemRow} className="text-xs bg-slate-800 text-blue-400 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;PlusCircle className="h-3.5 w-3.5" /&gt; Add Task</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="space-y-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{formData.actionItems.map((action, index) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div key={action.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-900/40 p-4 rounded-xl border border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="md:col-span-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;label className="block text-[10px] uppercase font-semibold text-slate-400 mb-1"&gt;Task Description&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input type="text" placeholder="e.g. Collect KYC docs, Draft OD Proposal" value={action.task} onChange={(e) =&gt; handleActionItemChange(index, 'task', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="md:col-span-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;label className="block text-[10px] uppercase font-semibold text-slate-400 mb-1"&gt;Owner&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;input type="text" placeholder="Assignee" value={action.owner} onChange={(e) =&gt; handleActionItemChange(index, 'owner', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="md:col-span-3 flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="flex-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;label className="block text-[10px] uppercase font-semibold text-slate-400 mb-1"&gt;Deadline&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;input type="date" value={action.deadline} onChange={(e) =&gt; handleActionItemChange(index, 'deadline', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{formData.actionItems.length &gt; 1 &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;button type="button" onClick={() =&gt; removeActionItemRow(index)} className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg"&gt;&lt;Trash2 className="h-4 w-4" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>{/* ACTION BUTTONS */}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;button type="button" onClick={() =&gt; { setFormData(initialFormState); setEditingReportId(null); setActiveTab('dashboard'); }} className="px-6 py-3 text-sm font-semibold text-slate-400 hover:text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition-all"&gt;Cancel&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;button type="submit" className="px-8 py-3 text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/25 transition-all"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{editingReportId ? 'Update RM Visit Report' : 'Log RM Visit Report'}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/form&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>)}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>{/* TAB: RM REPORTS DASHBOARD */}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>{activeTab === 'dashboard' &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className={`${selectedReport ? 'lg:col-span-5' : 'lg:col-span-12'} space-y-6 transition-all duration-300`}&gt;</p>
+<p class="p2"><span class="Apple-converted-space">              </span></p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between shadow-lg"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="relative w-full md:w-80"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;input type="text" placeholder="Search accounts, notes..." value={searchQuery} onChange={(e) =&gt; setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-blue-500" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{searchQuery &amp;&amp; &lt;button onClick={() =&gt; setSearchQuery('')} className="absolute right-3 top-3 text-slate-400"&gt;&lt;X className="h-3.5 w-3.5" /&gt;&lt;/button&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="flex items-center gap-2 overflow-x-auto"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;button onClick={() =&gt; setFilterType('all')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400'}`}&gt;All Visits&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;button onClick={() =&gt; setFilterType('prospective')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${filterType === 'prospective' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400'}`}&gt;New Prospects&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;button onClick={() =&gt; setFilterType('existing')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${filterType === 'existing' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400'}`}&gt;Existing Customers&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>{filteredReports.length === 0 ? (</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="bg-slate-950 rounded-2xl border border-slate-800 p-12 text-center"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;AlertTriangle className="h-10 w-10 text-slate-500 mx-auto mb-4" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;h3 className="text-sm font-bold text-slate-300"&gt;No RM Reports Found&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>) : (</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>filteredReports.map((report) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div key={report.id} onClick={() =&gt; { setSelectedReport(report); setAiOutput(null); }} className={`group text-left p-5 bg-slate-950 hover:bg-slate-900/60 rounded-2xl border transition-all cursor-pointer relative shadow-md ${selectedReport?.id === report.id ? 'border-blue-500 ring-1 ring-blue-500/30' : 'border-slate-800'}`}&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="absolute top-4 right-4 flex gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase ${report.customerType === 'prospective' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-blue-950 text-blue-400 border border-blue-800'}`}&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>{report.customerType === 'prospective' ? 'Prospect' : 'Existing'}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="space-y-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;p className="text-xs text-slate-400 font-medium flex items-center gap-1.5"&gt;&lt;Calendar className="h-3 w-3" /&gt; {report.visitDate}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;h3 className="text-base font-bold text-white mt-1 group-hover:text-blue-400"&gt;{report.companyName}&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="grid grid-cols-2 gap-3 text-xs text-slate-400"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;div&gt;&lt;span className="text-[10px] uppercase font-bold text-slate-500 block"&gt;Logged By&lt;/span&gt;&lt;span className="font-medium text-slate-300"&gt;{report.visitorName}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;div&gt;&lt;span className="text-[10px] uppercase font-bold text-slate-500 block"&gt;Meeting&lt;/span&gt;&lt;span className="font-medium text-slate-300 truncate block"&gt;{report.locationType}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="pt-2 border-t border-slate-900 grid grid-cols-2 gap-2 text-xs"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>{report.customerType === 'prospective' ? (</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;div&gt;&lt;span className="text-[10px] text-slate-500 uppercase block"&gt;Expected Value&lt;/span&gt;&lt;span className="font-bold text-slate-200 flex items-center"&gt;&lt;IndianRupee className="h-3 w-3 mr-0.5"/&gt;{Number(report.prospectiveData.dealSize || 0).toLocaleString('en-IN')}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;div&gt;&lt;span className="text-[10px] text-slate-500 uppercase block"&gt;Stage&lt;/span&gt;&lt;span className="font-semibold text-slate-200"&gt;{report.prospectiveData.leadStage}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>) : (</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;div&gt;&lt;span className="text-[10px] text-slate-500 uppercase block"&gt;Relationship&lt;/span&gt;&lt;span className="font-bold text-amber-400"&gt;{"⭐".repeat(report.existingData.healthScore)}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;div&gt;&lt;span className="text-[10px] text-slate-500 uppercase block"&gt;Cross-sell Pipeline&lt;/span&gt;&lt;span className="font-semibold text-slate-200 flex items-center"&gt;&lt;IndianRupee className="h-3 w-3 mr-0.5"/&gt;{Number(report.existingData.upsellPotential || 0).toLocaleString('en-IN')}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>))</p>
+<p class="p1"><span class="Apple-converted-space">                </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>{selectedReport &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="lg:col-span-7 bg-slate-950 rounded-2xl border border-blue-500/20 shadow-2xl overflow-hidden sticky top-28"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="bg-gradient-to-r from-slate-950 via-slate-950 to-blue-950/20 p-6 border-b border-slate-800 flex justify-between items-start gap-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;span className="text-[10px] font-bold tracking-wider uppercase text-blue-400"&gt;Detailed Report&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;h2 className="text-xl font-bold text-white mt-1"&gt;{selectedReport.companyName}&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5"&gt;&lt;Calendar className="h-3 w-3" /&gt; Visit Logged: {selectedReport.visitDate}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="flex items-center gap-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;button onClick={() =&gt; handleEditReport(selectedReport)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all" title="Edit Report"&gt;&lt;Edit className="h-4.5 w-4.5" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;button onClick={() =&gt; window.print()} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all" title="Print Clean Report"&gt;&lt;Printer className="h-4.5 w-4.5" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;button onClick={() =&gt; handleCopyReportToClipboard(selectedReport)} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all" title="Copy to Clipboard"&gt;&lt;Copy className="h-4.5 w-4.5" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;button onClick={() =&gt; handleDeleteReport(selectedReport.id)} className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 rounded-lg transition-all" title="Delete Report"&gt;&lt;Trash2 className="h-4.5 w-4.5" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;button onClick={() =&gt; { setSelectedReport(null); setAiOutput(null); }} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all" title="Close"&gt;&lt;X className="h-4.5 w-4.5" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="p-6 md:p-8 space-y-8 max-h-[75vh] overflow-y-auto"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-900/50 rounded-xl border border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;&lt;span className="text-[10px] font-bold uppercase text-slate-500 block"&gt;RM Name&lt;/span&gt;&lt;span className="text-sm font-semibold text-slate-300"&gt;{selectedReport.visitorName}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div&gt;&lt;span className="text-[10px] font-bold uppercase text-slate-500 block"&gt;Format&lt;/span&gt;&lt;span className="text-sm font-semibold text-slate-300"&gt;{selectedReport.locationType}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="col-span-2"&gt;&lt;span className="text-[10px] font-bold uppercase text-slate-500 block"&gt;Details&lt;/span&gt;&lt;span className="text-sm font-semibold text-slate-300"&gt;{selectedReport.locationDetail || "N/A"}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{selectedReport.customerType === 'prospective' ? (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 pb-1 border-b border-slate-800"&gt;&lt;TrendingUp className="h-4 w-4" /&gt; Prospective Business Details&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="grid grid-cols-2 gap-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Expected Value (₹)&lt;/span&gt;&lt;span className="text-base font-bold text-emerald-400"&gt;₹{Number(selectedReport.prospectiveData.dealSize || 0).toLocaleString('en-IN')}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Sales Stage&lt;/span&gt;&lt;span className="text-base font-bold text-slate-200"&gt;{selectedReport.prospectiveData.leadStage}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Competing Banks&lt;/span&gt;&lt;span className="text-sm font-medium text-slate-200"&gt;{selectedReport.prospectiveData.competitors || "None"}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Decision Maker Met?&lt;/span&gt;&lt;span className="text-sm font-bold text-slate-200"&gt;{selectedReport.prospectiveData.decisionMakerMet ? "Yes ✅" : "No ❌"}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="bg-slate-900 p-4 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block mb-1"&gt;Customer Requirements / Pain Points&lt;/span&gt;&lt;p className="text-xs text-slate-300 font-mono"&gt;{selectedReport.prospectiveData.keyPainPoints}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>) : (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5 pb-1 border-b border-slate-800"&gt;&lt;Activity className="h-4 w-4" /&gt; Account Health Details&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="grid grid-cols-2 gap-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Relationship Rating&lt;/span&gt;&lt;span className="text-base font-bold text-amber-400"&gt;{"⭐".repeat(selectedReport.existingData.healthScore)}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Cross-sell Pipeline (₹)&lt;/span&gt;&lt;span className="text-base font-bold text-blue-400"&gt;₹{Number(selectedReport.existingData.upsellPotential || 0).toLocaleString('en-IN')}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Renewal/Maturity Date&lt;/span&gt;&lt;span className="text-sm font-semibold text-slate-200"&gt;{selectedReport.existingData.renewalDate || "N/A"}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-900 p-3 rounded-lg border border-slate-800"&gt;&lt;span className="text-[10px] uppercase text-slate-500 block"&gt;Active Service Issues&lt;/span&gt;&lt;span className={`text-sm font-bold ${selectedReport.existingData.supportIssues ? 'text-rose-400' : 'text-slate-400'}`}&gt;{selectedReport.existingData.supportIssues ? "Attention Required ⚠️" : "None ✅"}&lt;/span&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>)}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="space-y-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;h3 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1.5 pb-1 border-b border-slate-800"&gt;&lt;Users className="h-4 w-4" /&gt; Persons Met&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="grid grid-cols-1 md:grid-cols-2 gap-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>{selectedReport.contacts.map((contact, idx) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div key={idx} className="bg-slate-900 p-3.5 rounded-xl border border-slate-800/80"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;p className="text-sm font-bold text-white"&gt;{contact.name}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;p className="text-xs text-blue-400 font-medium"&gt;{contact.role}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;p className="text-xs text-slate-500 mt-1.5"&gt;&lt;Mail className="h-3 w-3 inline mr-1" /&gt; {contact.email}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="space-y-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;h3 className="text-xs font-bold uppercase text-slate-400 pb-1 border-b border-slate-800"&gt;Discussion Minutes&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;p className="text-xs text-slate-300 leading-relaxed bg-slate-900/40 p-4 rounded-xl border border-slate-900 font-serif"&gt;{selectedReport.discussionNotes}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="space-y-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;h3 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1.5 pb-1 border-b border-slate-800"&gt;&lt;CheckSquare className="h-4 w-4" /&gt; Action Items&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>{selectedReport.actionItems.length &gt; 0 ? (</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="space-y-2.5"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{selectedReport.actionItems.map((action) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;div key={action.id} onClick={() =&gt; toggleActionComplete(selectedReport.id, action.id)} className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer ${action.completed ? 'bg-emerald-950/10 border-emerald-900/60' : 'bg-slate-900 border-slate-800'}`}&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;button className={`p-1 rounded-md mt-0.5 ${action.completed ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-500'}`}&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>{action.completed ? &lt;Check className="h-3.5 w-3.5" /&gt; : &lt;div className="h-3.5 w-3.5" /&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;div className="flex-1 min-w-0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;p className={`text-xs font-semibold ${action.completed ? 'line-through text-slate-500' : 'text-slate-200'}`}&gt;{action.task}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                </span>&lt;span className="bg-slate-800 px-2 py-0.5 rounded"&gt;Assignee: {action.owner}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                </span>{action.deadline &amp;&amp; &lt;span className="flex items-center"&gt;&lt;Clock className="h-3 w-3 mr-1" /&gt; Due: {action.deadline}&lt;/span&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>) : &lt;p className="text-xs text-slate-500 italic"&gt;No tasks logged.&lt;/p&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="bg-gradient-to-br from-blue-950/40 via-blue-900/20 to-slate-950 p-5 rounded-2xl border border-blue-500/20 shadow-lg space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="flex justify-between items-center gap-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-blue-600 p-1.5 rounded-lg text-white"&gt;&lt;Sparkles className="h-4 w-4" /&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div&gt;&lt;h4 className="text-xs font-bold text-white uppercase"&gt;Gemini Branch Assistant&lt;/h4&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;button onClick={() =&gt; generateAIAssistance(selectedReport)} disabled={aiLoading} className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-xs font-bold text-white px-4 py-2 rounded-xl flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{aiLoading ? &lt;&gt;&lt;RefreshCw className="h-3.5 w-3.5 animate-spin" /&gt; Drafting...&lt;/&gt; : &lt;&gt;&lt;Zap className="h-3.5 w-3.5" /&gt; Draft Follow-up&lt;/&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>{aiOutput &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/80"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="bg-slate-950/80 p-2 border-b border-slate-800 flex gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;button onClick={() =&gt; setAiOutputTab('email')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg ${aiOutputTab === 'email' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}&gt;Email Draft&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;button onClick={() =&gt; setAiOutputTab('summary')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg ${aiOutputTab === 'summary' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}&gt;Internal Digest&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="p-4 relative"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;button onClick={() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>const el = document.createElement('textarea'); el.value = aiOutputTab === 'email' ? aiOutput.email : aiOutput.summary;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); triggerNotification("Copied!");</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>}} className="absolute top-3 right-3 p-1.5 bg-slate-800 text-slate-300 rounded"&gt;&lt;Copy className="h-3.5 w-3.5" /&gt;&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;pre className="text-xs text-slate-300 font-sans whitespace-pre-wrap max-h-60 overflow-y-auto pr-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>{aiOutputTab === 'email' ? aiOutput.email : aiOutput.summary}</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>&lt;/pre&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>)}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>{/* TAB: INSIGHTS &amp; METRICS */}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>{activeTab === 'insights' &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="space-y-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="grid grid-cols-2 md:grid-cols-4 gap-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block"&gt;Branch Leads Tracker&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-3xl font-extrabold text-white mt-1 block"&gt;{walkins.length}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-xs text-slate-400 mt-1 block"&gt;{convertedLeads} Converted / {activeLeads} Active&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block"&gt;RM Visits Logged&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-3xl font-extrabold text-white mt-1 block"&gt;{totalVisits}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-xs text-slate-400 mt-1 block"&gt;New {prospectiveCount} / Existing {existingCount}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block"&gt;New Business Pipeline&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-3xl font-extrabold text-emerald-400 mt-1 block max-w-full truncate overflow-hidden"&gt;₹{(totalPipelineValue/100000).toFixed(1)}L&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-xs text-slate-400 mt-1 block"&gt;Expected business value&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block"&gt;Cross-sell Pipeline&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-3xl font-extrabold text-blue-400 mt-1 block max-w-full truncate overflow-hidden"&gt;₹{(upsellPotentialTotal/100000).toFixed(1)}L&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;span className="text-xs text-slate-400 mt-1 block"&gt;From existing base&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="grid grid-cols-1 md:grid-cols-2 gap-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-lg space-y-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;h3 className="text-sm font-bold uppercase tracking-wider text-white"&gt;Branch Portfolio Health&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="flex justify-between items-center text-xs mb-1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;span className="text-slate-300 font-semibold"&gt;Average Existing Customer Rating&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;span className="text-amber-400 font-bold"&gt;{averageHealthScore} / 5&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div className="bg-slate-900 h-2 rounded-full overflow-hidden"&gt;&lt;div className="bg-amber-400 h-full" style={{ width: `${averageHealthScore !== "N/A" ? (Number(averageHealthScore)/5)*100 : 0}%` }}/&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-lg overflow-hidden flex flex-col"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                 </span>&lt;div className="p-6 border-b border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;h3 className="text-sm font-bold uppercase tracking-wider text-white"&gt;Recent Walk-in Leads Status&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="p-4 flex-1 overflow-y-auto max-h-48"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>{walkins.slice(0, 5).map(w =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div key={w.id} className="flex items-center justify-between py-2 border-b border-slate-800/50 last:border-0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;p className="text-xs font-bold text-slate-200"&gt;{w.name} &lt;span className="text-[10px] text-slate-500 font-normal ml-1"&gt;({w.purpose})&lt;/span&gt;&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${w.status === 'Converted' ? 'bg-emerald-900/50 text-emerald-400' : w.status === 'New Lead' ? 'bg-amber-900/50 text-amber-400' : 'bg-slate-800 text-slate-400'}`}&gt;{w.status}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-lg overflow-hidden"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="p-6 border-b border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;h3 className="text-sm font-bold uppercase tracking-wider text-white"&gt;RM Pipeline Directory&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="overflow-x-auto"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;table className="w-full text-left text-xs"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;thead className="bg-slate-900 text-slate-500 uppercase font-semibold border-b border-slate-800"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;th className="p-4"&gt;Customer&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;th className="p-4"&gt;Type&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;th className="p-4"&gt;Assigned RM&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;th className="p-4"&gt;Date&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;th className="p-4 text-right"&gt;Value Impact (₹)&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;tbody className="divide-y divide-slate-900"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>{reports.map((report) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;tr key={report.id} className="hover:bg-slate-900/40 transition-all"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;td className="p-4 font-bold text-slate-200"&gt;{report.companyName}&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;td className="p-4"&gt;&lt;span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${report.customerType === 'prospective' ? 'bg-emerald-950 text-emerald-400' : 'bg-blue-950 text-blue-400'}`}&gt;{report.customerType === 'prospective' ? 'New' : 'Existing'}&lt;/span&gt;&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;td className="p-4 text-slate-400"&gt;{report.visitorName}&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;td className="p-4 text-slate-500"&gt;{report.visitDate}&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;td className="p-4 text-right font-bold text-slate-200"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                          </span>₹{Number(report.customerType === 'prospective' ? report.prospectiveData.dealSize : report.existingData.upsellPotential).toLocaleString('en-IN')}</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                      </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/main&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;footer className="print:hidden bg-slate-950 border-t border-slate-800 py-6 text-center text-xs text-slate-500 mt-auto"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;p&gt;© 2026 BranchSphere Operations. Designed for Indian Banking Workflows.&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/footer&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>{/* PRINT ONLY: RM VISIT REPORT LAYOUT */}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>{selectedReport &amp;&amp; (</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div className="hidden print:block bg-white text-black p-8 min-h-screen w-full font-serif max-w-4xl mx-auto"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>{/* Print Header */}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="border-b-2 border-black pb-4 mb-8 flex justify-between items-end"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;h1 className="text-3xl font-black uppercase tracking-tight text-black flex items-center gap-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;Store className="h-8 w-8 text-black" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>RM Visit Report</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/h1&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-sm font-bold mt-1 text-gray-700 tracking-widest"&gt;CONFIDENTIAL INTERNAL DOCUMENT&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="text-right"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-sm font-bold"&gt;Date Logged: &lt;span className="font-normal"&gt;{selectedReport.visitDate}&lt;/span&gt;&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-sm font-bold"&gt;Report ID: &lt;span className="font-normal"&gt;{selectedReport.id.split('-')[1]}&lt;/span&gt;&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>{/* Section 1: Core Details */}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="grid grid-cols-2 gap-8 mb-8 border-b border-gray-300 pb-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3"&gt;Customer Entity&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-xl font-bold"&gt;{selectedReport.companyName}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-sm mt-1 text-gray-700"&gt;Profile Type: &lt;span className="font-semibold uppercase text-black"&gt;{selectedReport.customerType === 'prospective' ? 'New Prospect' : 'Existing Customer'}&lt;/span&gt;&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3"&gt;Meeting Matrix&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;table className="w-full text-sm"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;tr className="border-b border-gray-100"&gt;&lt;td className="py-1 text-gray-600"&gt;Assigned RM:&lt;/td&gt;&lt;td className="py-1 font-bold text-right"&gt;{selectedReport.visitorName}&lt;/td&gt;&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;tr className="border-b border-gray-100"&gt;&lt;td className="py-1 text-gray-600"&gt;Format:&lt;/td&gt;&lt;td className="py-1 font-bold text-right"&gt;{selectedReport.locationType}&lt;/td&gt;&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;tr&gt;&lt;td className="py-1 text-gray-600"&gt;Location:&lt;/td&gt;&lt;td className="py-1 font-bold text-right"&gt;{selectedReport.locationDetail || 'N/A'}&lt;/td&gt;&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>{/* Section 2: Business Intelligence */}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="mb-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 border-b-2 border-black pb-1 mb-4"&gt;Business Intelligence&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>{selectedReport.customerType === 'prospective' ? (</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Expected Deal Size&lt;/p&gt;&lt;p className="text-lg font-bold"&gt;₹{Number(selectedReport.prospectiveData.dealSize || 0).toLocaleString('en-IN')}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Pipeline Stage&lt;/p&gt;&lt;p className="text-lg font-bold"&gt;{selectedReport.prospectiveData.leadStage}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Competitor Landscape&lt;/p&gt;&lt;p className="text-base"&gt;{selectedReport.prospectiveData.competitors || 'None Documented'}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Decision Maker&lt;/p&gt;&lt;p className="text-base"&gt;{selectedReport.prospectiveData.decisionMakerMet ? 'Engaged directly' : 'Not present'}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="col-span-2 mt-2"&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Requirements / Pain Points&lt;/p&gt;&lt;p className="text-sm mt-1 bg-white p-3 border border-gray-200"&gt;{selectedReport.prospectiveData.keyPainPoints}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>) : (</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Account Health&lt;/p&gt;&lt;p className="text-lg font-bold"&gt;{"★".repeat(selectedReport.existingData.healthScore)}{"☆".repeat(5 - selectedReport.existingData.healthScore)}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Cross-sell / Expansion Value&lt;/p&gt;&lt;p className="text-lg font-bold"&gt;₹{Number(selectedReport.existingData.upsellPotential || 0).toLocaleString('en-IN')}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Renewal / Maturity&lt;/p&gt;&lt;p className="text-base"&gt;{selectedReport.existingData.renewalDate || 'None Set'}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div&gt;&lt;p className="text-xs text-gray-600 uppercase font-bold"&gt;Active Support Escelation&lt;/p&gt;&lt;p className="text-base"&gt;{selectedReport.existingData.supportIssues ? 'Yes - Attention Required' : 'No Critical Issues'}&lt;/p&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>{/* Section 3: Personnel */}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="mb-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 border-b-2 border-black pb-1 mb-4"&gt;Key Personnel Met&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;table className="w-full text-sm border-collapse"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;tr className="bg-gray-100 text-left"&gt;&lt;th className="p-2 border border-gray-300"&gt;Name&lt;/th&gt;&lt;th className="p-2 border border-gray-300"&gt;Designation&lt;/th&gt;&lt;th className="p-2 border border-gray-300"&gt;Contact/Email&lt;/th&gt;&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>{selectedReport.contacts.map((contact, idx) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;tr key={idx}&gt;&lt;td className="p-2 border border-gray-300 font-bold"&gt;{contact.name}&lt;/td&gt;&lt;td className="p-2 border border-gray-300"&gt;{contact.role}&lt;/td&gt;&lt;td className="p-2 border border-gray-300"&gt;{contact.email}&lt;/td&gt;&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>{/* Section 4: Discussion */}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="mb-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 border-b-2 border-black pb-1 mb-4"&gt;Official Discussion Minutes&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;p className="text-sm leading-relaxed text-justify whitespace-pre-wrap"&gt;{selectedReport.discussionNotes}&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>{/* Section 5: Action Items */}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="mb-12"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 border-b-2 border-black pb-1 mb-4"&gt;Next Steps &amp; Action Items&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;ul className="space-y-3"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>{selectedReport.actionItems.length &gt; 0 ? selectedReport.actionItems.map((action, idx) =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;li key={idx} className="flex gap-3 text-sm items-start"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div className="mt-1 flex-shrink-0 w-4 h-4 border border-black flex items-center justify-center"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>{action.completed &amp;&amp; &lt;span className="font-bold text-xs"&gt;✓&lt;/span&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;span className="font-bold mr-2"&gt;{action.task}&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;span className="text-gray-500 text-xs inline-block ml-2"&gt;(Owner: {action.owner} | Due: {action.deadline || 'N/A'})&lt;/span&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                  </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/li&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>)) : &lt;li className="text-sm text-gray-500 italic"&gt;No action items documented.&lt;/li&gt;}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>{/* Signature Block */}</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div className="flex justify-between mt-16 pt-8 border-t border-gray-400"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="text-center w-48"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="border-b border-black h-8 mb-2"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-xs font-bold"&gt;Relationship Manager Sign&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div className="text-center w-48"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;div className="border-b border-black h-8 mb-2"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;p className="text-xs font-bold"&gt;Branch Manager Sign&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>);</p>
+<p class="p1">}</p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+<p class="p2"><br></p>
+</body>
+</html>

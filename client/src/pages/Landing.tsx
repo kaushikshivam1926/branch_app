@@ -13,6 +13,7 @@
  */
 
 import { sbiLogoUrl } from '@/lib/assets';
+import NotificationConfigModal from "@/components/NotificationConfigModal";
 import { Link } from "wouter";
 import { useState, useEffect } from "react";
 import { 
@@ -36,7 +37,8 @@ import {
   FileEdit,
   Star,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Bell
 } from "lucide-react";
 import { db, loadData, saveData } from "@/lib/db";
 import { exportAllData as exportAllIndexedDB, importAllData as importAllIndexedDB, downloadBackup } from "@/lib/dataBackup";
@@ -192,6 +194,7 @@ export default function Landing() {
   const [tempState, setTempState] = useState("");
   const [tempPinCode, setTempPinCode] = useState("");
   const [stateSearch, setStateSearch] = useState("");
+  const [showNotificationConfig, setShowNotificationConfig] = useState(false);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
 
   // Favourites bar state
@@ -635,6 +638,14 @@ export default function Landing() {
                 >
                   <Building2 className="w-4 h-4" />
                   <span>Branch Config</span>
+                </button>
+                <button
+                  onClick={() => setShowNotificationConfig(true)}
+                  className="flex items-center gap-2 bg-pink-600/80 hover:bg-pink-600 text-white px-4 py-2 rounded-lg transition-colors border border-white/30"
+                  title="Configure notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span>Notifications</span>
                 </button>
                 <button
                   onClick={handleExportAll}
@@ -1142,6 +1153,10 @@ export default function Landing() {
             </div>
           </div>
         </div>
+      )}
+
+      {showNotificationConfig && (
+        <NotificationConfigModal onClose={() => setShowNotificationConfig(false)} />
       )}
     </div>
   );

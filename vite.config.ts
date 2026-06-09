@@ -7,15 +7,7 @@ import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
-// Support three build modes:
-// - Development (default): Code-splitting for faster dev builds & better caching
-// - Deployment: Single-file for offline file:// access (users can double-click index.html)
-// - Modular: Modular chunks with code-splitting for offline via HTTP server (recommended)
-const isDeploymentBuild = process.env.BUILD_MODE === "deployment";
-const isModularBuild = process.env.BUILD_MODE === "modular";
-const plugins = isDeploymentBuild
-  ? [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), viteSingleFile()]
-  : [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), viteSingleFile()];
 
 export default defineConfig({
   plugins,
@@ -31,22 +23,25 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    cssCodeSplit: !isDeploymentBuild, // Split CSS for modular/dev
-    // For deployment: inline all assets into single file
-    // For modular/dev: keep assets separate for efficient caching
-    assetsInlineLimit: isDeploymentBuild ? Infinity : 0,
+    cssCodeSplit: false,
+    assetsInlineLimit: 1048576, // Inline all assets ≤1MB as Base64 for standalone offline mode
     rollupOptions: {
       output: {
-        // Inline everything in deployment mode (handled by viteSingleFile)
-        // Keep separate chunks in modular/dev mode for better caching
-        inlineDynamicImports: isDeploymentBuild,
+        inlineDynamicImports: true,
+        manualChunks: undefined,
       },
     },
   },
   server: {
     port: 3000,
-    strictPort: true, // Fail if 3000 is busy to avoid running multiple dev versions
+    strictPort: false, // Will find next available port if 3000 is busy
     host: true,
+    hmr: {
+      // When accessed through the Manus reverse proxy tunnel the WebSocket
+      // must connect on port 443 (WSS). The SW is intentionally not registered
+      // in dev mode (see main.tsx) to prevent stale cache issues.
+      clientPort: 443,
+    },
     allowedHosts: [
       ".manuspre.computer",
       ".manus.computer",

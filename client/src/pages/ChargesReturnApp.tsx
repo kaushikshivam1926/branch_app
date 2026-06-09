@@ -348,7 +348,7 @@ export default function ChargesReturnApp() {
   const [acmPreviewData, setAcmPreviewData] = useState<{ reportDate: { iso: string; label: string }; rows: ACMRow[] } | null>(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 print:bg-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-blue-50 print:bg-white">
       {/* Header */}
       <header 
         className="w-full py-2 px-6 print:hidden shadow-lg"
@@ -454,6 +454,15 @@ export default function ChargesReturnApp() {
         {activeTab === "entry" && <ChargesEntryTab />}
         {activeTab === "report" && <ChargesReturnReportTab />}
       </div>
+
+      {/* Footer */}
+      <footer className="py-4 px-6 bg-white border-t border-gray-200 mt-auto print:hidden">
+        <div className="max-w-full mx-auto">
+          <p className="text-center text-sm" style={{ color: "#666" }}>
+            Ideation by <strong>Shivam Kaushik</strong> Developed with AI
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -2143,7 +2152,7 @@ function ChargesReturnReportTab() {
               <th className="border border-black px-2 py-1 text-center leading-tight">Date</th>
               <th className="border border-black px-2 py-1 text-center leading-tight">To whom paid</th>
               <th className="border border-black px-2 py-1 text-center leading-tight">Purpose</th>
-              <th className="border border-black px-2 py-1 text-center leading-tight">Approved by BM/RM</th>
+              <th className="border border-black px-2 py-1 text-center leading-tight">Approved by BM/Regional Manager</th>
               <th className="border border-black px-2 py-1 text-center leading-tight">Amount Paid</th>
             </tr>
           </thead>

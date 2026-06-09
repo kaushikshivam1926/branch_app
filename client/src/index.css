@@ -198,7 +198,7 @@
   /* Hide all page elements except report content */
   header,
   nav,
-  .print\\:hidden {
+  .print\:hidden {
     display: none !important;
   }
 
@@ -220,11 +220,11 @@
   }
 
   /* Remove shadows and backgrounds for print */
-  .print\\:shadow-none {
+  .print\:shadow-none {
     box-shadow: none !important;
   }
 
-  .print\\:border-0 {
+  .print\:border-0 {
     border: 0 !important;
   }
 
@@ -254,7 +254,7 @@
     display: table-row-group;
   }
 
-  .print\\:page-break-before {
+  .print\:page-break-before {
     page-break-before: always;
   }
 
@@ -291,15 +291,15 @@
   }
 
   /* Adjust spacing for print */
-  .print\\:p-8 {
+  .print\:p-8 {
     padding: 2rem !important;
   }
 
-  .print\\:p-0 {
+  .print\:p-0 {
     padding: 0 !important;
   }
 
-  .print\\:mb-8 {
+  .print\:mb-8 {
     margin-bottom: 2rem !important;
   }
 
@@ -315,11 +315,11 @@
   }
 
   /* Ensure content fills page */
-  .print\\:bg-white {
+  .print\:bg-white {
     background: white !important;
   }
 
-  .print\\:mt-16 {
+  .print\:mt-16 {
     margin-top: 4rem !important;
   }
 

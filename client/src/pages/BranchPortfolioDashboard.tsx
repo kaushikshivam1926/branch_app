@@ -46,6 +46,7 @@ import DataUpload from "./portfolio/DataUpload";
 import LoanFileManager from "./portfolio/LoanFileManager";
 import NPATracking from "./portfolio/NPATracking";
 import LoanClosureModule from "./portfolio/LoanClosureModule";
+import SMANPAAUCAReporting from "./portfolio/SMANPAAUCAReporting";
 
 type NavigationItem = {
   id: string;
@@ -63,6 +64,7 @@ const navigationItems: NavigationItem[] = [
   { id: "loan-file-manager", label: "Loan File Register", icon: BookOpen, component: LoanFileManager },
   { id: "npa-tracking", label: "NPA Tracking", icon: Activity, component: NPATracking },
   { id: "loan-closure", label: "Loan Closure Module", icon: FileText, component: LoanClosureModule },
+  { id: "sma-npa-auca", label: "SMA/NPA/AUCA Reporting", icon: FileText, component: SMANPAAUCAReporting },
   { id: "data-upload", label: "Data Upload", icon: Upload, component: DataUpload },
 ];
 
@@ -154,15 +156,6 @@ export default function BranchPortfolioDashboard() {
           </div>
           
           <div className="flex items-center gap-3">
-            <Link href="/">
-              <Button
-                variant="outline"
-                className="bg-white/20 hover:bg-white/30 text-white border-white/40 gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Home
-              </Button>
-            </Link>
             <Button
               variant="outline"
               size="sm"
@@ -202,6 +195,18 @@ export default function BranchPortfolioDashboard() {
           </div>
 
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+            {/* Back to Home */}
+            <Link href="/">
+              <Button 
+                variant="ghost" 
+                className={`w-full ${sidebarCollapsed ? 'justify-center px-0' : 'justify-start'} mb-4 text-gray-600 hover:text-purple-700 hover:bg-purple-50`}
+                title="Back to Home"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                {!sidebarCollapsed && <span className="ml-2">Back to Home</span>}
+              </Button>
+            </Link>
+
             {/* Navigation Items */}
             {navigationItems.map((item) => {
               const Icon = item.icon;
@@ -259,7 +264,7 @@ export default function BranchPortfolioDashboard() {
       </div>
 
       {/* Footer */}
-      <footer className="py-4 px-6 bg-white border-t border-gray-200">
+      <footer className="py-4 px-6 bg-white border-t border-gray-200 mt-auto">
         <div className="max-w-full mx-auto">
           <p className="text-center text-sm" style={{ color: "#666" }}>
             Ideation by <strong>Shivam Kaushik</strong> Developed with AI

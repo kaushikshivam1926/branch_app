@@ -1,21 +1,26 @@
 // SBI Branch Application Catalogue — Service Worker
-// Cache-first strategy for complete offline functionality
-// Optimized for code-split bundles (separate JS/CSS files)
-// Version: 3.0
-
-const CACHE_NAME = 'sbi-branch-app-v3';
+// Version: 4.0 — network-first nav, Vite dev scripts bypassed
+const CACHE_NAME = 'sbi-branch-app-v4';
 const OFFLINE_FALLBACK = '/index.html';
 
 // Core assets to pre-cache on install
-// Note: JS/CSS bundles will be auto-cached on first visit via fetch handler
 const PRECACHE_ASSETS = [
-  '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.png',
-  '/apple-touch-icon.png',
-  '/sample-accounts.csv'
 ];
+
+// Paths that must NEVER be served from cache (Vite dev internals)
+function shouldBypassCache(url) {
+  const p = url.pathname;
+  return (
+    p.startsWith('/@vite/') ||
+    p.startsWith('/@fs/') ||
+    p.startsWith('/node_modules/') ||
+    p.startsWith('/__vite') ||
+    p.includes('?v=') ||
+    p.includes('?t=')
+  );
+}
 
 // ── Install: pre-cache critical assets ──────────────────────────────────────
 self.addEventListener('install', (event) => {
@@ -47,19 +52,26 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests and cross-origin tracking
+  // Skip non-GET and Vite dev internals — always go to network
   if (request.method !== 'GET') return;
-  if (url.hostname !== self.location.hostname && url.pathname.includes('umami')) return;
+  if (url.hostname !== self.location.hostname) return;
+  if (shouldBypassCache(url)) return;
 
-  // For navigation requests (HTML pages) — serve from cache or fallback
+  // Navigation: network-first so new deployments are always picked up
   if (request.mode === 'navigate') {
     event.respondWith(
-      caches.match(OFFLINE_FALLBACK).then((cached) => cached || fetch(request))
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(OFFLINE_FALLBACK))
     );
     return;
   }
 
-  // For JS/CSS bundles and other resources — cache-first strategy
+  // For all other requests — cache-first strategy
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
@@ -77,13 +89,12 @@ self.addEventListener('fetch', (event) => {
 
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          // Cache JS, CSS, images, and other assets
           cache.put(request, responseToCache);
         });
 
         return response;
       }).catch(() => {
-        // Network failed — return offline fallback for navigation
+        // Network failed — return offline fallback for HTML
         if (request.headers.get('accept')?.includes('text/html')) {
           return caches.match(OFFLINE_FALLBACK);
         }

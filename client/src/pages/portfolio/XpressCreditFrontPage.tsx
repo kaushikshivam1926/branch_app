@@ -79,17 +79,16 @@ const CHECKLIST_ROWS: { left: string; right: string }[] = [
   { left: "CIC Report", right: "Key Fact Statement" },
   { left: "Self-attested PAN Card", right: "Appraisal cum Sanction Report" },
   { left: "KYC", right: "" },
-  { left: "UID / Voter Id", right: "No Dues Required" },
-  { left: "Certificate (NDC)", right: "" },
-  { left: "e-KYC / Electoral Search", right: "Not Required" },
-  { left: "Salary Slips", right: "NDC Receiving date: ___/___/______" },
-  { left: "A/c Stmnt. / CBS Screenshot", right: "Perfios Report" },
-  { left: "Form 16 / ITR", right: "Control Return" },
-  { left: "IT Undertaking", right: "Annexure XP-10 Signed & Sent" },
-  { left: "NeSL Disclosure Consent", right: "PSS / RO Verification" },
-  { left: "Borrower Ack. (Ann. II)", right: "SI Letter (PL-12)" },
-  { left: "SI Amendment", right: "" },
-  { left: "Register Entry", right: "" },
+  { left: "UID / Voter Id", right: "No Dues: Required \u2610 / Not Required \u2610" },
+  { left: "e-KYC / Electoral Search", right: "Perfios Report" },
+  { left: "Salary Slips", right: "Control Return" },
+  { left: "A/c Stmnt. / CBS Screenshot", right: "Annexure XP-10 Signed & Sent" },
+  { left: "Form 16 / ITR", right: "PSS / RO Verification" },
+  { left: "IT Undertaking", right: "SI Letter (PL-12)" },
+  { left: "NeSL Disclosure Consent", right: "" },
+  { left: "Borrower Ack. (Ann. II)", right: "" },
+  { left: "Stamp Paid & Pasted", right: "" },
+  { left: "Photograph", right: "" },
 ];
 
 function buildPrintHTML(params: {
@@ -106,10 +105,12 @@ function buildPrintHTML(params: {
   address: string;
   mobile: string;
   logoB64: string;
+  isClosed?: boolean;
 }): string {
   const {
     serialNo, custName, fathersName, salaryAcctNo, salaryAcctType,
     cifNo, acctNo, acctDesc, sanctionAmt, sanctionDate, address, mobile, logoB64,
+    isClosed = false,
   } = params;
 
   const rows = [
@@ -153,11 +154,23 @@ function buildPrintHTML(params: {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #000; background: white; }
     @page { size: A4 portrait; margin: 0; }
-    .page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; }
+    .page { width: 210mm; min-height: 297mm; padding: 12mm 14mm; position: relative; overflow: hidden; }
     table { border-collapse: collapse; width: 100%; }
+    .closed-wm { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; pointer-events: none; z-index: 999; }
+    .closed-wm-text {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-35deg);
+      font-size: 56pt; font-weight: 900; letter-spacing: 10px;
+      color: rgba(180,0,0,0.20); white-space: nowrap;
+      font-family: Arial, Helvetica, sans-serif; text-transform: uppercase;
+      border-top: 3.5px solid rgba(180,0,0,0.25);
+      border-bottom: 3.5px solid rgba(180,0,0,0.25);
+      padding: 5mm 12mm; line-height: 1;
+    }
   </style>
 </head>
 <body>
+${isClosed ? '<div class="closed-wm"><span class="closed-wm-text">CLOSED</span></div>' : ''}
 <div class="page">
   <!-- Header -->
   <div style="border-bottom: 3px solid #003399; margin-bottom: 6mm; padding-bottom: 4mm;">
@@ -281,6 +294,7 @@ export default function XpressCreditFrontPage({ record, onClose }: Props) {
       address,
       mobile,
       logoB64: SBI_LOGO_B64,
+      isClosed: record.status === 'CLOSED',
     });
 
     const iframe = iframeRef.current;

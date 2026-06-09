@@ -1,0 +1,636 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!-- saved from url=(0044)https://dbie.rbi.org.in/CFR/cfrSearchPan.rbi -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<title>Result Panel for CFR</title>
+	<link href="./Result Panel for CFR_files/jquery-ui.css" rel="stylesheet" type="text/css">
+	<link href="./Result Panel for CFR_files/styleT.css" rel="stylesheet" type="text/css">
+	<script type="text/javascript" src="./Result Panel for CFR_files/jquery-3.5.0.js.download"></script>
+	<script type="text/javascript" src="./Result Panel for CFR_files/jquery-ui.js.download"></script>
+<script type="text/javascript">
+
+	$(document).ready(function() {
+		   $("#crilcTabs").tabs();
+	
+	$(function() {  
+		//Created By: Brij Mohan
+		//Website: http://techbrij.com
+		function groupTable($rows, startIndex, total,cntincr){
+		//start index index of first column to be grouped
+		//total number of columns...
+		//counter increment which will add into startIndex...
+		//alert("start-"+startIndex+" total-"+total);
+		if (total === 0){
+		return;
+		}
+		//alert("inside function...");
+		var i , currentIndex = startIndex, count=1, lst=[];
+		var tds = $rows.find('td:eq('+ currentIndex +')');
+		var ctrl = $(tds[0]);
+		lst.push($rows[0]);
+		//alert("tds length-"+tds.length);
+		for (i=1;i<=tds.length;i++){
+		var temp=null;
+		if(i!=tds.length){
+			temp=$(tds[i]).text();
+		}
+		if (ctrl.text() ==  temp){
+		count++;
+		$(tds[i]).addClass('deleted');
+		lst.push($rows[i]);
+		}
+		else{
+		if (count>1){
+		ctrl.attr('rowspan',count);
+		groupTable($(lst),startIndex+cntincr,total-1,cntincr);
+		}
+		count=1;
+		lst = [];
+		ctrl=$(tds[i]);
+		lst.push($rows[i]);
+		}
+		}
+		}
+		groupTable($('#t1 tr:has(td)'),0,1,1);
+		groupTable($('#t1 tr:has(td)'),1,1,1);
+		
+		
+		//
+		groupTable($('#t1 tr:has(td)'),1,2,1);
+		groupTable($('#t1 tr:has(td)'),1,2,2);
+		
+		
+		
+		//for m:1 relation (we consider it as 1:1) between fraud case number and Date of reporting
+		groupTable($('#t1 tr:has(td)'),1,2,3);
+		
+		
+		
+		//
+		groupTable($('#t1 tr:has(td)'),1,2,4);
+		
+
+		
+		
+		groupTable($('#t1 tr:has(td)'),1,2,5);
+		groupTable($('#t1 tr:has(td)'),1,2,6);
+		//for 1:m relation between fraud case number and perprietor name
+		
+// 		groupTable($('#t1 tr:has(td)'),3,2,1);
+		groupTable($('#t1 tr:has(td)'),1,2,7);
+		//for 1:1 relation between perprietor name and perprietor PAN 
+		
+		//for 1:m relation between fraud case number and party/account Name
+		groupTable($('#t1 tr:has(td)'),1,2,8);
+		
+		//relation 1:1 for party/account Name and party/account Address
+		groupTable($('#t1 tr:has(td)'),9,2,1);
+		
+		//relation 1:m for party account name and proprietor/partner/Director name 
+		groupTable($('#t1 tr:has(td)'),9,2,2);
+		
+		//relation m:1 for proprietor/partner/Director address and proprietor/partner/Director name
+		//so keeping it as 1:m fraud case number and proprietor/partner/Director address
+		groupTable($('#t1 tr:has(td)'),1,2,11);
+		
+// 		//relation 1:m between fraud case number and associate concern's name
+// 		groupTable($('#t1 tr:has(td)'),1,2,6);
+		
+// 		//relation m:1 for associate concern's address and associate concern's name
+// 		//so keeping it as 1:m fraud case number and associate concern's address
+// 		groupTable($('#t1 tr:has(td)'),1,2,7);
+		
+// 		//relation 1:m for associate concern's name and proprietor/partner/Director of associate concern's name
+// 		//but while doing this, we again process  associate concern's name column,
+// 		//to avoid that, we keep 1:m relation for fraud case number and proprietor/partner/Director of associate concern's name
+// 		groupTable($('#t1 tr:has(td)'),1,2,8);
+		
+// 		//relation m:1 for proprietor/partner/Director of associate concern's address and proprietor/partner/Director of associate concern's name
+// 		//so keeping it as 1:m fraud case number and proprietor/partner/Director of associate concern's address
+// 		groupTable($('#t1 tr:has(td)'),1,2,5);
+		//rest of column have 1:m relation with fraud case number
+		//i.e. 1:m for fraud case number and rest of columns...
+		groupTable($('#t1 tr:has(td)'),1,2,12);
+		groupTable($('#t1 tr:has(td)'),1,2,13);
+		groupTable($('#t1 tr:has(td)'),1,2,14);
+		groupTable($('#t1 tr:has(td)'),1,2,15);
+		groupTable($('#t1 tr:has(td)'),1,2,16);
+		groupTable($('#t1 tr:has(td)'),1,2,17);
+		
+		$('#t1 .deleted').remove();
+		
+		groupTable($('#t2 tr:has(td)'),0,1,1);
+		groupTable($('#t2 tr:has(td)'),1,1,1);
+		
+		
+		//
+		groupTable($('#t2 tr:has(td)'),1,2,1);
+		groupTable($('#t2 tr:has(td)'),1,2,2);
+		
+		
+		
+		//for m:1 relation (we consider it as 1:1) between fraud case number and Date of reporting
+		groupTable($('#t2 tr:has(td)'),1,2,3);
+		
+		
+		
+		//
+		groupTable($('#t2 tr:has(td)'),1,2,4);
+		groupTable($('#t2 tr:has(td)'),1,2,5);
+		
+		
+		
+		
+		groupTable($('#t2 tr:has(td)'),1,2,6);
+		//for 1:m relation between fraud case number and perprietor name
+		
+// 		groupTable($('#t2 tr:has(td)'),3,2,1);
+		groupTable($('#t2 tr:has(td)'),1,2,7);
+		//for 1:1 relation between perprietor name and perprietor PAN 
+		
+		//for 1:m relation between fraud case number and party/account Name
+		groupTable($('#t2 tr:has(td)'),1,2,8);
+		
+		//relation 1:1 for party/account Name and party/account Address
+		groupTable($('#t2 tr:has(td)'),9,2,1);
+		
+		//relation 1:m for party account name and proprietor/partner/Director name 
+		groupTable($('#t2 tr:has(td)'),9,2,2);
+		
+		//relation m:1 for proprietor/partner/Director address and proprietor/partner/Director name
+		//so keeping it as 1:m fraud case number and proprietor/partner/Director address
+		groupTable($('#t2 tr:has(td)'),1,2,11);
+		
+// 		//relation 1:m between fraud case number and associate concern's name
+// 		groupTable($('#t2 tr:has(td)'),1,2,6);
+		
+// 		//relation m:1 for associate concern's address and associate concern's name
+// 		//so keeping it as 1:m fraud case number and associate concern's address
+// 		groupTable($('#t2 tr:has(td)'),1,2,7);
+		
+// 		//relation 1:m for associate concern's name and proprietor/partner/Director of associate concern's name
+// 		//but while doing this, we again process  associate concern's name column,
+// 		//to avoid that, we keep 1:m relation for fraud case number and proprietor/partner/Director of associate concern's name
+// 		groupTable($('#t2 tr:has(td)'),1,2,8);
+		
+// 		//relation m:1 for proprietor/partner/Director of associate concern's address and proprietor/partner/Director of associate concern's name
+// 		//so keeping it as 1:m fraud case number and proprietor/partner/Director of associate concern's address
+// 		groupTable($('#t2 tr:has(td)'),1,2,5);
+		
+		//rest of column have 1:m relation with fraud case number
+		//i.e. 1:m for fraud case number and rest of columns...
+		groupTable($('#t2 tr:has(td)'),1,2,12);
+		groupTable($('#t2 tr:has(td)'),1,2,13);
+		groupTable($('#t2 tr:has(td)'),1,2,14);
+		groupTable($('#t2 tr:has(td)'),1,2,15);
+		groupTable($('#t2 tr:has(td)'),1,2,16);
+		groupTable($('#t2 tr:has(td)'),1,2,17);
+		
+		$('#t2 .deleted').remove();
+		});
+	});
+</script>
+
+<script type="text/javascript">
+function showPopUpModus(str){
+	document.getElementById(str).style.display = "block";
+}
+function showPopUpBrief_history(str){
+	document.getElementById(str).style.display = "block";
+}
+function closePopUp(divId){
+	document.getElementById(divId).style.display = "none";
+}
+$(function(){   
+    $(document).keydown(function(objEvent) {
+
+            if (objEvent.ctrlKey) {
+                if ($(objEvent.target).not('input')){
+                    if (objEvent.keyCode == 65 || objEvent.keyCode == 97 || objEvent.keyCode == 115 || objEvent.keyCode == 83) {                         
+                        objEvent.preventDefault();
+                    }
+                }
+            }        
+    });
+});
+
+</script>
+<style type="text/css">
+body{
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#mnubtn_container{
+    position: fixed;
+    top: 15px;
+    right: 0px;
+    width: 170px;
+    display: block;
+    height: 35px;
+    border: solid 2px #16A085;
+    background: #ADEBDF;
+    text-align: center;
+}
+.mnubtn{
+    margin: 2px 2px;
+    display: block;
+    border: solid 1px #81DECC;
+    width: 150px;
+    padding: 4px;
+    text-align: center;
+    font-weight: bold;
+    text-decoration: none;
+    background-color: #16A085;
+    height: 20px;
+    color: #fff;
+}
+.popupDiv{
+position: fixed;
+/* width: 1700px; */
+width:100%;
+height: 100%;
+border: solid 0px red;
+z-index: 200;
+top: 0px;
+left: 0px;
+background:  url(images/background-glass11.png) repeat;
+}
+.popUpContentClass{
+margin:125px auto;
+position: relative;
+/* border: solid 3px #488AC7; */
+width: 700px;
+height: 350px;
+background: #fff;
+-webkit-box-shadow: 0px 0px 40px 10px rgba(153, 153, 153, 0.35);
+-moz-box-shadow: 0px 0px 40px 10px rgba(153, 153, 153, 0.35);
+box-shadow: 0px 0px 40px 10px rgba(153, 153, 153, 0.35);
+}
+#closePopUp{
+float:right;
+display:inline-block;
+border: solid 0px yellow;
+width: 20px;
+height: 20px;
+background:  url(images/close-popup_1.png) no-repeat;
+}
+#closePopUp:hover{
+cursor: pointer;
+}
+#closePopUpRD{
+float: left;
+border: solid 0px red;
+height: 20px;
+line-height: 20px;
+text-align: left;
+margin-left: 20px;
+font-weight: bold;
+color: #488AC7;
+padding: 0px 10px 0px 0px;
+}
+#closePopUpBN{
+float: right;
+border: solid 0px red;
+height: 20px;
+line-height: 20px;
+text-align: right;
+font-weight: bold;
+color: #488AC7;
+padding: 0px 0px 0px 10px;
+}
+#closediv{
+width: 100%;
+height: 20px;
+border: solid 0px red;
+text-align: right;
+}
+#popUpPreContentDiv{
+margin-left:20px;
+font-weight:bold;
+height: 20px;
+width: 660px;
+text-align: 20px;
+border: solid 0px red;
+color: #16A085;
+}
+#popUpContentDiv{
+margin: 0px 20px 20px 20px;
+padding: 5px;
+height: 260px;
+width: 650px;
+overflow-y: scroll;
+background: #EAEAEA;
+}
+.ModusClass{
+text-decoration: underline;
+color: #128972;
+}
+.ModusClass:hover{
+cursor: pointer;
+}
+.disTable1{
+min-width:100px;
+}
+.disTable2{
+min-width:100px;
+}
+.disTable3{
+min-width:100px;
+}
+.disTable4{
+min-width:100px;
+}
+.disTable5{
+min-width:100px;
+}
+.disTable6{
+min-width:100px;
+}
+.disTable7{
+min-width:150px;
+}
+.disTable8{
+min-width:100px;
+}
+.disTable9{
+min-width:150px;
+}
+.disTable10{
+min-width:100px;
+}
+.disTable11{
+min-width:150px;
+}
+.disTable12{
+min-width:100px;
+}
+.disTable13{
+min-width:150px;
+}
+.disTable14{
+min-width:100px;
+}
+.disTable15{
+min-width:100px;
+}
+.disTable16{
+min-width:150px;
+}
+.disTable17{
+min-width:100px;
+}
+.disTable18{
+min-width:200px;
+}
+.disTable19{
+min-width:200px;
+}
+.disTable01{
+min-width:100px;
+}
+.disTable02{
+min-width:100px;
+}
+.disTable03{
+min-width:100px;
+color: red;
+font-weight: bold;
+}
+.disTable04{
+min-width:100px;
+}
+
+
+#reportContainer{
+	margin:0px;
+	padding:0px;
+	display: block;
+	width: 100%;
+	height: 100vh;
+	border: solid 0px black;
+	background: #797979;
+}
+#reportHtmlView {
+	margin:1% 1% 0 1%;
+	display: block;
+	border: solid 0px red;
+	width: 98%;
+	height: 90%;
+ 	overflow: auto;
+	background: yellow;
+}
+#reportMenuContainer{
+/* 	background:#CECECE; */
+	border:solid 0px red;
+	display: block;
+	height:2%;
+	width: 100%;
+	min-height: 40px;
+	max-height: 40px;
+}
+#reportMenuBar{
+	margin-left:1%;
+	margin-right:1%;
+	background:#EBEBEB
+	border:solid 0px red;
+	display: block;
+	height:100%;
+	width: 98%;
+}
+#reportMenuBar a.mnubtn{
+	margin:8px auto;
+	vertical-align:middle;
+	text-decoration:none;
+	font-weight:bold;
+	color:#797979;
+	padding: 4px 20px 4px 20px;
+	float:right;
+	display:inline-block;
+	height: 20px;
+	background: #fff;
+	border: solid 1px grey; 
+	cursor:pointer; 
+}
+.something {
+	height: auto;
+	position: relative;
+	left: 0px;
+	right: 1%;
+	top: 1%;
+	bottom: 1%;
+	background-color: #ffffff;
+	border: 1px solid #808090;
+	padding: 10px;
+}
+
+table {
+ 	border-bottom:solid 1px #CECECE; 
+ 	border-top:solid 1px #CECECE; 
+ 	border-left:solid 1px #CECECE; 
+	width: 80%;
+	margin: 10px 0 20px 0 !important;
+}
+
+th {
+	padding: 2px 4px 2px 4px !important;
+	text-align: left;
+	vertical-align: top;
+	font: normal normal bold 9px Tahoma, 'Times New Roman', 'Courier New';
+	line-height: 11px;
+	color: #ffffff;
+	text-align: center;
+	border-right: solid 1px #CECECE; 
+}
+
+th a{
+	text-decoration: none;
+}
+
+td {
+	padding: 2px 4px 2px 4px !important;
+	text-align: left;
+	vertical-align: top;
+	font: normal normal normal 9px Tahoma, 'Times New Roman', 'Courier New';
+	line-height: 11px;
+	text-align: center;
+	border: solid 1px #818185;
+}
+
+thead tr {
+	background-color: #16A085;
+}
+
+th.sorted {
+	background-color: #d7ebff;
+}
+
+th a,th a:visited {
+	color: black;
+}
+
+th a:hover {
+	text-decoration: underline;
+	color: black;
+}
+
+th.sorted a,th.sortable a {
+	background-position: right;
+	display: block;
+	width: 100%;
+	color: #ffffff;
+}
+
+tr.odd {
+	background-color: #fff
+}
+
+tr.tableRowEven,tr.even {
+	background-color: #fff;
+}
+.group-1 {
+    font-weight:bold;
+    padding-bottom:10px;
+    border-top:1px solid black;
+}
+.group-2 {
+    font-style:italic;
+    border-top: 1px solid black;
+
+}
+.grouped-table tr.even {
+    background-color: #fff;
+}
+.grouped-table tr.odd {
+    background-color: #fff;
+}
+
+tfoot {
+	display: table-footer-group;
+	vertical-align: middle;
+	border-color: inherit;
+	background-color: #488ac7; 
+	color: white;
+}
+
+th.sorted {
+	background-color: #1F466B;;
+}
+</style>
+
+
+</head>
+<body oncontextmenu="return false;" style=" display: table-cell; height: 100%; vertical-align: middle; background-color:#CECED0;">
+<div class="something" align="center">
+<div id="crilcTabs" class="ui-tabs ui-corner-all ui-widget ui-widget-content">
+<ul style="background: #ADEBDF;" role="tablist" class="ui-tabs-nav ui-corner-all ui-helper-reset ui-helper-clearfix ui-widget-header">
+	    <li role="tab" tabindex="0" class="ui-tabs-tab ui-corner-top ui-state-default ui-tab ui-tabs-active ui-state-active" aria-controls="CRILC" aria-labelledby="ui-id-1" aria-selected="true" aria-expanded="true"><a href="https://dbie.rbi.org.in/CFR/cfrSearchPan.rbi#CRILC" style="color: #16A085;" role="presentation" tabindex="-1" class="ui-tabs-anchor" id="ui-id-1">CFR Result Panel</a></li>
+	  </ul>
+	 <div id="CRILC" aria-labelledby="ui-id-1" role="tabpanel" class="ui-tabs-panel ui-corner-bottom ui-widget-content" aria-hidden="false">
+	 <div style="margin: 10px;">
+		<div align="left">
+			<div style="font: normal normal bold 16px Arial, Helvetica, &#39;Courier New&#39;, &#39;Times New Roman&#39;; line-height: 19px;color: #488ac7;">
+				<span style="padding:1px 1px 1px 1px;width:498px; white-space: nowrap;vertical-align: baseline;display: inline-block; text-align: left;color: #16A085;">Central Fraud Registry</span>
+			</div>
+		</div>
+	</div>
+	
+	<div style="clear: both; margin: 10px 10px 10px 10px;" align="left">
+	<div id="table10" class="tab_content" style="display: block; width: 98%;">
+	<div style="color: #1F466B; font: normal normal bold 12px Arial, Helvetica, &#39;Courier New&#39;, &#39;Times New Roman&#39;; ">
+					
+					<span> Total Fraud Count =  0 </span>  <br>
+					  
+ 					<span> Nothing found to display.</span> 
+ 					  
+ 				</div>   
+ 				<div style="color: #1F466B; font: normal normal bold 12px Arial, Helvetica, &#39;Courier New&#39;, &#39;Times New Roman&#39;; ">
+ 				
+ 				</div>
+ 				Nothing found to display. 
+              <div>
+              <table style="width: 600px;color: #128972;font-size: 14px;" border="1" bordercolor="#16A085" cellpadding="0" cellspacing="0">
+         		<tbody><tr>
+         			<td colspan="1" style="text-align: left;">M.C.B.T.</td>
+         			<td colspan="5" style="text-align: left;">Misappropriation and criminal breach of trust</td>
+         		</tr>
+         		<tr>
+         			<td colspan="1" style="text-align: left;">F.E.</td>
+         			<td colspan="5" style="text-align: left;">Fraudulent encashment/manipulation of books of account and conversion of property</td>
+         		</tr>
+         		<tr>
+         			<td colspan="1" style="text-align: left;">U.C.F.</td>
+         			<td colspan="5" style="text-align: left;">Unauthorised credit facility extended for illegal gratification</td>
+         		</tr>
+         		<tr>
+         			<td colspan="1" style="text-align: left;">N.C.S.</td>
+         			<td colspan="5" style="text-align: left;">Negligence and cash shortage</td>
+         		</tr>
+         		<tr>
+         			<td colspan="1" style="text-align: left;">C.F.</td>
+         			<td colspan="5" style="text-align: left;">Cheating and Forgery</td>
+         		</tr>
+         		<tr>
+         			<td colspan="1" style="text-align: left;">I.F.X.</td>
+         			<td colspan="5" style="text-align: left;">Irregularities in foreign exchange transactions</td>
+         		</tr>
+         		<tr>
+         			<td colspan="1" style="text-align: left;">OTH.</td>
+         			<td colspan="5" style="text-align: left;">Others</td>
+         		</tr>
+         	</tbody></table>
+              </div>
+              
+	</div>	
+	</div>
+	 </div>
+</div>
+</div>
+	
+
+
+</body></html>

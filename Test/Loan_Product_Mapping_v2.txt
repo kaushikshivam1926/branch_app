@@ -1,0 +1,113 @@
+ProductCode,ProductName,Category,SubCategory,Segment,Priority,Secured,GovtScheme,RiskWeight
+6259-5005,AB-Car Loan-Staff,Auto Loan,Car,Staff,Medium,Yes,Staff Loan,75
+6251-1114,ADVANTAGE CAR LN TL JAN12,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6251-1093,ADVANTAGE CAR LN TL SEP11,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6251-1083,ADVANTAGE CAR LN TL=>5 L,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6251-1082,ADVANTAGE CAR LOAN TL <5L,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6250-1060,ADVANTAGE CAR LOAN5-7 YR,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6251-1074,BR-ADVANTAGE CAR LN JAN11,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6251-1071,BR-ADVANTAGE CAR LN OCT10,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6351-6011,BR-D L Gold Loan,Gold Loan,Regular,Retail,High,Yes,Standard,50
+6351-7311,BR-DL NSCLICKVPMAGNMRBI,Personal Loan,Deposit Backed,Retail,High,Yes,Digital Gold Loan,50
+6351-7911,BR-DLLoans-PensionersPER,Personal Loan,Pension,Retail,Medium,No,Pension Loan,100
+6251-2183,BR-EASY HL SURAKSHIT FLT,Housing Loan,Surakshit,Retail,High,Yes,Surakshit HL,35
+6251-2179,BR-EASY HSG LOAN FLT,Housing Loan,Regular,Retail,High,Yes,Standard HL,35
+6251-1055,BR-EZEE CAR LOAN,Auto Loan,Regular,Retail,Medium,Yes,Standard,75
+6251-2151,BR-HTL SBI HOME PLUS,Housing Loan,Home Plus,Retail,High,Yes,Standard HL,35
+6251-2188,BR-SBI ADV. HL JAN/11,Housing Loan,Regular,Retail,High,Yes,Standard HL,35
+6351-7912,BR-SBILN TO AFFLUENT PENS,Personal Loan,Pension,Retail,Medium,No,Pension Loan,100
+6259-2024,BR-STAFF HL COMM. <=30L,Housing Loan,Staff,Staff,High,Yes,Staff HL,35
+6251-4004,BR-T L Educationa LnPER,Education Loan,Regular,Retail,Medium,Yes,Education Loan,75
+6251-1015,BR-TL SBI SARAL PER,Personal Loan,Regular,Retail,Medium,No,Saral Loan,100
+6251-1611,BR-TL XPRESS CREDIT,Personal Loan,Xpress Credit,Retail,High,No,Xpress Credit,100
+6330-7001,D L Bank Deposit AGR,Agri Loan,Deposit Backed,Agri,High,Yes,Deposit Backed,20
+6340-7001,D L Bank Deposit C&I,MSME Loan,Deposit Backed,MSME,High,Yes,Deposit Backed,20
+6351-7003,D L Bank Deposit P  AUG11,Personal Loan,Deposit Backed,Retail,High,Yes,Deposit Backed,20
+6359-7001,D L Bank Deposits STAFF,Personal Loan,Deposit Backed,Staff,High,Yes,Staff Loan,20
+6359-1101,D L Festiv AdvanceSTAFF,Personal Loan,Festival,Staff,Low,No,Festival Loan,100
+6350-7301,D L IVP/ KVP PER,Secured Loan,IVP/KVP,Retail,High,Yes,Secured,20
+6350-7911,D L Loans-PensionersPER,Personal Loan,Pension,Retail,Medium,No,Pension Loan,100
+6359-1011,D L Persona LoansSTAFF,Personal Loan,Overdraft,Staff,Medium,No,Staff PL,100
+6359-3101,D L Vehi -2 Whee STAFF,Auto Loan,Two Wheeler,Staff,Medium,Yes,Staff Vehicle Loan,75
+6359-3001,D L Vehice -CAR STAFF,Auto Loan,Car,Staff,Medium,Yes,Staff Car Loan,75
+6350-8001,DL-NRI-FCNB-PER-SELF,NRI Loan,FCNB,NRI,High,Yes,FCNB Loan,20
+,,,,,,,,
+6350-7902,DL-SBI Loan to Pen.Nov05,Personal Loan,Pension,Retail,Medium,No,Pension Loan,100
+,,,,,,,,
+6250-2168,EASY HL My Home Camp FLT,Housing Loan,Regular,Retail,High,Yes,Standard HL,35
+,,,,,,,,
+6400-2173,EB- STAFF HL COMM APR 21,Housing Loan,Staff,Staff,High,Yes,Staff HL,35
+,,,,,,,,
+6400-4108,EB-DL-PM_SVAN 2TRN,MSME Loan,PM SVANidhi,MSME,High,No,PM SVANidhi,100
+6400-4134,EB-DL-PM_SVAN 3TRN,MSME Loan,PM SVANidhi,MSME,High,No,PM SVANidhi,100
+6400-4086,EB-DL-PM_SVANidhi,MSME Loan,PM SVANidhi,MSME,High,No,PM SVANidhi,100
+,,,,,,,,
+6401-4023,EB-DL-PMS-2nd Tranche,MSME Loan,PM Svanidhi,MSME,High,No,PM SVANidhi,100
+,,,,,,,,
+6400-3112,EB-GLOBAL 7.5-1.5Cr JUN21,Housing Loan,Global HL,Retail,High,Yes,Global HL,35
+,,,,,,,,
+6400-2009,EB-HL-CLSS-(EWS) SEP19,Housing Loan,PMAY-EWS,Retail,High,Yes,PMAY,35
+6400-2121,EB-HL-CLSS-(LIG)-APR 21,Housing Loan,PMAY-LIG,Retail,High,Yes,PMAY,35
+6400-2083,EB-HL-CLSS-(LIG)-MAY 20,Housing Loan,PMAY-LIG,Retail,High,Yes,PMAY,35
+6400-2006,EB-HL-CLSS-(LIG)-SEP 19,Housing Loan,PMAY-LIG,Retail,High,Yes,PMAY,35
+,,,,,,,,
+6400-2007,EB-HL-CLSS-(MIG-1) SEP19,Housing Loan,PMAY-MIG1,Retail,High,Yes,PMAY,35
+6400-2085,EB-HL-CLSS-(MIG-2) MAY 20,Housing Loan,PMAY-MIG2,Retail,High,Yes,PMAY,35
+,,,,,,,,
+6400-2066,EB-HL-FLEXIPAY MAY 20,Housing Loan,Flexipay,Retail,High,Yes,Flexipay HL,35
+,,,,,,,,
+6400-2167,EB-HL-PRIVLGE- APR 21,Housing Loan,Privilege,Retail,High,Yes,Privilege HL,35
+,,,,,,,,
+6400-2055,EB-HOME LOAN (MAX CONV),Housing Loan,Regular,Retail,High,Yes,Standard HL,35
+,,,,,,,,
+6400-2601,EB-HOME TOPUP SEP 19,Housing Loan,Top-Up,Retail,Medium,Yes,Top-Up HL,35
+,,,,,,,,
+6400-4158,EB-MSME-SSI-MUDRA,MSME Loan,Mudra,MSME,High,No,Mudra,100
+6400-4159,EB-MSME-TL-SBF-MUDRA,MSME Loan,Mudra,MSME,High,No,Mudra,100
+,,,,,,,,
+6400-4035,EB-MSME-TL-DAY NULM,MSME Loan,NULM,MSME,High,No,NULM,100
+,,,,,,,,
+6400-3205,EB-PMVL_UTTAM,Vehicle Loan,Commercial Vehicle,MSME,Medium,Yes,PMVL,75
+,,,,,,,,
+6400-3172,EB-RLMS EL SCHOLAR A_NO C,Education Loan,RLMS,Retail,Medium,Yes,RLMS,75
+6400-3174,EB-RLMS EL SCHOLAR B_NO C,Education Loan,RLMS,Retail,Medium,Yes,RLMS,75
+,,,,,,,,
+6400-2297,EB-RLMS HL PRIVILEGE,Housing Loan,RLMS,Retail,High,Yes,RLMS,35
+,,,,,,,,
+6400-2107,EB-RLMS HOME LOAN,Housing Loan,RLMS,Retail,High,Yes,RLMS,35
+,,,,,,,,
+6400-2221,EB-RLMS HOME LOAN-NRI,Housing Loan,RLMS,NRI,High,Yes,RLMS,35
+,,,,,,,,
+6400-3201,EB-RLMS_Gobal_7.5-50L NO,Housing Loan,RLMS,Retail,High,Yes,RLMS,35
+,,,,,,,,
+6400-2620,EB-RLMS-(P-LAP),LAP Loan,RLMS,Retail,High,Yes,LAP,50
+,,,,,,,,
+6400-3181,EB-RLMS-EL STUDENT EDU_NO,Education Loan,RLMS,Retail,Medium,Yes,RLMS,75
+,,,,,,,,
+6400-2215,EB-RLMS-HL-COMBO LOAN-JUN,Housing Loan,Combo,Retail,High,Yes,Combo HL,35
+,,,,,,,,
+6400-2272,EB-RLMS-HL-PMAY U2.0LIG-W,Housing Loan,PMAY-LIG,Retail,High,Yes,PMAY,35
+,,,,,,,,
+6400-2231,EB-RLMS-HOME LON-FLEXIPAY,Housing Loan,Flexipay,Retail,High,Yes,Flexipay HL,35
+,,,,,,,,
+6400-2619,EB-RLMS-HOME TOPUP LOAN,Housing Loan,Top-Up,Retail,Medium,Yes,Top-Up HL,35
+,,,,,,,,
+6400-2606,EB-SBI SURAKSHA,Housing Loan,Suraksha,Retail,High,Yes,Suraksha HL,35
+,,,,,,,,
+6400-2170,EB-SBI- HL-REALTY APR 21,Housing Loan,Realty,Retail,High,Yes,Realty HL,35
+,,,,,,,,
+6400-3102,EB-SC-A NO COL JUN21,Education Loan,Scholar A,Retail,Medium,No,Scholar Loan,100
+6400-3106,EB-SC-B NonNIT NO COLJN21,Education Loan,Scholar B,Retail,Medium,No,Scholar Loan,100
+6400-3107,EB-SC-C-NITS NO COL JUN21,Education Loan,Scholar C,Retail,Medium,No,Scholar Loan,100
+,,,,,,,,
+6400-3120,EB-ST-IN-MED> 7.5 - NIRF,Education Loan,Medical,Retail,Medium,Yes,Education Loan,75
+6400-3119,EB-ST-IN-NonMED>7.5-50 OT,Education Loan,Non-Medical,Retail,Medium,Yes,Education Loan,75
+,,,,,,,,
+6400-3116,EB-STU- <=4L JUN21,Education Loan,Regular,Retail,Medium,Yes,Education Loan,75
+6400-3117,EB-STU- >4-7.5L JUN21,Education Loan,Regular,Retail,Medium,Yes,Education Loan,75
+,,,,,,,,
+6400-2626,EB-TL-ASGY>2 acupto6l,Agri Loan,ASGY,Agri,High,Yes,Agri Scheme,75
+6400-3602,EB-TL-SGY>2 acupto6lac,Agri Loan,SGY,Agri,High,Yes,Agri Scheme,75
+6400-3601,EB-TL-SGYupto2lac,Agri Loan,SGY,Agri,High,Yes,Agri Scheme,75
+,,,,,,,,
+6400-4204,EB-TL-SME CAR LOAN-2024,Auto Loan,Commercial Vehicle,MSME,Medium,Yes,SME Car Loan,75

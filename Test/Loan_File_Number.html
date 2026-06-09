@@ -1,0 +1,728 @@
+import React, { useState, useRef } from 'react';
+import { Upload, Settings, History, PlayCircle, Download, CheckCircle, AlertCircle, FileText, ChevronRight, Plus, Trash2, ChevronLeft, X, ChevronDown, ChevronUp } from 'lucide-react';
+
+// --- Utility: Robust CSV Parser (Handles quotes & commas correctly) ---
+function parseCSV(str) {
+  if (!str || typeof str !== 'string') return [];
+  const result = [];
+  let row = [];
+  let startValueIdx = 0;
+  let inQuotes = false;
+  
+  // Guard against Byte Order Marks (BOM) common in Excel CSVs
+  if (str.charCodeAt(0) === 0xFEFF) {
+      str = str.slice(1);
+  }
+
+  for (let i = 0; i < str.length; i++) {
+      let cc = str[i];
+      let nc = str[i+1];
+
+      if (cc === '"') {
+          inQuotes = !inQuotes;
+      } else if (cc === ',' && !inQuotes) {
+          let val = str.substring(startValueIdx, i);
+          row.push(val.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          startValueIdx = i + 1;
+      } else if ((cc === '\n' || cc === '\r') && !inQuotes) {
+          let val = str.substring(startValueIdx, i);
+          row.push(val.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+          result.push(row);
+          row = [];
+          if (cc === '\r' && nc === '\n') i++; // skip \n
+          startValueIdx = i + 1;
+      }
+  }
+  if (startValueIdx < str.length) {
+      let val = str.substring(startValueIdx);
+      row.push(val.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+  }
+  if (row.length > 0) result.push(row);
+
+  if (result.length === 0) return [];
+
+  // Prevent blank rows from becoming headers
+  let headerIdx = 0;
+  while(headerIdx < result.length && result[headerIdx].length <= 1 && !result[headerIdx][0]) {
+      headerIdx++;
+  }
+  if(headerIdx >= result.length) return [];
+  
+  const headers = result[headerIdx].map(h => h.trim());
+  const data = [];
+  for (let i = headerIdx + 1; i < result.length; i++) {
+      if (result[i].length === 1 && result[i][0].trim() === '') continue; // skip empty rows
+      let obj = {};
+      for (let j = 0; j < headers.length; j++) {
+          if (headers[j]) { // ignore empty headers to prevent missing keys
+              obj[headers[j]] = result[i][j] ? result[i][j].trim() : '';
+          }
+      }
+      data.push(obj);
+  }
+  return data;
+}
+
+// --- Utility: Export JSON to CSV Blob ---
+function exportCSV(data, filename) {
+  if (!data || data.length === 0) return;
+  const headers = Object.keys(data[0]);
+  const csvRows = [
+    headers.join(','), // Header row
+    ...data.map(row => headers.map(fieldName => {
+      let field = row[fieldName] || '';
+      field = String(field).replace(/"/g, '""');
+      return `"${field}"`;
+    }).join(','))
+  ];
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// --- Utility: Extract Date from Filename ---
+function extractSnapshotDate(filename) {
+  if (!filename || typeof filename !== 'string') return new Date().toISOString().split('T')[0];
+  const match = filename.match(/_(\d{8})_/);
+  if (match) {
+    const dStr = match[1];
+    return `${dStr.substring(0, 4)}-${dStr.substring(4, 6)}-${dStr.substring(6, 8)}`;
+  }
+  return new Date().toISOString().split('T')[0];
+}
+
+// --- Utility: Format Date (Handles Excel Serial Numbers) ---
+function formatLastSeenDate(value) {
+  if (!value) return '';
+  const strVal = String(value).trim();
+  
+  // Check if it's an Excel numeric serial date (e.g., 45258)
+  if (/^\d+$/.test(strVal) && Number(strVal) > 10000) {
+    // Convert Excel serial date to JS Date (offset 25569 is Jan 1, 1970)
+    const jsDate = new Date(Math.round((Number(strVal) - 25569) * 86400 * 1000));
+    return jsDate.toISOString().split('T')[0];
+  }
+  return strVal;
+}
+
+// --- Utility: Format Indian Currency ---
+function formatIndianCurrency(amount) {
+  const num = parseFloat(amount);
+  if (isNaN(num)) return amount || '-';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num);
+}
+
+export default function App() {
+  // App Navigation State
+  const [showSettings, setShowSettings] = useState(false);
+  const [hasProcessed, setHasProcessed] = useState(false);
+  
+  // State: Mappings Configuration
+  const [mappings, setMappings] = useState([
+    { desc: 'SCH LN L-B STAF-WARD<=30L', category: 'PERLOAN' },
+    { desc: 'EB-DL-PM_SVAN 2TRN', category: 'PERLOAN' },
+    { desc: 'EB-MSME-TL-COM VEH 50L', category: 'PERLOAN' },
+    { desc: 'SBI SURAKSHA', category: 'PENLOAN' },
+    { desc: 'PM SURYA GHAR', category: 'PMSURYA' }
+  ]);
+  const [isMappingsCollapsed, setIsMappingsCollapsed] = useState(false);
+
+  // State: Historical (Existing) Data
+  const [historyFiles, setHistoryFiles] = useState({
+    xpress: { name: null, data: [] },
+    pension: { name: null, data: [] },
+    gold: { name: null, data: [] },
+    pmsurya: { name: null, data: [] }
+  });
+
+  // State: Results (Output Data)
+  const [results, setResults] = useState({
+    xpress: [], pension: [], gold: [], pmsurya: []
+  });
+  
+  // State: UI Feedback
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processedStatus, setProcessedStatus] = useState(null);
+
+  // Pagination & Results View State
+  const [selectedResultCategory, setSelectedResultCategory] = useState('xpress');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  // --- Handlers: Mappings ---
+  const addMapping = () => setMappings([...mappings, { desc: '', category: 'PERLOAN' }]);
+  const removeMapping = (index) => setMappings(mappings.filter((_, i) => i !== index));
+  const updateMapping = (index, field, value) => {
+    const newMappings = [...mappings];
+    newMappings[index][field] = value;
+    setMappings(newMappings);
+  };
+
+  const handleMappingUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const data = parseCSV(text);
+      
+      const newMappings = data
+        .filter(row => row['Product_Desc'] && row['Category'])
+        .map(row => ({
+          desc: row['Product_Desc'].trim(),
+          category: row['Category'].trim()
+        }));
+        
+      if (newMappings.length > 0) {
+        setMappings(newMappings);
+        setIsMappingsCollapsed(true); // Auto-collapse on successful upload
+      } else {
+        alert("Could not find 'Product_Desc' and 'Category' columns in the uploaded CSV.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+  // --- Handlers: Historical Data Upload ---
+  const handleHistoryUpload = (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const data = parseCSV(text);
+      setHistoryFiles(prev => ({ ...prev, [type]: { name: file.name, data } }));
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+  // --- Core Processing Logic: Equivalent to M-Code Pipeline ---
+  const processPipeline = (loanFileContent, fileName) => {
+    setIsProcessing(true);
+    setProcessedStatus(null);
+    try {
+      // 1. Parse File & Extract Snapshot Date (Master_Snapshot)
+      const rawData = parseCSV(loanFileContent);
+      const snapshotDate = extractSnapshotDate(fileName);
+
+      // Filter & Map valid categories
+      const mappedData = [];
+      rawData.forEach(row => {
+        const acctDesc = row['ACCTDESC']?.trim();
+        const mapping = mappings.find(m => m.desc === acctDesc);
+        if (mapping) {
+          mappedData.push({ ...row, Category: mapping.category, SnapshotDate: snapshotDate });
+        }
+      });
+
+      // Processing helper for each category
+      const processCategory = (categoryCode, historicalData, prefix, padCount) => {
+        // Step 2: Live Filter
+        const liveData = mappedData.filter(d => d.Category === categoryCode);
+        const liveAccountNos = new Set(liveData.map(l => l['ACCTNO']));
+
+        // Step 3: Status Update for Existing
+        const updatedExisting = historicalData.map(ext => {
+          const acctNo = ext['Account No.'] || ext['ACCTNO']; 
+          if (liveAccountNos.has(acctNo)) {
+            return { ...ext, 'Status': 'ACTIVE', 'Last Seen': snapshotDate };
+          } else {
+            return { ...ext, 'Status': 'CLOSED', 'Last Seen': formatLastSeenDate(ext['Last Seen']) };
+          }
+        });
+
+        // Step 4: Find New Accounts (Anti-Join)
+        const existingAccountNos = new Set(historicalData.map(ext => ext['Account No.'] || ext['ACCTNO']));
+        let newAccounts = liveData.filter(l => !existingAccountNos.has(l['ACCTNO']));
+
+        // Sort new accounts ascending
+        newAccounts.sort((a, b) => (a['ACCTNO'] > b['ACCTNO'] ? 1 : -1));
+
+        // Find max existing serial
+        let maxSerial = 0;
+        historicalData.forEach(e => {
+          const s = e['Serial No.'] || '';
+          const numStr = s.replace(prefix, '').trim();
+          const num = parseInt(numStr, 10);
+          if (!isNaN(num) && num > maxSerial) maxSerial = num;
+        });
+
+        // Format new accounts
+        const formattedNew = newAccounts.map((row, index) => {
+          const serialNum = maxSerial + index + 1;
+          const paddedSerial = String(serialNum).padStart(padCount, '0');
+          return {
+            'Serial No.': `${prefix}${paddedSerial}`,
+            'Account No.': row['ACCTNO'],
+            'Account Description': row['ACCTDESC'],
+            'CIF Number': row['CUSTNUMBER'],
+            'Customer Name': row['CUSTNAME'],
+            'Limit': row['LIMIT'],
+            'Sanction Date': row['SANCTDT'],
+            'Status': 'ACTIVE',
+            'Last Seen': snapshotDate
+          };
+        });
+
+        // Step 5: Final Combination
+        return [...updatedExisting, ...formattedNew];
+      };
+
+      // Execute for all four categories
+      const finalXpress = processCategory('PERLOAN', historyFiles.xpress.data, 'PER', 4);
+      const finalPension = processCategory('PENLOAN', historyFiles.pension.data, 'PEN', 4);
+      const finalGold = processCategory('GOLDLON', historyFiles.gold.data, 'GOLD', 3);
+      const finalPMSurya = processCategory('PMSURYA', historyFiles.pmsurya.data, 'PMS', 4);
+
+      setResults({ xpress: finalXpress, pension: finalPension, gold: finalGold, pmsurya: finalPMSurya });
+      setProcessedStatus(`Successfully processed ${rawData.length} rows. Snapshot date: ${snapshotDate}`);
+      setSelectedResultCategory('xpress'); // Reset view to default
+      setCurrentPage(1);
+      setPageInput('1');
+      setHasProcessed(true);
+      setShowSettings(false); // Close settings if open
+    } catch (error) {
+      setProcessedStatus(`Error processing pipeline: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleLoanFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      processPipeline(event.target.result, file.name);
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+  // --- Render Block: Settings Page ---
+  const renderSettings = () => {
+    // Derived stats for Mappings Summary
+    const mappingStats = {
+      total: mappings.length,
+      xpress: mappings.filter(m => m.category === 'PERLOAN').length,
+      pension: mappings.filter(m => m.category === 'PENLOAN').length,
+      gold: mappings.filter(m => m.category === 'GOLDLON').length,
+      pmsurya: mappings.filter(m => m.category === 'PMSURYA').length
+    };
+
+    return (
+      <div className="max-w-6xl mx-auto animate-fade-in pb-12">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-800">Application Settings</h2>
+            <p className="text-gray-500 mt-2">Manage mappings and historical base files. These are typically one-time configurations.</p>
+          </div>
+        </div>
+
+        <div className="space-y-10">
+          {/* Settings Section 1: Mappings */}
+          <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden transition-all duration-300">
+            <div 
+              className="p-6 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => setIsMappingsCollapsed(!isMappingsCollapsed)}
+            >
+               <div className="flex-1">
+                 <div className="flex items-center gap-2">
+                   <h3 className="text-xl font-bold text-gray-800">1. Product Mappings</h3>
+                   {isMappingsCollapsed ? <ChevronDown className="w-5 h-5 text-gray-500" /> : <ChevronUp className="w-5 h-5 text-gray-500" />}
+                 </div>
+                 <p className="text-gray-500 text-sm mt-1">Map Excel `PRODUCT_LIST` descriptions to internal system categories.</p>
+               </div>
+               <label 
+                 className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white py-2 px-4 rounded-md text-sm font-medium shadow transition-colors flex items-center gap-2"
+                 onClick={(e) => e.stopPropagation()} // Prevent toggling accordion when clicking upload
+               >
+                  <Upload className="w-4 h-4" /> Import PRODUCT_LIST.csv
+                  <input type="file" accept=".csv" className="hidden" onChange={handleMappingUpload} />
+               </label>
+            </div>
+
+            {/* Collapsed Summary View */}
+            {isMappingsCollapsed && (
+               <div className="p-5 bg-white flex flex-wrap gap-4 items-center animate-fade-in">
+                  <div className="bg-gray-100 px-4 py-2 rounded-lg text-sm border border-gray-200">
+                     <span className="font-semibold text-gray-800">Total Rules: </span> {mappingStats.total}
+                  </div>
+                  <div className="bg-blue-50 text-blue-800 px-4 py-2 rounded-lg text-sm border border-blue-200 shadow-sm">
+                     <span className="font-semibold">Xpress (PERLOAN): </span> {mappingStats.xpress}
+                  </div>
+                  <div className="bg-green-50 text-green-800 px-4 py-2 rounded-lg text-sm border border-green-200 shadow-sm">
+                     <span className="font-semibold">Pension (PENLOAN): </span> {mappingStats.pension}
+                  </div>
+                  <div className="bg-amber-50 text-amber-800 px-4 py-2 rounded-lg text-sm border border-amber-200 shadow-sm">
+                     <span className="font-semibold">Gold (GOLDLON): </span> {mappingStats.gold}
+                  </div>
+                  <div className="bg-teal-50 text-teal-800 px-4 py-2 rounded-lg text-sm border border-teal-200 shadow-sm">
+                     <span className="font-semibold">PM Surya (PMSURYA): </span> {mappingStats.pmsurya}
+                  </div>
+                  <button 
+                    onClick={() => setIsMappingsCollapsed(false)} 
+                    className="ml-auto text-sm text-blue-600 hover:text-blue-800 font-medium px-4 py-2 rounded hover:bg-blue-50 transition-colors"
+                  >
+                    Edit Mappings
+                  </button>
+               </div>
+            )}
+
+            {/* Expanded Table View */}
+            {!isMappingsCollapsed && (
+              <>
+                <div className="max-h-96 overflow-y-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-white text-slate-600 text-sm uppercase tracking-wider border-b border-gray-200 shadow-sm">
+                        <th className="p-4">Account Description (ACCTDESC)</th>
+                        <th className="p-4">System Category</th>
+                        <th className="p-4 w-20 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mappings.map((m, i) => (
+                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 border-b border-gray-100">
+                            <input 
+                              type="text" 
+                              value={m.desc} 
+                              onChange={(e) => updateMapping(i, 'desc', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                              placeholder="e.g., SCH LN L-B STAF-WARD<=30L" 
+                            />
+                          </td>
+                          <td className="p-3 border-b border-gray-100">
+                            <select 
+                              value={m.category} 
+                              onChange={(e) => updateMapping(i, 'category', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="PERLOAN">PERLOAN (Xpress)</option>
+                              <option value="PENLOAN">PENLOAN (Pension)</option>
+                              <option value="GOLDLON">GOLDLON (Gold)</option>
+                              <option value="PMSURYA">PMSURYA (PM Surya Ghar)</option>
+                            </select>
+                          </td>
+                          <td className="p-3 border-b border-gray-100 text-center">
+                            <button onClick={() => removeMapping(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-md">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="p-4 bg-gray-50 border-t border-gray-200">
+                  <button onClick={addMapping} className="flex items-center gap-2 text-sm text-blue-600 font-medium hover:text-blue-800">
+                    <Plus className="w-4 h-4" /> Add Mapping Row
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Settings Section 2: Historical Data */}
+          <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+               <h3 className="text-xl font-bold text-gray-800">2. Historical Data (Existing Records)</h3>
+               <p className="text-gray-500 text-sm mt-1">Upload the previous run's final CSVs. If skipped, all accounts in the master file will be treated as entirely new.</p>
+            </div>
+            <div className="p-6 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { id: 'xpress', title: 'XPRESS Existing', color: 'blue' },
+                { id: 'pension', title: 'PENSION Existing', color: 'green' },
+                { id: 'gold', title: 'GOLD Existing', color: 'amber' },
+                { id: 'pmsurya', title: 'PM SURYA Existing', color: 'teal' }
+              ].map(cat => (
+                <div key={cat.id} className={`bg-gray-50 rounded-xl border-t-4 border-${cat.color}-500 p-6 flex flex-col items-center justify-center text-center shadow-sm`}>
+                  <History className={`w-10 h-10 text-${cat.color}-500 mb-3`} />
+                  <h3 className="font-semibold text-gray-800 mb-1">{cat.title}</h3>
+                  {historyFiles[cat.id].name ? (
+                    <div className="text-sm text-green-600 font-medium break-all mb-4">
+                      Loaded: {historyFiles[cat.id].name} <br/>
+                      ({historyFiles[cat.id].data.length} records)
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400 mb-4">No file uploaded</div>
+                  )}
+                  <label className={`mt-auto w-full cursor-pointer bg-white hover:bg-${cat.color}-50 text-${cat.color}-700 py-2 px-4 rounded-md text-sm font-medium border border-${cat.color}-200 shadow-sm transition-colors`}>
+                    Upload CSV
+                    <input type="file" accept=".csv" className="hidden" onChange={(e) => handleHistoryUpload(e, cat.id)} />
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Render Block: Upload Prompt (Main Screen initially) ---
+  const renderUploadPrompt = () => (
+    <div className="max-w-3xl mx-auto animate-fade-in flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="mb-8 text-center">
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">Run Loan Pipeline</h2>
+        <p className="text-gray-500">Upload your latest daily `LoansBalanceFile.csv` to execute updates and generate new accounts.</p>
+      </div>
+
+      <div className="bg-white p-12 rounded-2xl shadow-sm border-2 border-dashed border-blue-200 flex flex-col items-center justify-center text-center w-full">
+        <div className="bg-blue-50 text-blue-600 p-5 rounded-full mb-6">
+          <Upload className="w-14 h-14" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-3">Upload Master Loan File</h3>
+        <p className="text-sm text-gray-500 mb-8 max-w-sm mx-auto">File must be CSV format and ideally contain the date in the filename (e.g. 13042_20251127_Misc...)</p>
+        
+        <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white py-4 px-10 rounded-full font-semibold shadow-lg transition-transform active:scale-95 flex items-center gap-3 text-lg">
+          {isProcessing ? 'Processing...' : 'Select File & Run Pipeline'}
+          <input type="file" accept=".csv" className="hidden" onChange={handleLoanFileUpload} disabled={isProcessing} />
+        </label>
+      </div>
+
+      {processedStatus && !hasProcessed && (
+        <div className={`mt-6 p-4 rounded-lg flex items-start gap-3 w-full ${processedStatus.includes('Error') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+           {processedStatus.includes('Error') ? <AlertCircle className="w-5 h-5 shrink-0" /> : <CheckCircle className="w-5 h-5 shrink-0" />}
+           <span className="font-medium">{processedStatus}</span>
+        </div>
+      )}
+    </div>
+  );
+
+  // --- Render Block: Results ---
+  const renderResults = () => {
+    const listData = results[selectedResultCategory] || [];
+    const filteredData = statusFilter === 'All' 
+      ? listData 
+      : listData.filter(row => row['Status'] === statusFilter);
+
+    const activeConfig = {
+      xpress: { title: 'Xpress Credits', color: 'blue', exportName: 'XPRESS_FINAL.csv' },
+      pension: { title: 'Pension Loans', color: 'green', exportName: 'PENSION_FINAL.csv' },
+      gold: { title: 'Gold Loans', color: 'amber', exportName: 'GOLD_FINAL.csv' },
+      pmsurya: { title: 'PM Surya Ghar', color: 'teal', exportName: 'PMSURYA_FINAL.csv' }
+    }[selectedResultCategory] || { title: 'Unknown', color: 'gray', exportName: 'UNKNOWN.csv' };
+
+    const totalRows = filteredData.length;
+    const rowsPerPage = 100;
+    const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+    const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+    
+    const startIndex = (safeCurrentPage - 1) * rowsPerPage;
+    const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+    const visibleData = filteredData.slice(startIndex, endIndex);
+
+    const handlePageSubmit = (e) => {
+      e.preventDefault();
+      const page = parseInt(pageInput, 10);
+      if (!isNaN(page) && page >= 1 && page <= totalPages) {
+        setCurrentPage(page);
+        setPageInput(page.toString());
+      } else {
+        setPageInput(safeCurrentPage.toString());
+      }
+    };
+
+    const changeCategory = (cat) => {
+      setSelectedResultCategory(cat);
+      setCurrentPage(1);
+      setPageInput('1');
+      setStatusFilter('All');
+    };
+
+    return (
+      <div className="max-w-7xl mx-auto animate-fade-in flex flex-col h-full">
+        {/* Results Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Output Results</h2>
+            <p className="text-gray-500 text-sm mt-1">
+              {processedStatus ? processedStatus : 'Review the final updated lists and download the CSVs.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Controls Row: Category & Status Filter */}
+        <div className="flex flex-col xl:flex-row gap-4 mb-6 justify-between items-start xl:items-center">
+          {/* Category Selector Buttons */}
+          <div className="flex gap-2 bg-white p-2 rounded-lg shadow-sm border border-gray-200 inline-flex w-full xl:w-auto overflow-x-auto">
+            <button onClick={() => changeCategory('xpress')} className={`flex-1 sm:flex-none px-6 py-2 rounded-md font-medium text-sm transition-colors whitespace-nowrap ${selectedResultCategory === 'xpress' ? 'bg-blue-100 text-blue-800 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>Xpress Credits</button>
+            <button onClick={() => changeCategory('pension')} className={`flex-1 sm:flex-none px-6 py-2 rounded-md font-medium text-sm transition-colors whitespace-nowrap ${selectedResultCategory === 'pension' ? 'bg-green-100 text-green-800 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>Pension Loans</button>
+            <button onClick={() => changeCategory('gold')} className={`flex-1 sm:flex-none px-6 py-2 rounded-md font-medium text-sm transition-colors whitespace-nowrap ${selectedResultCategory === 'gold' ? 'bg-amber-100 text-amber-800 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>Gold Loans</button>
+            <button onClick={() => changeCategory('pmsurya')} className={`flex-1 sm:flex-none px-6 py-2 rounded-md font-medium text-sm transition-colors whitespace-nowrap ${selectedResultCategory === 'pmsurya' ? 'bg-teal-100 text-teal-800 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>PM Surya Ghar</button>
+          </div>
+
+          {/* Right Side Controls: Status Filter & Download */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full xl:w-auto">
+            {/* Status Filter */}
+            <div className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-sm border border-gray-200 w-full sm:w-auto overflow-x-auto">
+              <span className="text-sm font-medium text-gray-500 px-2 whitespace-nowrap">Status:</span>
+              <div className="flex gap-1">
+                <button onClick={() => { setStatusFilter('All'); setCurrentPage(1); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${statusFilter === 'All' ? 'bg-slate-800 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>All</button>
+                <button onClick={() => { setStatusFilter('ACTIVE'); setCurrentPage(1); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${statusFilter === 'ACTIVE' ? 'bg-green-100 text-green-800 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>Active</button>
+                <button onClick={() => { setStatusFilter('CLOSED'); setCurrentPage(1); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${statusFilter === 'CLOSED' ? 'bg-red-100 text-red-800 shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>Closed</button>
+              </div>
+            </div>
+
+            {/* Dynamic Download Button */}
+            <button 
+              onClick={() => exportCSV(results[selectedResultCategory], activeConfig.exportName)} 
+              className={`flex items-center justify-center gap-2 bg-${activeConfig.color}-600 text-white px-5 py-2.5 rounded-lg shadow hover:bg-${activeConfig.color}-700 text-sm font-medium transition-colors w-full sm:w-auto whitespace-nowrap`}
+            >
+              <Download className="w-4 h-4"/> 
+              Download {activeConfig.title} CSV
+            </button>
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <div className="bg-white rounded-xl shadow border border-gray-200 flex flex-col flex-1 min-h-[400px]">
+          {/* Table Header & Stats */}
+          <div className={`bg-${activeConfig.color}-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center`}>
+            <h3 className={`font-bold text-${activeConfig.color}-800 uppercase`}>{activeConfig.title}</h3>
+            <span className={`text-xs font-bold bg-${activeConfig.color}-200 text-${activeConfig.color}-800 px-3 py-1 rounded-full`}>
+              Total: {totalRows} Entries
+            </span>
+          </div>
+
+          {/* Table Content */}
+          <div className="overflow-x-auto flex-1">
+            {listData.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">No data generated for this category.</div>
+            ) : (
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                  <tr>
+                    <th className="p-3 font-semibold text-gray-600">Serial No.</th>
+                    <th className="p-3 font-semibold text-gray-600">Account No.</th>
+                    <th className="p-3 font-semibold text-gray-600">Status</th>
+                    <th className="p-3 font-semibold text-gray-600">Last Seen</th>
+                    <th className="p-3 font-semibold text-gray-600">Customer Name</th>
+                    <th className="p-3 font-semibold text-gray-600 text-right">Limit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {visibleData.map((row, i) => (
+                    <tr key={i} className="hover:bg-slate-50">
+                      <td className="p-3 font-medium text-gray-800">{row['Serial No.']}</td>
+                      <td className="p-3 text-gray-600">{row['Account No.']}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${row['Status'] === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {row['Status']}
+                        </span>
+                      </td>
+                      <td className="p-3 text-gray-600">{row['Last Seen']}</td>
+                      <td className="p-3 text-gray-600">{row['Customer Name'] || row['CUSTNAME']}</td>
+                      <td className="p-3 text-gray-800 font-medium text-right">{formatIndianCurrency(row['Limit'] || row['LIMIT'])}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {listData.length > 0 && (
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-0 z-10">
+              <div className="text-sm text-gray-600">
+                Showing <span className="font-semibold text-gray-800">{totalRows === 0 ? 0 : startIndex + 1}</span> to <span className="font-semibold text-gray-800">{endIndex}</span> of <span className="font-semibold text-gray-800">{totalRows}</span> entries
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <button 
+                    disabled={safeCurrentPage === 1}
+                    onClick={() => { setCurrentPage(prev => Math.max(1, prev - 1)); setPageInput(String(safeCurrentPage - 1)); }}
+                    className="p-1 rounded hover:bg-gray-200 disabled:opacity-50 disabled:hover:bg-transparent text-gray-600 transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm font-medium px-2">Page {safeCurrentPage} of {totalPages}</span>
+                  <button 
+                    disabled={safeCurrentPage === totalPages}
+                    onClick={() => { setCurrentPage(prev => Math.min(totalPages, prev + 1)); setPageInput(String(safeCurrentPage + 1)); }}
+                    className="p-1 rounded hover:bg-gray-200 disabled:opacity-50 disabled:hover:bg-transparent text-gray-600 transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handlePageSubmit} className="flex items-center gap-2 border-l pl-4 border-gray-300">
+                  <label className="text-sm text-gray-600">Go to:</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max={totalPages}
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button type="submit" className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 font-medium transition-colors">
+                    Go
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // --- Main UI Wrapper ---
+  return (
+    <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
+      
+      {/* Global Header */}
+      <header className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-md z-20 shrink-0">
+        <div className="flex items-center gap-3 text-xl font-bold text-blue-400">
+          <CheckCircle className="w-7 h-7" /> LoanFlow Web
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Top Right: Re-upload Button (Only shows if results are visible and settings are closed) */}
+          {hasProcessed && !showSettings && (
+            <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded-md text-sm font-medium shadow transition-colors flex items-center gap-2">
+              <Upload className="w-4 h-4" /> Upload Latest Loan Balance File
+              <input type="file" accept=".csv" className="hidden" onChange={handleLoanFileUpload} disabled={isProcessing} />
+            </label>
+          )}
+
+          {/* Top Right: Settings Toggle */}
+          <button 
+            onClick={() => setShowSettings(!showSettings)} 
+            className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-colors border ${showSettings ? 'bg-slate-800 text-white border-slate-700' : 'text-slate-300 border-transparent hover:bg-slate-800 hover:text-white'}`}
+          >
+            {showSettings ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+            {showSettings ? 'Close Settings' : 'Settings'}
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto p-8">
+        {showSettings 
+          ? renderSettings() 
+          : (hasProcessed ? renderResults() : renderUploadPrompt())
+        }
+      </main>
+
+    </div>
+  );
+}

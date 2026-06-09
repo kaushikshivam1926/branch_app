@@ -810,9 +810,8 @@ export default function RemindersApp() {
       </main>
 
       {/* Footer */}
-      <footer className="py-4 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="w-full h-px mb-4" style={{ backgroundColor: "#333" }} />
+      <footer className="py-4 px-6 bg-white border-t border-gray-200 mt-auto">
+        <div className="max-w-full mx-auto">
           <p className="text-center text-sm" style={{ color: "#666" }}>
             Ideation by <strong>Shivam Kaushik</strong> Developed with AI
           </p>

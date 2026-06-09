@@ -1348,7 +1348,7 @@ export default function FinancialPlanningToolkit() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
       <header 
         className="w-full py-2 px-6"
@@ -1398,7 +1398,7 @@ export default function FinancialPlanningToolkit() {
       </header>
 
       {/* Main Content */}
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 flex-grow">
         {currentView === 'dashboard' && renderDashboard()}
         {currentView === 'retirement' && renderRetirement()}
         {currentView === 'sip' && renderSIP()}
@@ -1410,6 +1410,15 @@ export default function FinancialPlanningToolkit() {
         {currentView === 'education' && renderEducation()}
         {currentView === 'masterplan' && renderMasterPlan()}
       </div>
+
+      {/* Footer */}
+      <footer className="py-4 px-6 bg-white border-t border-gray-200 mt-auto">
+        <div className="max-w-full mx-auto">
+          <p className="text-center text-sm" style={{ color: "#666" }}>
+            Ideation by <strong>Shivam Kaushik</strong> Developed with AI
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

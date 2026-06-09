@@ -1,0 +1,423 @@
+ProductCode,ProductName,Category,SubCategory,Segment,Priority,Secured,Scheme,RiskWeight
+6050-7001,OD Bank's Deposits PER,Personal Loan,OD Against Deposits,General,Medium,Yes,None,0
+6050-7004,OD-LOAN AG DEPOSITS INB JUN20,Personal Loan,OD Against Deposits,General,Medium,Yes,None,0
+6050-7005,OD-LOAN AG DEPOSITS-YONO JUN20,Personal Loan,OD Against Deposits,General,Medium,Yes,None,0
+6050-7006,OD-Loan against FD through INB,Personal Loan,OD Against Fixed Deposit,General,Medium,Yes,None,0
+6050-7007,OD-Lon against FD through YONO,Personal Loan,OD Against Fixed Deposit,General,Medium,Yes,None,0
+6054-1801,SBI HOME EQUITY MAXGAIN APR12,Home Loan,Maxgain OD,General,High,Yes,None,75
+6054-2063,SBI SURAKSHIT HL MAXGN AUG'12,Home Loan,Maxgain OD,General,High,Yes,None,35
+6054-2272,SBI H L MAXGAIN OD (AUG14),Home Loan,Maxgain OD,General,High,Yes,None,35
+6054-2272,SBI HL MAXGAIN OD(WOM-AUG14),Home Loan,Maxgain OD,General,High,Yes,None,35
+6059-1000,OD PERSONAL LOAN STAFF,Personal Loan,Overdraft - Staff,Staff,Medium,No,None,75
+6059-1002,OD FESTIVAL LOAN - STAFF,Personal Loan,Festival Advance,Staff,Low,No,None,75
+6059-1003,AB-OD Persona (STAFF),Personal Loan,Overdraft - Staff,Staff,Medium,No,None,75
+6059-7001,OD Bank Deposits STAFF,Personal Loan,OD Against Deposits,Staff,Medium,Yes,None,0
+6059-7003,OD-Staff Lon against FD YONO,Personal Loan,OD Against Deposits,Staff,Medium,Yes,None,0
+6080-1001,OD MULTIPLE LIMIT,Personal Loan,Overdraft,General,Low,No,None,100
+6250-1012,TLCARLOAN(FEB05FLOAT-M/U,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1015,TL SBI SARAL PER NOV 08,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6250-1026,NEW CAR>3-5 YRS -ALL LOAN,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1027,NEW CAR>5-7YRS-ALL LOANS,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1036,NEW CAR UPTO3YR <7.5L 10%,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1037,NEW CAR>3-5 YRS ALL 10%,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1039,SBI NANO CAR LOAN =<5YRS,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1047,EZEE CAR UPTO3YR <7.5L,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1048,EZEE CAR>3-5 YRS ALL,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1049,EZEE CAR>5-7YRS-ALL,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1056,EZEE CAR LOAN >3-5 Y,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1057,EZEE CAR LOAN5-7 YR,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1060,ADVANTAGE CAR LOAN5-7 YR,Auto Loan,Car Loan,General,High,Yes,None,75
+6250-1601,TL XPRESS CREDIT(PER),Personal Loan,Xpress Credit,General,Medium,No,None,100
+6250-1611,TL XPRESS CREDIT,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6250-2012,SBI REALTY FLOATING INTT,Home Loan,Realty Home Loan,General,High,Yes,None,50
+6250-2015,SBI REALTY Foat upto30la,Home Loan,Realty Home Loan,General,High,Yes,None,50
+6250-2032,SBI SPL HL >5 TO 20 LACS,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2101,H T L Foating Int PER,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2102,HTL-Foating Int (PER),Home Loan,Home Loan,General,High,Yes,None,50
+6250-2111,HTL FLOAT(PER)NOV/04,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2131,HTL FLOAT(PER)MAY/06,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2143,HTL FLOT(P) 20 02 07,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2144,HTL FLOT(P) upto 30 ac,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2160,SBI EASY HL FLT RATE,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2168,EASY HL My Home Camp FLT,Home Loan,Home Loan,General,High,Yes,None,50
+6250-2170,SBI Hi-Five Home Loan,Home Loan,Home Loan,General,High,Yes,None,50
+6250-4001,T L Educationa LoanPER,Education Loan,Student Loan,General,Medium,No,None,75
+6250-4013,STU LOAN TO WARD OF STAFF,Education Loan,Student Loan - Staff,Staff,Medium,No,None,75
+6250-4021,STU LN STAFF-WARD<=7.5LAC,Education Loan,Student Loan - Staff,Staff,Medium,No,None,75
+6250-4022,STU LN STAFF-WARD>7.5LAC,Education Loan,Student Loan - Staff,Staff,Medium,No,None,75
+6250-4037,SCH LN L-B STAF-WARD<=30L,Education Loan,Scholar Loan - Staff,Staff,Medium,No,None,75
+6250-4041,SCH LN L-AA STF-WARD<=50L,Education Loan,Scholar Loan - Staff,Staff,Medium,No,None,75
+6250-4042,GLOBAL ED-VANTAGE STAFF,Education Loan,Global Edvantage,Staff,Medium,No,None,75
+6251-1015,BR-TL SBI SARAL PER,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6251-1055,BR-EZEE CAR LOAN,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1070,BR-EZEE CAR LOAN OCT10,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1071,BR-ADVANTAGE CAR LN OCT10,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1073,BR-EZEE CAR LOAN JAN11,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1074,BR-ADVANTAGE CAR LN JAN11,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1082,ADVANTAGE CAR LOAN TL <5L,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1083,ADVANTAGE CAR LN TL=>5 L,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1093,ADVANTAGE CAR LN TL SEP11,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1114,ADVANTAGE CAR LN TL JAN12,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1125,SBI CAR LOAN SCHEME (TL),Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1132,SBI CAR LN SCHM(TL) AUG12,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1140,SBI CAR LN SCHM(TL)OCT-13,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1171,SBI CAR LN-TL-NEW CAR-MEN,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-1178,SBI TL NEW CAR LOAN-WOMEN,Auto Loan,Car Loan,Women,High,Yes,None,75
+6251-1179,P-SEG CAR LN-AGR TL-WOMEN,Auto Loan,Car Loan,Women,High,Yes,None,75
+6251-1611,BR-TL XPRESS CREDIT,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6251-1613,XPRESS CREDIT-TL-JUN'14,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6251-1627,XPRESS CREDIT-TL-OCT'15,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6251-1801,SBI HOME EQUITY TL APR'12,Home Loan,Home Equity,General,High,Yes,None,50
+6251-1803,SBI HOME TOPUP - TL-NOV14,Home Loan,Home Top-up,General,High,Yes,None,50
+6251-1806,SBI HOME TOPUP-DEC15-(W),Home Loan,Home Top-up,Women,High,Yes,None,50
+6251-1807,SBI HOME TOPUP-DEC15-(O),Home Loan,Home Top-up,General,High,Yes,None,50
+6251-2151,BR-HTL SBI HOME PLUS,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2179,BR-EASY HSG LOAN FLT,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2183,BR-EASY HL SURAKSHIT FLT,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2187,BR-SBI EASY H L JAN/11,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2188,BR-SBI ADV. HL JAN/11,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2222,SBI HSG LN TL<30L MAY'11,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2237,SBI SURAKSHA,Home Loan,Suraksha - Rinn Raksha,General,High,Yes,Suraksha,50
+6251-2238,SBI HOME LOAN TL AUG'11,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2240,SBI REALTY HL TL AUG'11,Home Loan,Realty Home Loan,General,High,Yes,None,50
+6251-2241,SBI SURAKSHIT HL  AUG'11,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2243,MAXGAIN SURAKSHA,Home Loan,Suraksha - Rinn Raksha,General,Medium,No,Suraksha,100
+6251-2245,SBI HOME LOAN TL AUG'12,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2247,SBI REALTY HL TL AUG'12,Home Loan,Realty Home Loan,General,High,Yes,None,50
+6251-2248,SBI SURAKSHIT HL  AUG'12,Home Loan,Home Loan,General,High,Yes,None,50
+6251-2255,SBI HOME LOAN TL (OCT13),Home Loan,Home Loan,General,High,Yes,None,50
+6251-2261,SBI HOME LOAN TL (DEC13),Home Loan,Home Loan,General,High,Yes,None,50
+6251-2262,SBI HL-TL (WOMEN)(DEC13),Home Loan,Home Loan,Women,High,Yes,None,50
+6251-2264,SBI REALTY HL TL (DEC13),Home Loan,Realty Home Loan,General,High,Yes,None,50
+6251-2271,SBI HOME LOAN TL (AUG14),Home Loan,Home Loan,General,High,Yes,None,50
+6251-2272,SBI HL-TL (WOMEN)(AUG14),Home Loan,Home Loan,Women,High,Yes,None,50
+6251-2275,SBI REALTY HL TL (AUG14),Home Loan,Realty Home Loan,General,High,Yes,None,50
+6251-2277,SBI CRE HL TL (AUG14),Home Loan,Home Loan - CRE,General,High,Yes,None,50
+6251-2281,SBI HOME LOAN TL (APR15),Home Loan,Home Loan,General,High,Yes,None,50
+6251-2282,SBI HL-TL (WOMEN)(APR15),Home Loan,Home Loan,Women,High,Yes,None,50
+6251-2311,SBI HOME LOAN TL (OCT15),Home Loan,Home Loan,General,High,Yes,None,50
+6251-2312,SBI HL-TL (WOMEN)(OCT15),Home Loan,Home Loan,Women,High,Yes,None,50
+6251-3286,SBI SPL CAR LOAN SC OCT15,Auto Loan,Car Loan,General,High,Yes,None,75
+6251-4004,BR-T L Educationa LnPER,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4015,SBI STU LN PER 4L OCT11,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4018,SBI STU LN PER 4L FEB 12,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4019,SBI STU LN PER>4-7.5L FEB,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4020,SBI STU LN PER>7.5L FEB12,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4023,SBI STU LN P>4-7.5L DEC12,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4024,SBI STU LN PER>7.5L DEC12,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4028,SBI STU LN PER 4L JUN 15,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4033,SBI STU LN P>4-7.5LJUN 15,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4034,SBI STU LN PER>7.5LJUN 15,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4037,SBI STU LN PER>7.5LOCT 15,Education Loan,Student Loan,General,Medium,No,None,75
+6251-4322,TL-SCHOLAR L-B NO COLLAT,Education Loan,Scholar Loan,General,Medium,No,None,75
+6256-3001,TL Veh-CAR-FLOAT(<OCT2003,Auto Loan,Car Loan,General,High,Yes,None,75
+6256-3002,TL VehCar(PER)FLOAT,Auto Loan,Car Loan,General,High,Yes,None,75
+6259-2011,HOUSING LOAN SUB STAFF,Home Loan,IHL - Subordinate,Staff,High,Yes,None,50
+6259-2012,HOUSING LOAN CLERICAL STF,Home Loan,IHL - Clerical,Staff,High,Yes,None,50
+6259-2013,HOUSING LOAN SUP STAFF,Home Loan,IHL - Officer,Staff,High,Yes,None,50
+6259-2015,IHL-CLERICAL STAFF,Home Loan,IHL - Clerical,Staff,High,Yes,None,50
+6259-2016,IHL-OFF UPTO SMG-V-SEP 14,Home Loan,IHL - Officer,General,High,Yes,None,50
+6259-2024,BR-STAFF HL COMM. <=30L,Home Loan,IHL - Commercial,Staff,High,Yes,None,50
+6259-2034,IHL-OFFICERS UPTO MMGS-3,Home Loan,IHL - Officer,General,High,Yes,None,50
+6259-2035,IHL-OFFICER-SMG-IV-SMGS-V,Home Loan,IHL - Officer,General,High,Yes,None,50
+6259-2054,IHL-OFF-TEGS-VI & VII-CRE,Home Loan,IHL - Officer CRE,General,High,Yes,None,50
+6259-2058,IHL-OFFICERS-SMG-4&5CRE,Home Loan,IHL - Officer CRE,General,High,Yes,None,50
+6259-2135,RLMS-IHL-SMGS4N5-CRE,Home Loan,IHL - Officer CRE,General,High,Yes,None,50
+6259-2204,RLMS-IHL-CLERICAL-NOV22(T,Home Loan,IHL - Clerical,Staff,High,Yes,None,50
+6259-2207,RLMS-IHL-OFFICERSUPTOMMGS,Home Loan,IHL - Officer,Staff,High,Yes,None,50
+6259-2210,RLMS-IHL-OFFICERSMGS IV V,Home Loan,IHL - Officer,Staff,High,Yes,None,50
+6259-3011,TL CAR LOAN CLERICAL,Auto Loan,Car Loan - Staff,Staff,High,Yes,None,75
+6259-3012,TL CAR LOAN-EXECU/SUP STF,Auto Loan,Car Loan - Staff,Staff,High,Yes,None,75
+6259-5005,AB-Car Loan-Staff,Auto Loan,Car Loan - Staff,Staff,High,Yes,None,75
+6330-7001,D L Bank Deposit AGR,Personal Loan,Deposit Related,General,Low,No,None,
+6340-7001,D L Bank Deposit C&I,Personal Loan,Deposit Related,General,Low,No,None,
+6350-7001,D L Bank Deposit PER,Personal Loan,Deposit Related,General,Low,No,None,
+6350-7301,D L IVP/ KVP PER,Personal Loan,Deposit Related,General,Low,No,None,
+6350-7902,DL-SBI Loan to Pen.Nov05,Personal Loan,Pension Loan,General,Medium,No,None,100
+6350-7911,D L Loans-PensionersPER,Personal Loan,Pension Loan,General,Medium,No,None,100
+6350-8001,DL-NRI-FCNB-PER-SELF,Personal Loan,Deposit Related,NRI,Medium,No,None,100
+6351-6011,BR-D L Gold Loan,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6351-6014,LOAN AGNST GOLD ORNAMENTS,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6351-6015,SBI GOLD LOAN-JULY 2014,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6351-6026,SBI GOLD LOAN-OCT 2015,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6351-7003,D L Bank Deposit P  AUG11,Personal Loan,Deposit Related,General,Low,No,None,
+6351-7004,D L Bank Deposit P  JUL12,Personal Loan,Deposit Related,General,Low,No,None,
+6351-7005,D L Bank Deposit P  MAR13,Personal Loan,Deposit Related,General,Low,No,None,
+6351-7311,BR-DL NSCLICKVPMAGNMRBI,Personal Loan,Deposit Related,General,High,Yes,None,100
+6351-7911,BR-DLLoans-PensionersPER,Personal Loan,Pension Loan,General,Medium,No,None,100
+6351-7912,BR-SBILN TO AFFLUENT PENS,Personal Loan,Pension Loan,General,Medium,No,None,100
+6351-7913,SBI PENSION LOAN-OCT14,Personal Loan,Pension Loan,General,Medium,No,None,100
+6351-7914,SBI PENSION LOAN-JUN'15,Personal Loan,Pension Loan,General,Medium,No,None,100
+6351-7915,SBI PENSION LOAN-OCT15,Personal Loan,Pension Loan,General,Medium,No,None,100
+6359-1011,D L Persona LoansSTAFF,Personal Loan,Demand Laon - Staff,Staff,Medium,No,None,100
+6359-1101,D L Festiv AdvanceSTAFF,Personal Loan,Festival Advance,Staff,Medium,No,None,100
+6359-1601,STAFF COMPUTER LOAN FIXED,Personal Loan,Computer Loan,Staff,Medium,No,None,100
+6359-1602,STFF COMPUTER LN FX DEC13,Personal Loan,Computer Loan,Staff,Medium,No,None,100
+6359-3001,D L Vehice -CAR STAFF,Auto Loan,Car Loan - Staff,Staff,High,Yes,None,75
+6359-3102,D L Vehi -2 Whee STAFF,Auto Loan,Two Wheeler Loan - Staff,Staff,High,Yes,None,75
+6359-7001,D L Bank Deposits STAFF,Personal Loan,OD Against Deposits,Staff,Low,No,None,
+6400-1001,RR-TL-HL-JUL19-Upto 75Lac,Home Loan,Home Loan,General,High,Yes,None,50
+6400-2001,EB-HOME LOAN SEP19,Home Loan,Home Loan,General,High,Yes,None,50
+6400-2003,EB-HL-FLEXIPAY SEP19,Home Loan,FlexiPay Home Loan,General,High,Yes,None,50
+6400-2004,EB-HL-PRVLEG-SEP19,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6400-2006,EB-HL-CLSS-(LIG)-SEP 19,Home Loan,CLSS LIG,General,High,Yes,PMAY,50
+6400-2007,EB-HL-CLSS-(MIG-1) SEP19,Home Loan,CLSS MIG-1,General,High,Yes,PMAY,50
+6400-2008,EB-HL-CLSS-(MIG-2) SEP19,Home Loan,CLSS MIG-2,General,High,Yes,PMAY,50
+6400-2009,EB-HL-CLSS-(EWS) SEP19,Home Loan,CLSS EWS,General,High,Yes,PMAY,50
+6400-2055,EB-HOME LOAN (MAX CONV),Home Loan,Home Loan,General,High,Yes,None,50
+6400-2064,EB-HOME LOAN MAY 20,Home Loan,Home Loan,General,High,Yes,None,50
+6400-2066,EB-HL-FLEXIPAY MAY 20,Home Loan,FlexiPay Home Loan,General,High,Yes,None,50
+6400-2067,EB-HL-PRIVLGE- MAY 20,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6400-2070,EB-SBI- HL-REALTY MAY 20,Home Loan,Realty Home Loan,General,High,Yes,None,50
+6400-2083,EB-HL-CLSS-(LIG)-MAY 20,Home Loan,CLSS LIG,General,High,Yes,PMAY,50
+6400-2084,EB-HLCLSS-(MIG-1) MAY 20,Home Loan,CLSS MIG-1,General,High,Yes,PMAY,50
+6400-2085,EB-HL-CLSS-(MIG-2) MAY 20,Home Loan,CLSS MIG-2,General,High,Yes,PMAY,50
+6400-2086,EB-HLCLSS (EWS) MAY 20,Home Loan,CLSS EWS,General,High,Yes,PMAY,50
+6400-2107,EB-RLMS HOME LOAN,Home Loan,Home Loan,General,High,Yes,None,50
+6400-2121,EB-HL-CLSS-(LIG)-APR 21,Home Loan,CLSS LIG,General,High,Yes,PMAY,50
+6400-2164,EB-HOME LOAN APR 21,Home Loan,Home Loan,General,High,Yes,None,50
+6400-2167,EB-HL-PRIVLGE- APR 21,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6400-2170,EB-SBI- HL-REALTY APR 21,Home Loan,Realty Home Loan,General,High,Yes,None,50
+6400-2173,EB- STAFF HL COMM APR 21,Home Loan,IHL - Commercial,Staff,High,Yes,None,50
+6400-2195,EB-HL-PRIVLGE- APRIL 22,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6400-2198,EB-SBI-HL-REALTY APRIL 22,Home Loan,Realty Home Loan,General,High,Yes,None,50
+6400-2204,EB-HOME LOAN APR 22,Home Loan,Home Loan,General,High,Yes,None,50
+6400-2213,RLMS-IHL-COMML-TERM LOAN-,Home Loan,IHL - Commercial,Staff,High,Yes,None,100
+6400-2215,EB-RLMS-HL-COMBO LOAN-JUN,Home Loan,Combo Home Loan,General,High,Yes,None,50
+6400-2221,EB-RLMS HOME LOAN-NRI,Home Loan,Home Loan,NRI,High,Yes,None,50
+6400-2231,EB-RLMS-HOME LON-FLEXIPAY,Home Loan,FlexiPay Home Loan,General,High,Yes,None,50
+6400-2272,EB-RLMS-HL-PMAY U2.0LIG-W,Home Loan,PMAY (U2.0 LIG),Women,High,Yes,PMAY,50
+6400-2297,EB-RLMS HL PRIVILEGE,Home Loan,Home Loan,General,High,Yes,None,50
+6400-2601,EB-HOME TOPUP SEP 19,Home Loan,Home Top-up,General,High,Yes,None,50
+6400-2604,EB-TL-P-LAP-NSAL-SEP 19,Home Loan,P-LAP,General,High,Yes,None,100
+6400-2606,EB-SBI SURAKSHA,Home Loan,Suraksha - Rinn Raksha,General,High,Yes,Suraksha,50
+6400-2609,EB-HOME TOPUP-MAY 20,Home Loan,Home Top-up,General,High,Yes,None,50
+6400-2619,EB-RLMS-HOME TOPUP LOAN,Home Loan,Home Top-up,General,High,Yes,None,50
+6400-2620,EB-RLMS-(P-LAP),Home Loan,P-LAP,General,High,Yes,None,100
+6400-2621,EB-HOME TOPUP-TL-APRIL 22,Home Loan,Home Top-up,General,High,Yes,None,50
+6400-2626,EB-TL-ASGY>2 acupto6l,Home Loan,Surya Ghar - Rooftop Solar,General,Medium,Yes,None,100
+6400-3102,EB-SC-A NO COL JUN21,Education Loan,Scholar Loan,General,High,Yes,None,50
+6400-3106,EB-SC-B NonNIT NO COLJN21,Education Loan,Scholar Loan,General,High,Yes,None,50
+6400-3107,EB-SC-C-NITS NO COL JUN21,Education Loan,Scholar Loan,General,High,Yes,None,50
+6400-3112,EB-GLOBAL 7.5-1.5Cr JUN21,Education Loan,Global Edvantage,General,High,Yes,None,100
+6400-3116,EB-STU- <=4L JUN21,Education Loan,Student Loan,General,Medium,No,None,75
+6400-3117,EB-STU- >4-7.5L JUN21,Education Loan,Student Loan,General,Medium,No,None,75
+6400-3119,EB-ST-IN-NonMED>7.5-50 OT,Education Loan,Student Loan,General,Medium,No,None,75
+6400-3120,EB-ST-IN-MED> 7.5 - NIRF,Education Loan,Student Loan,General,Medium,No,None,75
+6400-3138,EB-BSD-SC-A NO COL JUN22,Home Loan,Home Loan,General,High,Yes,None,50
+6400-3142,EB-BSD-SC-B NonNIT NO COL,Home Loan,Home Loan,General,High,Yes,None,50
+6400-3172,EB-RLMS EL SCHOLAR A_NO C,Education Loan,Scholar Loan,General,Medium,No,None,75
+6400-3174,EB-RLMS EL SCHOLAR B_NO C,Education Loan,Scholar Loan,General,Medium,No,None,75
+6400-3181,EB-RLMS-EL STUDENT EDU_NO,Education Loan,Student Loan,General,Medium,No,None,75
+6400-3201,EB-RLMS_Gobal_7.5-50L NO,Education Loan,Global Edvantage,General,High,Yes,None,100
+6400-3205,EB-PMVL_UTTAM,Education Loan,PM Vidyalaxmi,General,Medium,No,PMAY,100
+6400-3601,EB-TL-SGYupto2ac,Home Loan,Surya Ghar - Rooftop Solar,General,Medium,Yes,None,100
+6400-3601,EB-TL-SGYupto2lac,Home Loan,Surya Ghar - Rooftop Solar,General,Medium,Yes,None,100
+6400-3602,EB-TL-SGY>2 acupto6lac,Home Loan,Surya Ghar - Rooftop Solar,General,Medium,Yes,None,100
+6400-4035,EB-MSME-TL-DAY NULM,MSME,DAY-NULM Loan,General,Medium,No,DAY NULM,100
+6400-4086,EB-DL-PM_SVANidhi,MSME,PM SVANidhi Loan,General,Medium,No,PM SVANidhi,100
+6400-4108,EB-DL-PM_SVAN 2TRN,MSME,PM SVANidhi Loan,General,Medium,No,PM SVANidhi,100
+6400-4125,EB-MSME-TL-COM VEH 50L,MSME,Commercial Vehicle Loan,General,High,Yes,None,100
+6400-4134,EB-DL-PM_SVAN 3TRN,MSME,PM SVANidhi Loan,General,Medium,No,PM SVANidhi,100
+6400-4158,EB-MSME-SSI-MUDRA,MSME,MUDRA Loan,General,Medium,No,Mudra,100
+6400-4159,EB-MSME-TL-SBF-MUDRA,MSME,MUDRA Loan,General,Medium,No,Mudra,100
+6400-4204,EB-TL-SME CAR LOAN-2024,MSME,SME Car Loan,General,High,Yes,None,100
+6401-4023,EB-DL-PMS-2nd Tranche,MSME,PM SVANidhi Tranche,General,Medium,No,PM SVANidhi,100
+6401-4024,EB-DL-PMS-3rd Tranche,MSME,PM SVANidhi Tranche,General,Medium,No,PM SVANidhi,100
+6450-2001,MC-SBI HOME LOAN Oct .15,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2002,MC-SBI HOME LOAN (For Wom,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2021,MC-JAI JAWAN PENSION LN,Personal Loan,Pension Loan,General,Medium,No,None,100
+6450-2024,MC-TL Fexipay Home Loan,Home Loan,FlexiPay Home Loan,General,High,Yes,None,50
+6450-2025,MC-PRIVILEGE-HL-TL-OTHERS,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6450-2026,MC-PRIVILEGE-HL-TL-WOMEN,Home Loan,Privilege Home Loan,Women,High,Yes,None,50
+6450-2035,MC-SBI HOME TOPUP- TL-NOV,Home Loan,Home Top-up,General,High,Yes,None,50
+6450-2038,MC- SBI SURAKSHA,Home Loan,Suraksha - Rinn Raksha,General,Medium,No,Suraksha,100
+6450-2041,MC- MAXGAIN SURAKSHA,Home Loan,Suraksha - Rinn Raksha,General,Medium,No,Suraksha,100
+6450-2050,MC-CLSS(LIG) HL-W-FEB16,Home Loan,CLSS LIG,Women,High,Yes,PMAY,50
+6450-2058,MC-HL-CLSS-MIG1(W)MAR 17,Home Loan,CLSS MIG-1,Women,High,Yes,PMAY,50
+6450-2102,MC-XPRESS CREDIT-TL-NOV16,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2106,MC-TLXPRSCR-UR-CHKOFF J17,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2107,MC-TLXPRSCR-UR-NCHKOFFJ17,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2108,MC-TL-XPRSCR-R-CHKOFF J17,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2109,MC-TL-XPRSCR-R-NCHKOFFJ17,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2111,MC-SBI STULN<=4 LACSNOV16,Education Loan,Student Loan,General,Medium,No,None,75
+6450-2112,MC-SBI STU LN>4-7.5LNOV16,Education Loan,Student Loan,General,Medium,No,None,75
+6450-2118,MC-SCHOLR L-C NOCOLLNOV16,Education Loan,Scholar Loan,General,Medium,No,None,75
+6450-2128,MC-SBICARLN-TL-NEWCAR N16,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-2132,MC-SBITL NEWCAR LN WO N16,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-2171,MC-SBI HOME LOAN JAN 17,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2172,MC-SBI HOMELOAN(WOM)JAN17,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2173,MC-SBICRE HOMELOAN JAN 17,Home Loan,Home Loan - CRE,General,High,Yes,None,50
+6450-2190,MC-CLSS(EWS) HL-W-JAN17,Home Loan,CLSS EWS,Women,High,Yes,PMAY,50
+6450-2192,MC-CLSS(LIG) HL-W-JAN 17,Home Loan,CLSS LIG,Women,High,Yes,PMAY,50
+6450-2193,MC-PRIVLGE-HL-TL-OTHJAN17,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6450-2194,MC-PRIVLGE-HL-TL-WOMJAN17,Home Loan,Privilege Home Loan,Women,High,Yes,None,50
+6450-2197,MC-TL-XPRESS CREDIT RATED,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2198,MC-TL-XPRESS CREDIT UNRTD,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2199,MC-TL-XPRESS CREDIT JUN19,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2201,MC-SBI HL FEST OFF (WOM),Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2211,MC-PRVLG-HL-TL-FES OFF(W),Home Loan,Privilege Home Loan,Women,High,Yes,None,50
+6450-2218,MC-SBI REALTY SAL(W)JAN17,Home Loan,Realty Home Loan,Women,High,Yes,None,50
+6450-2224,MC-SBI HOME LOAN (BUSMEN),Home Loan,Home Loan,General,High,Yes,None,50
+6450-2226,MC-SBI HAMARA GHAR,Home Loan,Hamara Ghar,General,High,Yes,Hamara Ghar,50
+6450-2228,MC-SBILAP- SALARIED JAN17,Home Loan,P-LAP,General,High,Yes,None,100
+6450-2229,MC-TL LAP-BUSINES/RENTAL,Home Loan,LAP for Business,General,High,Yes,None,100
+6450-2230,MC-SBIHOME TOPUP TL-JAN17,Home Loan,Home Top-up,General,High,Yes,None,50
+6450-2232,MC-SBITL NEWCAR LN(W)J17,Auto Loan,Car Loan,Women,High,Yes,None,75
+6450-2234,MC-SBISPL CAR LOAN SC J17,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-2241,MC-SBI LOYAL NEWCAR-M-J17,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-2255,MC-SBICARLN-TL-NEWCAR J17,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-2257,MC-XPRSCR-SCH/CL-CKOFFJ17,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-2258,MC-JAI JAWAN PEN LN JAN17,Personal Loan,Pension Loan,General,Medium,No,None,100
+6450-2260,MC-SBISTU LNPER>7.5LJAN17,Education Loan,Student Loan,General,Medium,No,None,75
+6450-2262,MC-SCHOLAR L-A NOCOLJAN17,Education Loan,Scholar Loan,General,Medium,No,None,75
+6450-2264,MC-SCHOLAR L-B NOCOLJAN17,Education Loan,Scholar Loan,General,Medium,No,None,75
+6450-2266,MC-EDU LN ABRD 20L-1.5CR,Education Loan,Student Loan - Abroad,General,Medium,No,None,75
+6450-2274,MC-SBI STUDENT LOAN(SO),Education Loan,Student Loan,General,Medium,No,None,75
+6450-2286,MC-SBI HOMELOAN WOM MAY17,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2288,MC-SBICRE HL (WOM) MAY17,Home Loan,Home Loan - CRE,Women,High,Yes,None,50
+6450-2315,MC-SBIHOME TOPUP TL-MAY17,Home Loan,Home Top-up,General,High,Yes,None,50
+6450-2328,MC-HL-CLSS-MIG II(W)JUN17,Home Loan,CLSS MIG-2,Women,High,Yes,PMAY,50
+6450-2329,MC-SBI HOME LOAN JUN 17,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2330,MC-SBI HOMELOAN (W) JUN17,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2347,MC-SBI HL SAL(OTH)SEP17,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2348,MC-SBI HL SAL (W) SEP17,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2349,MC-SBI HL N-SAL(OTH)SEP17,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2350,MC-SBI HL N-SAL(WOM)SEP17,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2366,MC-PRIVLGE-HL-OTH-SEP17,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6450-2367,MC-PRIVLGE-HL-WOM-SEP17,Home Loan,Privilege Home Loan,Women,High,Yes,None,50
+6450-2380,MC-HL-CLS-LIG-SAL(O)SEP17,Home Loan,CLSS LIG,General,High,Yes,PMAY,50
+6450-2381,MC-HL-CLS-LIG-SAL(W)SEP17,Home Loan,CLSS LIG,Women,High,Yes,PMAY,50
+6450-2385,MC-HLCLSS-MIG1SAL(W)SEP17,Home Loan,CLSS MIG-1,Women,High,Yes,PMAY,50
+6450-2388,MC-HLCLSS-MIG2SAL(O)SEP17,Home Loan,CLSS MIG-2,General,High,Yes,PMAY,50
+6450-2393,MC-HAMARAGHAR SAL(W)SEP17,Home Loan,Hamara Ghar,Women,High,Yes,Hamara Ghar,50
+6450-2406,MC-HOME TOPUP SAL SEP 17,Home Loan,Home Top-up,General,High,Yes,None,50
+6450-2407,MC-HOME TOPUP N-SAL SEP17,Home Loan,Home Top-up,General,High,Yes,None,50
+6450-2443,MC-SBI HL SAL-WOM-MAR 18,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2449,MC-HL-CRE N-SAL-WOM-MAR18,Home Loan,Home Loan - CRE,Women,High,Yes,None,50
+6450-2470,MC-HLCLSS-EWS-SAL(O)MAR18,Home Loan,CLSS EWS,General,High,Yes,PMAY,50
+6450-2486,MC-HAMARAGHAR-SAL(O)MAR18,Home Loan,Hamara Ghar,General,High,Yes,Hamara Ghar,50
+6450-2517,MC-CAR LOAN-NEW JUN 2018,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-2519,MC-CAR LON NEW(W)JUN 2018,Auto Loan,Car Loan,Women,High,Yes,None,75
+6450-2617,MC-HL-SAL 30L<81 APRIL18,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2618,MC-HL-SAL 30L>80 <91AP18,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2619,MC-HL-NSAL 30L <81 AP18,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2621,MC-HLCRE SAL30L<81AP18,Home Loan,Home Loan - CRE,General,High,Yes,None,50
+6450-2635,MC-PRIVLGE HL <= 80 AP18,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6450-2639,MC-HLCLSS LIGSAL LTV<=80,Home Loan,CLSS LIG,General,High,Yes,PMAY,50
+6450-2640,MC-HLCLSS LIGSAL LTV >80,Home Loan,CLSS LIG,General,High,Yes,PMAY,50
+6450-2643,MC-HLCLSS MIG1SAL LTV<=80,Home Loan,CLSS MIG-1,General,High,Yes,PMAY,50
+6450-2644,MC-HLCLSS MIG1 SAL LTV>80,Home Loan,CLSS MIG-1,General,High,Yes,PMAY,50
+6450-2648,MC-HLCLSS MIG2 SAL LTV>80,Home Loan,CLSS MIG-2,General,High,Yes,PMAY,50
+6450-2668,MC-SBI HL SAL (W) APR18,Home Loan,Home Loan,Women,High,Yes,None,50
+6450-2685,MC-PRIVLGE-HL-OTH-APR18,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6450-2705,MC-HOME TOPUP SAL Ap-18,Home Loan,Home Top-up,General,High,Yes,None,50
+6450-2706,MC-HOME TOPUP N-SAL Ap-18,Home Loan,Home Top-up,General,High,Yes,None,50
+6450-2708,MC-HOME TOPUP Wout Mort S,Home Loan,Home Top-up,Staff,High,No,None,100
+6450-2709,MC-HOME TOPUP Wout Mort N,Home Loan,Home Top-up,General,High,No,None,100
+6450-2771,MC-NRI REALTY-SAL-OCT18,Home Loan,Realty Home Loan,NRI,High,Yes,None,50
+6450-2773,MC-SBI REALTY SAL(W)OCT18,Home Loan,Realty Home Loan,Women,High,Yes,None,50
+6450-2778,MC-HL-SAL 30L<81 FEB 19,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2779,MC-HL-SAL 30L>80 FEB 19,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2781,MC-HL-NSAL 30L>80 FEB 19,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2850,MC-HL-SAL 30L<81 APR 19,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2851,MC-HL-SAL 30L>80 APR 19,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2852,MC-HL-NSAL 30L <81 APR 19,Home Loan,Home Loan,General,High,Yes,None,50
+6450-2860,MC-PRIVLGE HL <80 APR 19,Home Loan,Privilege Home Loan,General,High,Yes,None,50
+6450-2864,MC-HLCLSS LIGSAL <81APR19,Home Loan,CLSS LIG,General,High,Yes,PMAY,50
+6450-2869,MC-HLCLSS MIG1SAL>80APR19,Home Loan,CLSS MIG-1,General,High,Yes,PMAY,50
+6450-3001,MC-SBI CAR LN-TL-NEW CAR,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-3005,MC-SBI TL NEWCAR LN WOMEN,Auto Loan,Car Loan,Women,High,Yes,None,75
+6450-3009,MC-SBI SPL CAR LOAN SC,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-3032,MC-CAR LOAN-NEW FXD RT,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-3034,MC-CAR LON NEW(W) FXD RT,Auto Loan,Car Loan,Women,High,Yes,None,75
+6450-3041,MC-LOYAL-CARLON (M) FXDRT,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-3072,MC-SPL CAR LON SCH FXD RT,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-3073,MC-ASURED CAR LON(M)FXDRT,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-3083,MC-CAR LOAN SUBSIDIARIES,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-3101,MC-SBI STU LN <=4L OCT19,Education Loan,Student Loan,General,Medium,No,None,75
+6450-3102,MC-STU LN >4-7.5L OCT19,Education Loan,Student Loan,General,Medium,No,None,75
+6450-3118,MC-EL Abrd20L-1.5Cr Oct19,Education Loan,Student Loan - Abroad,General,Medium,No,None,75
+6450-3140,MC-SCH LN-B NO COLL OCT19,Education Loan,Scholar Loan,General,Medium,No,None,75
+6450-4001,MC-SBI STU LN <=4 LACS-DE,Education Loan,Student Loan,General,Medium,No,None,75
+6450-4002,MC-SBI STU LN >4-7.5L DEC,Education Loan,Student Loan,General,Medium,No,None,75
+6450-4013,MC-EDU LOAN ABROAD 20L-1.,Education Loan,Student Loan - Abroad,General,Medium,No,None,75
+6450-4037,MC 1M-SC-LN-C NO COL MAY2,Education Loan,Scholar Loan,General,Medium,No,None,100
+6450-4208,MC-XPRESS CREDIT-TL-OCT'1,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4209,MC-XPRESS CR - PVT SCH/CO,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4219,MC-TL-PRE APPRVD XPRES CR,Personal Loan,PAXC,General,Medium,No,None,100
+6450-4223,MC-CAR LOAN THRU YONO/CRM,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-4226,MC-CARLOAN-EV-P-SEG-FX RT,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-4230,MC-CARLOAN 100PERC FIN,Auto Loan,Car Loan,General,High,Yes,None,75
+6450-4237,MC-TL PAXC (DEFENCE),Personal Loan,PAXC,General,Medium,No,None,100
+6450-4238,MC-TL PAXC (GOVT),Personal Loan,PAXC,General,Medium,No,None,100
+6450-4243,MC-TL-XPRESS LITE-OCT19,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4244,MC-PAPNL-SBI PENSIONERS,Personal Loan,PAPNL,General,Medium,No,None,100
+6450-4246,MC-TL-REAL TIME  XPRES CR,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4251,MC-JAI JAWAN PEN LN APR21,Personal Loan,Pension Loan,General,Medium,No,None,100
+6450-4252,MC-SBI PENSION LOAN-APR21,Personal Loan,Pension Loan,General,Medium,No,None,100
+6450-4254,MC-Per LN Treasury Pensio,Personal Loan,Pension Loan,General,Medium,No,None,100
+6450-4255,MC-Per LN to PSU Pensionr,Personal Loan,Pension Loan,General,Medium,No,None,100
+6450-4256,MC-TL-PRE-APROVD-PEN-LOAN,Personal Loan,PAPNL,General,Medium,No,None,100
+6450-4258,MC-TL-XPRESS CREDIT APR21,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4259,MC-TL-XPRESS ELITE,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4261,MC-TL-XPRESS LITE-APR21,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4262,MC-TL-PRE APPRVD XPRES CR,Personal Loan,PAXC,General,Medium,No,None,100
+6450-4265,MC-TL- RMP XPRESS CREDIT,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4267,MC-PAPL OTHER THAN CSP,Personal Loan,PAPL,General,Medium,No,None,100
+6450-4268,MC-TL-KAV-PL-SAL,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6450-4271,MC-TL-KAV-YONO-PL-SAL,Personal Loan,PAPL,General,Medium,No,None,100
+6450-4279,MC-JAIJAWAN SPARSH PEN LN,Personal Loan,Pension Loan,General,Medium,No,None,100
+6450-4289,MC-TL-PERSONAL LOAN,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6451-4001,MC-SBI PENSION LOAN-NOV16,Personal Loan,Pension Loan,General,Medium,No,None,100
+6451-4011,MC-SBI PENSION LOAN-JAN17,Personal Loan,Pension Loan,General,Medium,No,None,100
+6451-4019,MC-SBI GOLD LOAN-JAN 2017,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6451-4020,MC-GOLDLN- BLET REPAY J17,Gold Loan,Gold Loan - Bullet,General,High,Yes,None,100
+6451-4025,MC-DL-XPRS CRDT INSTA TOP,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6451-4026,SBI-onine DL for E-Comme,MSME,ECOMM,General,Medium,No,None,100
+6451-4029,MC-POS ENBLD-DBT CRD HLDR,Personal Loan,ECOMM,General,Medium,No,None,100
+6451-4030,MC-DL-INSTA PENSION-YONO,Personal Loan,Pension Loan,General,Medium,No,None,100
+6451-4034,MC-DL-SPL PAPL YONO MAY20,Personal Loan,PAPL,General,Medium,No,None,100
+6451-4035,MC-SBI EMI GOLD LOAN,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6451-4036,MC-BULLET REPAY GOLD LOAN,Gold Loan,Gold Loan - Bullet,General,High,Yes,None,100
+6451-4043,MC-DL-XPRS CRDT INSTA TOP,Personal Loan,Xpress Credit,General,Medium,No,None,100
+6451-4046,MC-DL-POS EMI-ECOM-JAN22,Personal Loan,ECOMM,General,Medium,No,None,100
+6451-4061,MC-DL-GOLD LOAN COVID WOR,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6451-4064,MC-DL-LOAN AG NSC/KVP J22,Personal Loan,Loan Against NSC/KVP,General,Medium,Yes,None,100
+6451-4068,MC-BULLET REPAY GOLD 6M,Gold Loan,Gold Loan - Bullet,General,High,Yes,None,100
+6451-4207,MC-SBI-E-PL- MOB APP BSD,Personal Loan,PAPL,General,Medium,No,None,100
+6451-4213,MC-PREAPPROVED-PL FOR CSP,Personal Loan,PAPL,General,Medium,No,None,100
+6451-4215,MC-SBI PENSION LOAN-OCT15,Personal Loan,Pension Loan,General,Medium,No,None,100
+6451-6001,MC-SBI GOLD LOAN-OCT 2015,Gold Loan,Gold Loan - EMI,General,High,Yes,None,100
+6500-2001,EB-HL MAXGAIN SEP 19,Home Loan,Maxgain OD,General,High,Yes,None,35
+6500-2002,EB-HL MAXGAIN (TL CONV),Home Loan,Maxgain OD,General,High,Yes,None,35
+6500-2031,EB-HL MAXGAIN MAY 20,Home Loan,Maxgain OD,General,High,Yes,None,35
+6500-2050,EB-RLMS-HL-MAXGAIN,Home Loan,Maxgain OD,General,High,Yes,None,35
+6500-2081,EB-HL MAXGAIN APRIL 22,Home Loan,Maxgain OD,General,High,Yes,None,35
+6500-2083,EB-NRI MAXGAIN - APRIL 22,Home Loan,Maxgain OD,NRI,High,Yes,None,35
+6500-2601,EB-OD-HOME TOPUP SEP 19,Home Loan,Home Top-up OD,General,High,Yes,None,75
+6500-2608,EB-INSTA HOME TOPUP (YONO) MAY,Home Loan,Home Top-up OD,General,High,Yes,None,75
+6500-2609,EB-OD-RLMS-HOME TOPUP-SEP21,Home Loan,Home Top-up OD,General,High,Yes,None,75
+6500-2621,EB-INSTA-HOME-TOPUP-YONO - APR,Home Loan,Home Top-up OD,General,High,Yes,None,75
+6500-2623,EB-OD-HOME TOPUP - APRIL 2022,Home Loan,Home Top-up OD,General,High,Yes,None,75
+6500-2626,EB-INSTA-HOME-TOPUP-YONO-APR24,Home Loan,Home Top-up OD,General,High,Yes,None,75
+6500-4006,EB-MSME-CC-SMART SCORE,MSME,Cash Credit,MSME,High,Yes,None,100
+6500-4030,EB-MSME-CC-USUAL CREDIT DISPEN,MSME,Cash Credit,MSME,High,Yes,None,100
+6500-4092,EB-MSME-CC-SSI-MUDRA,MSME,MUDRA Cash Credit,MSME,High,Yes,Mudra,100
+6500-4093,EB-MSME-CC-SBF-MUDRA,MSME,MUDRA Cash Credit,MSME,High,Yes,Mudra,100
+6501-4025,EB-DOD-REVAMPED PABL,MSME,PABL,General,Medium,No,None,75
+6501-4026,EB-DOD-PABL-BRE,MSME,PABL,General,Medium,No,None,75
+6551-1001,MC-HL MAXGAIN SAL 30L <80 Ap18,Home Loan,Maxgain OD,General,High,Yes,None,35
+6551-1002,MC-HL MAXGAIN SAL 30L >80<90AP,Home Loan,Maxgain OD,General,High,Yes,None,35
+6551-2001,MC-SBI HL MAXGAIN JAN 17,Home Loan,Maxgain OD,General,High,Yes,None,35
+6551-2002,MC-SBI HL MAXGAIN (WOM) JAN 17,Home Loan,Maxgain OD,General,High,Yes,None,35
+6551-2044,MC-SBI HL MAXGAIN Oct.15,Home Loan,Maxgain OD,General,High,Yes,None,35
+6551-2046,MC-OD Ccan PER JAN 2017,Personal Loan,Overdraft,General,Medium,Yes,None,100
+6551-2047,MC-OD-E-COM PURCHASES JAN 17,Personal Loan,ECOMM,General,Low,No,None,75
+6551-2178,MC-OD SBI LIQUID GOLD LN,Gold Loan,Gold Loan - OD,General,High,Yes,None,75
+6551-2179,MC-HL MAXGAIN - SAL(SOW) SEP 17,Home Loan,Maxgain OD,General,High,Yes,None,35
+6551-4214,MC-OD E-COM AG ER PHYSICAL FORM,Personal Loan,ECOMM,General,Low,No,None,75
+6551-4215,MC-OD-E-COMMERCE PURCHASES,Personal Loan,ECOMM,General,Low,No,None,75
+6999-9951,RA-AUTO LOAN-TL,Other,Recalled Assets - Auto Loan,General,High,Yes,None,75
+6999-9998,RECALLED ASSETS TL,Other,Recalled Assets - TL,General,Low,No,None,
+6999-9999,RECALLED ASSETS  DL,Other,Recalled Assets - DL,General,Low,No,None,

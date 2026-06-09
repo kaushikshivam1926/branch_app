@@ -1,0 +1,629 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!-- saved from url=(0041)https://dbie.rbi.org.in/CFR/cfrSearch.rbi -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta http-equiv="X-UA-Compatible" content="IE=100">
+
+<title>CFR Portal</title>
+
+<link rel="shortcut icon" type="image/x-icon" href="https://dbie.rbi.org.in/CFR/images/RBI_icon.png">
+<link rel="stylesheet" href="./CFR Portal 2_files/bootstrap.min.css">
+<link rel="stylesheet" href="./CFR Portal 2_files/font-awesome.min.css">
+<script type="text/javascript" src="./CFR Portal 2_files/jquery-3.5.0.js.download"></script>
+<script>window.jQuery || document.write('<script src="/CFR/js/jquery-3.5.0.js"><\/script>')</script>
+<link href="./CFR Portal 2_files/jquery-ui.css" rel="stylesheet" type="text/css">
+<script src="./CFR Portal 2_files/jquery-ui.js.download"></script>
+<style type="text/css">
+body{
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.blink_text {
+-webkit-animation-name: blinker;
+-webkit-animation-duration: 2s;
+-webkit-animation-timing-function: linear;
+-webkit-animation-iteration-count: infinite;
+
+-moz-animation-name: blinker;
+-moz-animation-duration: 2s;
+-moz-animation-timing-function: linear;
+-moz-animation-iteration-count: infinite;
+
+ animation-name: blinker;
+ animation-duration: 2s;
+ animation-timing-function: linear;
+ animation-iteration-count: infinite;
+
+ color: red;
+ font-weight: bold;
+ font-size: 16px;
+}
+
+@-moz-keyframes blinker {  
+ 0% { opacity: 1.0; }
+ 50% { opacity: 0.0; }
+ 100% { opacity: 1.0; }
+ }
+
+@-webkit-keyframes blinker {  
+ 0% { opacity: 1.0; }
+ 50% { opacity: 0.0; }
+ 100% { opacity: 1.0; }
+ }
+
+@keyframes blinker {  
+ 0% { opacity: 1.0; }
+ 50% { opacity: 0.0; }
+ 100% { opacity: 1.0; }
+ }
+.removeDisBlock {
+	display: inline;	
+/* 	width: 80%; */
+	max-width: 200px;	
+}
+
+.cfrlabel {
+	width: 45%;
+	text-align: right;
+}
+
+.fa-fw {
+	width: 2em;
+}
+
+body {
+	font-size: 140%;
+}
+
+a {
+	cursor: pointer;
+}
+
+.state-icon {
+	left: -5px;
+}
+
+.list-group-item-primary {
+	color: rgb(255, 255, 255);
+	background-color: rgb(66, 139, 202);
+}
+
+/* DEMO ONLY - REMOVES UNWANTED MARGIN */ .well .list-group {
+	margin-bottom:0px;
+	
+}
+
+.navbar-fixed-top {
+	min-height: 80px;
+}
+
+.cssError {
+	color: #D8000C;
+}
+
+.navbar-header {
+	text-align: center;
+	/* width: 87%; */
+	padding: 2px;
+}
+
+.btn-custom {
+	color: #fff;
+	background-color: #16A085;
+	border-color: #16A085;
+}
+.PAN
+{
+  text-transform: uppercase;
+}
+.error
+  {
+      color: Red;
+      visibility: hidden;
+}
+</style>
+
+<script>
+function validateForm() {
+	//alert("Inside Validform");
+	var vPan=document.getElementById("panNumber").value; 
+	//var vName=document.getElementById("account_name").value; 
+	//alert("Pan : "+vPan);
+	//alert("Name : "+vName);
+	if((vPan=='')){
+		//alert("Pan is Empty");
+		document.getElementById("pan_number.base.errors").style.display="block";
+		return false;
+	}else{
+		var txtPANCard = document.getElementById("panNumber");
+		var regex = /([A-Z]){5}([0-9]){4}([A-Z]){1}$/;
+		
+		if (regex.test(txtPANCard.value.toUpperCase())) {
+			//alert("Valid PAN ");
+        	//lblPANCard.style.visibility = "hidden";
+
+			return true;
+		}else {
+			//alert("inValid PAN ");
+            //lblPANCard.style.visibility = "visible";
+            document.getElementById("lblPANCard").style.display="block";
+            return false;
+        }
+  }
+	
+	
+	
+	
+}
+</script>
+
+
+<script type="text/javascript">
+
+	function searchString(searchPara){
+// 		alert("search parameter is"+searchPara);
+// 		document.getElementById("searchString").value=searchPara;
+		document.getElementById("account_name_hid").value=searchPara;
+		document.getElementById("searchBy").value="NAME";
+// 		alert(document.getElementById("searchString").value);
+		document.getElementById("cfrSearchForm").submit();
+	} 
+	
+	function resetAllControl(){
+		//alert("Inside resetAllControl();");
+		document.getElementById("account_name.base.errors").style.display="none";
+		document.getElementById("account_name.base.errors.character").style.display="none";
+		document.getElementById("pan_number.base.errors").style.display="none";
+		document.getElementById("lblPANCard").style.display="none";
+		document.getElementById("error").style.display="none";
+		//alert("Inside resetAllControl() ;")
+		$("#account_name").val("");
+		$("#panNumber").val("");
+		$("#account_name_hid").val("");
+		$('select[id="amount_involve"]').val('all');
+	}
+	$(function() {
+        $('#account_name').keyup(
+            function() {
+            	$("#account_name_hid").val("");
+            });
+    });
+
+//     $(function() {      
+//     	var search_term="";
+//         $("#account_name").autocomplete({
+//         	minLength: 3,
+//         	delay: 1000,
+//             source: function (request, response) {
+//             	search_term=request.term
+//                 $.getJSON("/CFR/getMachedNames.rbi", {
+//                     term: search_term
+//                 }, response)
+//             },
+//             select: function (event, ui) {
+// 				$("#searchString").val(search_term);
+//             	 var selectDrpValue = ui.item.value;
+//             	 $("#account_name_hid").val(selectDrpValue);
+//             }
+//         });
+//     });
+    
+</script>
+
+
+
+<!-- <script type="text/javascript" language="javascript"> -->
+<!-- //    				var csrfParameter = $("meta[name='_csrf_parameter']").attr("content");   -->
+<!-- //    				var csrfHeader = $("meta[name='_csrf_header']").attr("content");   -->
+<!-- //    				var csrfToken = $("meta[name='_csrf']").attr("content");	    -->
+<!-- //    				console.log(csrfHeader, csrfToken);   -->
+<!--   			</script>   -->
+</head>
+<!-- <script type="text/javascript" language="javascript"> -->
+<!-- // 				var csrfParameter = $("meta[name='_csrf_parameter']").attr("content"); -->
+<!-- // 				var csrfHeader = $("meta[name='_csrf_header']").attr("content"); -->
+<!-- // 				var csrfToken = $("meta[name='_csrf']").attr("content");	  -->
+<!-- 			</script> -->
+<body>
+	<nav class="navbar navbar-default" style="background-color: transparent;border-color: transparent;margin-bottom: 0px;">
+	<div class="container-fluid">
+		<div class="navbar-header" align="center" style="float: none;">
+			<img class="navbar-brand" alt="" src="./CFR Portal 2_files/rbiLogo1.jpg" style="height: 100px; display: block; margin-left: auto; margin-right: auto; float: right;">
+			<img class="navbar-brand" alt="" src="./CFR Portal 2_files/RBI LOGO Final.png" style="height: 100px; display: block; margin-left: auto; margin-right: auto; float: left;">
+		</div>
+	</div>
+	</nav>
+	<div class="well" style="text-align: center; font: normal normal normal 30px/1.4em museo-w01-700, serif; background-image: url(&#39;/CFR/images/body-bg_2.gif&#39;); border: none; padding: 3px;">Query
+		Panel For Central Fraud Registry</div>
+	<div id="cntainer">
+		<div class="col-sm-12 col-md-6 col-md-offset-3">
+			<div class="panel panel-default">
+				<div class="panel-heading" style="background-image: url(&#39;/CFR/images/body-bg_2.gif&#39;); text-align: center; padding: 4px 15px; display: none;">
+					<strong style="font: normal normal normal 20px/1.4em museo-w01-700, serif; font-weight: bold;">Search</strong>
+				</div>
+				<div class="panel-body">
+ 					 
+ 					
+ 					<form id="cfrSearchForm" class="form-horizontal" action="https://dbie.rbi.org.in/CFR/cfrSearchPan.rbi" method="POST" target="_blank" onsubmit="return validateForm()">
+<!--  					onSubmit="return submitSearch(this);"  -->
+ 						<fieldset> 
+							<div class="form-group">
+								<label class="control-label col-sm-4" for="account_name">Party/	Account Name or Associate Concern Name</label>
+								<div class="col-sm-6">
+									<input id="account_name" class="form-control" onkeypress="return IsAlphaNumeric(event);" placeholder="Party/Account Name or Associate Concern Name" autocomplete="off" type="text" maxlength="50">
+									<input id="account_name_hid" name="account_name_hid" type="hidden" value="">
+									<input id="searchString" name="searchString" type="hidden" value="sourabh bramhavanshi">
+
+									<span class="col-sm-12 col-md-12" style="font-size: 10px;font-style: italic;color: #16A085;">Enter full Party/ Account Name</span>
+
+									<!-- <span id="account_name.base.errors" style="text-align:center;padding:9px;display: none;" class="control-label alert alert-danger cssError col-sm-12 col-md-12">Please enter the Account Name</span> -->
+									<span id="account_name.base.errors" style="text-align:center;padding:9px;display: none;" class="control-label alert alert-danger cssError col-sm-12 col-md-12">Please enter atleast three letters of Party/ Account Name</span>
+									<span id="account_name.base.errors.character" style="text-align:center;padding:9px;display: none;" class="control-label alert alert-danger cssError col-sm-12 col-md-12">Please enter atleast three letters of Party/ Account Name</span>
+								
+								</div>
+								<div class="col-sm-2">
+									<input type="button" class="btn btn-lg btn-custom" value="Search" style="padding: 6px 12px; margin-left: 10px;" onclick="jsValidate(&#39;NAME&#39;);" target="_blank">
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="col-sm-12" style="text-align: center; font-weight: bold;">
+								OR
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="control-label col-sm-4" for="panNumber">Pan Number</label>
+								<div class="col-sm-6">
+									<input id="panNumber" name="panNumber" onkeypress="return IsAlphaNumeric(event);" onkeyup="this.value = this.value.toUpperCase();" placeholder="Pan Number" class="form-control" type="text" value="" maxlength="10" autocomplete="off">
+									<span class="col-sm-12 col-md-12" style="font-size: 10px;font-style: italic;color: #16A085;">Enter full PAN number</span>
+									
+									<span id="pan_number.base.errors" style="text-align:center;padding:9px;display: none;" class="control-label alert alert-danger cssError col-sm-12 col-md-12">Please enter full PAN number</span>
+									<!-- <span id="lblPANCard" class="error" style="text-align: center;">Invalid PAN Number</span> -->
+									<span id="lblPANCard" style="text-align: center; padding: 9px; display: none; visibility: hidden;" class="control-label alert alert-danger cssError col-sm-12 col-md-12">Invalid PAN Number</span>
+									
+								</div>
+								<div class="col-sm-2">
+								<input type="hidden" name="_tk" id="_tk" value="r0nvfW-06CznOplVlBr7X3Y5WAKhKFjbpP1JtuENhyI">
+<!-- 									<input type="button" class="btn btn-lg btn-custom" value="Search" style="padding: 6px 12px; margin-left: 10px;" onclick="jsValidate('PAN');"> -->
+										<input type="submit" class="btn btn-lg btn-custom" value="Search" style="padding: 6px 12px; margin-left: 10px;" onclick="setSearchBy(&#39;PAN&#39;)" target="_blank">
+								</div>
+							</div>
+							<br>
+							<div class="form-group">
+								<label class="control-label col-sm-4" for="amount_involve">Amount Involved</label>
+								<div class="col-sm-8">
+									<select id="amount_involve" name="amount_involve" placeholder="Amount Involved" class="form-control removeDisBlock">
+												<option value="all">All Fraud</option>
+												<option value="less1">Less than 0.1 Lakhs</option>
+												<option value="1to5">Rs 0.1 Lakhs to 5 Lakhs</option>
+												<option value="5to50">Rs 5 Lakhs to 50 Lakhs</option>
+												<option value="abv50">Above 50 Lakhs</option>
+									</select>
+										<input type="button" class="btn btn-lg btn-custom" value="Reset" style="padding: 6px 12px; margin-left: 10px;" onclick="resetAllControl();">
+								</div>
+							</div>
+							
+							
+							<div class="form-group">
+								<div class="col-sm-4"></div>
+								<div class="col-sm-8">
+								<input id="searchBy" name="searchBy" type="hidden" value="PAN">
+<!-- 								 -->
+								</div>
+							</div>
+							<span id="error" style="text-align:center;padding:9px;display: none;" class="control-label alert alert-danger cssError col-sm-12 col-md-12">* Special Characters not allowed.</span>
+ 							<span id="error2" style="text-align:center;padding:9px;display: none;" class="control-label alert alert-danger cssError col-sm-12 col-md-12">* please enter atlest Account Name or PAN Number </span>
+ 						
+ 						</fieldset> 
+ 						
+ 					</form> 
+				</div>
+				
+			</div>
+		</div>
+		<div id="cfrSearchResult" class="col-sm-12 col-md-10 col-md-offset-1">
+
+
+
+
+
+<link rel="stylesheet" href="./CFR Portal 2_files/font-awesome.min.css">
+<link rel="stylesheet" href="./CFR Portal 2_files/buttons.dataTables.min.css">
+<link rel="stylesheet" href="./CFR Portal 2_files/jquery.dataTables.min.css">
+<style type="text/css">
+
+
+#userAuditTable_info{
+display: inline-block;
+width: 50%;
+}
+#userAuditTable_paginate{
+display: inline-block;
+width: 50%;
+}
+#userAuditTable_filter{
+margin-top: 5px;
+}
+.paginate_button{
+padding: 0px 0px;
+}
+.spointer:hover {
+  color: blue;
+  cursor: pointer;
+  text-decoration: underline;
+  color: blue;	
+  
+}
+.spointer{
+color: blue;
+}
+.disTable9{
+min-width:150px;
+
+}
+  
+}
+</style>
+
+
+
+		<div id="cfrSearchDataGrid_wrapper" class="dataTables_wrapper form-inline dt-bootstrap no-footer"><div class="row"><div class="col-sm-6"><div class="dataTables_length" id="cfrSearchDataGrid_length"><label>Show <select name="cfrSearchDataGrid_length" aria-controls="cfrSearchDataGrid" class="form-control input-sm"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select> entries</label></div></div><div class="col-sm-6"><div id="cfrSearchDataGrid_filter" class="dataTables_filter"><label>Search:<input type="search" class="form-control input-sm" placeholder="" aria-controls="cfrSearchDataGrid"></label></div></div></div><div class="row"><div class="col-sm-12"><table id="cfrSearchDataGrid" class="table-bordered table-striped table-condensed dataTable no-footer" cellspacing="0" width="100%" role="grid" aria-describedby="cfrSearchDataGrid_info" style="width: 100%;">
+			<thead>
+				<tr role="row"><th class="disTable9 sorting" tabindex="0" aria-controls="cfrSearchDataGrid" rowspan="1" colspan="1" aria-label="Fraud Number: activate to sort column ascending" style="width: 189.766px;">Fraud Number</th><th class="sorting" tabindex="0" aria-controls="cfrSearchDataGrid" rowspan="1" colspan="1" aria-label="Bank Name: activate to sort column ascending" style="width: 100.422px;">Bank Name</th><th class="sorting" tabindex="0" aria-controls="cfrSearchDataGrid" rowspan="1" colspan="1" aria-label="Amount Involved (Rs. in Lakhs): activate to sort column ascending" style="width: 261.547px;">Amount Involved (Rs. in Lakhs)</th><th class="sorting_desc" tabindex="0" aria-controls="cfrSearchDataGrid" rowspan="1" colspan="1" aria-sort="descending" aria-label="Name of Account: activate to sort column ascending" style="width: 146.875px;">Name of Account</th><th class="sorting" tabindex="0" aria-controls="cfrSearchDataGrid" rowspan="1" colspan="1" aria-label="Name of Perpetrator: activate to sort column ascending" style="width: 171.094px;">Name of Perpetrator</th><th class="sorting" tabindex="0" aria-controls="cfrSearchDataGrid" rowspan="1" colspan="1" aria-label="PAN of Perpetrator : activate to sort column ascending" style="width: 159.453px;">PAN of Perpetrator </th><th class="sorting" tabindex="0" aria-controls="cfrSearchDataGrid" rowspan="1" colspan="1" aria-label="Proprietor/Partner/Director Name: activate to sort column ascending" style="width: 274.844px;">Proprietor/Partner/Director Name</th></tr>
+			</thead>
+
+			<tbody>
+				
+			<tr class="odd"><td valign="top" colspan="7" class="dataTables_empty">No data available in table</td></tr></tbody>
+		</table></div></div><div class="row"><div class="col-sm-5"><div class="dataTables_info" id="cfrSearchDataGrid_info" role="status" aria-live="polite">Showing 0 to 0 of 0 entries</div></div><div class="col-sm-7"><div class="dataTables_paginate paging_simple_numbers" id="cfrSearchDataGrid_paginate"><ul class="pagination"><li class="paginate_button previous disabled" id="cfrSearchDataGrid_previous"><a href="https://dbie.rbi.org.in/CFR/cfrSearch.rbi#" aria-controls="cfrSearchDataGrid" data-dt-idx="0" tabindex="0">Previous</a></li><li class="paginate_button next disabled" id="cfrSearchDataGrid_next"><a href="https://dbie.rbi.org.in/CFR/cfrSearch.rbi#" aria-controls="cfrSearchDataGrid" data-dt-idx="1" tabindex="0">Next</a></li></ul></div></div></div></div>
+		
+<script src="./CFR Portal 2_files/jquery.dataTables.min.js.download"></script>
+<script src="./CFR Portal 2_files/dataTables.bootstrap.js.download"></script>
+<script src="./CFR Portal 2_files/dataTables.buttons.min.js.download"></script>
+<script src="./CFR Portal 2_files/jszip.min.js.download"></script>
+<script src="./CFR Portal 2_files/pdfmake.min.js.download"></script>
+<script src="./CFR Portal 2_files/buttons.print.js.download"></script>
+<script src="./CFR Portal 2_files/buttons.html5.min.js.download"></script>
+<script src="./CFR Portal 2_files/vfs_fonts.js.download"></script>
+
+	<script type="text/javascript">
+		$(document).ready(function() {
+			$('#cfrSearchDataGrid').dataTable({
+// 				"aaSorting" : [],
+// 				dom: 'Bfrtip',
+// 				buttons: [
+// 				     	 {extend: 'excel',
+// 				     	title: 'User_Management_Logs',
+// 				     	 exportOptions: {
+// 				     	 columns: [ 0, 1, 2, 3, 4, 5 ]
+// 				     	 }
+// 				     	},{
+// 				     	 extend: 'print',
+// 				     	title: 'User_Management_Logs',
+// 				     	 exportOptions: {
+// 				     	 columns: [ 0, 1, 2, 3, 4, 5 ]
+// 				     	}
+// 				     	}
+// 				             ],
+ 			"order": [[ 3, "desc" ]]
+			});
+
+		});
+	</script>
+
+
+</div> 
+	</div>
+
+<script type="text/javascript">
+
+function setSearchBy(searchBy){
+ 	//alert("PAN-"+searchBy);
+	document.getElementById("searchBy").value=searchBy;
+	
+	var vPan=document.getElementById("panNumber").value; 
+	//alert("Pan : "+vPan);
+	if((vPan=='')){
+		document.getElementById("pan_number.base.errors").style.display="block";
+	}else{
+		var txtPANCard = document.getElementById("panNumber");
+		var regex = /([A-Z]){5}([0-9]){4}([A-Z]){1}$/;
+		
+		if (regex.test(txtPANCard.value.toUpperCase())) {
+			//alert("Valid PAN ");
+        	lblPANCard.style.visibility = "hidden";
+
+			return true;
+		}else {
+			//alert("inValid PAN ");
+            lblPANCard.style.visibility = "visible";
+            return false;
+        }
+		
+	}
+// 	alert(document.getElementById("searchBy").value+" value set");
+}
+
+// function submitSearch(){
+// 	alert("got it");
+// 	document.getElementById("searchBy").value="";
+// }
+
+function jsValidate(searchBy){
+	var flag=0;
+// 	var searchBy=document.getElementById("serachBy").value;
+// 	alert("searchBy-"+searchBy);
+	
+	document.getElementById("account_name.base.errors").style.display="none"; 
+	document.getElementById("pan_number.base.errors").style.display="none";
+	var account_name=0;
+	var panNumber=0;
+	var amount_involve=document.getElementById("amount_involve").value;
+	var namee=document.getElementById("amount_involve").value;
+	var pann=document.getElementById("amount_involve").value;
+	
+// 	var _tk=document.getElementById("_tk").value;
+	var str=document.getElementById("account_name").value;
+	var len=str.length;
+	//alert("len : "+len);
+	//alert("String issssss "+str);
+	//alert("length issssss "+len);
+	let str2=str.trim();
+	let letter = str2.charAt(0);
+	//alert("charAt "+letter);
+	/* if($('#account_name').val()==''|| len<3  ){ */
+/* 	if(len<3)
+		{
+			//alert("3 character At Least ");
+			document.getElementById("account_name.base.errors.character").style.display="block";
+			document.getElementById("searchString").value="";
+			flag=1;
+		}else
+			{ */
+				if(searchBy!=''){
+			// 		alert("searchBy is not null"+searchBy);
+					if(searchBy=='NAME'){
+						//alert("searchBy Name:");
+						if(str2=='' || len<3){
+							//alert("inside if")
+							document.getElementById("account_name.base.errors").style.display="block";
+							document.getElementById("searchString").value="";
+							flag=1;
+						}else{
+							account_name=document.getElementById("account_name").value;
+							document.getElementById("searchString").value=account_name;
+			// 				//alert("value set for searchString");
+						}
+					}else if(searchBy=='PAN'){
+						//alert("searchBy PAN:");
+						if($('#panNumber').val()==''){
+							document.getElementById("pan_number.base.errors").style.display="block";
+							document.getElementById("searchString").value="";
+							flag=1;
+						}else{
+							panNumber=document.getElementById("panNumber").value;
+							document.getElementById("searchString").value=panNumber;
+						}
+					}else{
+						flag=1;
+					}
+				}
+			//}
+	if(flag==0){
+		var data={};
+		data["searchBy"] = searchBy;
+		data["account_name"] = account_name;
+		data["panNumber"] = panNumber;
+		data["amount_involve"] = amount_involve;
+		
+		var token=document.getElementById("_tk").value;
+		
+		$.ajax({
+			
+			type:"POST",
+			contentType: "application/json",
+			url: "/CFR/cfrSearch.rbi?_tk="+token,
+			data: JSON.stringify(data),
+// 			dataType: 'json',
+			cache: false,
+	         beforeSend: function(xhr) {
+	      	 $("#cfrSearchResult").html("<div class='alert-dismissible text-center' role='alert'><strong style='color:#16A085;font-size:25px;'>Loading....</strong></div>");
+	        },
+	 	  success: function(resp) {
+// 	        	alert("data successfully arrived");
+// 	        	alert(resp);
+	        	$("#cfrSearchResult" ).empty();
+	        	$('#cfrSearchResult').html(resp);
+
+	         },
+	         error: function (callback) {
+// 	        	 alert("data successfully arrived:Failure");
+// 	        	 alert("Errorrrrrrrr          "+callback);
+	        	 console.log("error",callback);	 
+        	 }
+		});		
+	}
+	
+// 	if(flag==0){
+// 		var cfrSearch= {'searchBy' :searchBy ,'account_name': account_name,'panNumber':panNumber, 'amount_involve':amount_involve};
+// 		var token=document.getElementById("_tk").value;
+// 		$.ajax({
+// 			url: "/CFR/cfrSearch.rbi?_tk="+token,
+// 			type:"POST",
+// 			contentType: "application/json; charset=utf-8",
+// 			dataType: "json",
+// 			data: JSON.stringify(cfrSearch),
+// 	         beforeSend: function(xhr) {
+// 	      	 $("#cfrSearchResult").html("<div class='alert-dismissible text-center' role='alert'><strong style='color:#16A085;font-size:25px;'>Loading....</strong></div>");
+// 	        },
+// 	 	  success: function(resp) {
+// 	        	$("#cfrSearchResult" ).empty();
+// 	        	$('#cfrSearchResult').html(resp);
+
+// 	         },
+// 	         error: function (callback) {
+// 	        	 console.log("error",callback);	 
+//         	 }
+// 		});		
+// 	}
+}
+</script>
+<script type="text/javascript">
+    	var specialKeys = new Array();
+    	specialKeys.push(8);  //Backspace
+    	specialKeys.push(9);  //Tab
+    	specialKeys.push(46); //Delete
+     	specialKeys.push(36); //Home
+     	specialKeys.push(35); //End
+     	specialKeys.push(37); //Left
+    	specialKeys.push(39); //Right
+    	
+ 
+     	function IsAlphaNumeric(e) {
+    		if(e.which == 13)
+    			{
+    	//			alert("inside if"); 
+    				//document.getElementById("error2").style.display="block";
+    			}else
+    				{
+    					var keyCode = e.keyCode == 0 ? e.charCode : e.keyCode;
+    	        		var ret = ((keyCode >= 48 && keyCode <= 57) || (keyCode >= 65 && keyCode <= 90) || keyCode == 32  || keyCode == 47 || keyCode == 45 || keyCode == 46 || keyCode == 38 || (keyCode >= 97 && keyCode <= 122) || (specialKeys.indexOf(e.keyCode) != -1 && e.charCode != e.keyCode));
+    	       	  		document.getElementById("error").style.display = ret ? "none" : "inline";
+    	      	   		return ret;
+    				}
+    	 }
+	</script>
+	
+	<script> 
+        $(window).ready(function() {
+        $("#cfrSearchForm").on("keypress", function (event) {
+            console.log("aaya");
+            var keyPressed = event.keyCode || event.which;
+            if (keyPressed === 13) {
+               // alert("You pressed the Enter key!!");
+                event.preventDefault();
+                return false;
+            }
+        });
+        });
+  
+        
+        
+        
+        $(document).ready(function(){
+        	
+       	 $('#account_name').bind("cut copy paste",function(e) {
+                e.preventDefault();
+            });
+       	 
+       	 $("#panNumber").bind("cut copy paste", function(e) {
+       			e.preventDefault();
+       		});
+       	});
+    </script>
+
+
+</body></html>

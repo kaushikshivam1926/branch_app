@@ -611,10 +611,12 @@ export default function WebResourceHub() {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 border-t border-gray-300 mt-8">
-        <p className="text-center text-gray-600 text-sm">
-          Ideation by <strong>Shivam Kaushik</strong> Developed with AI
-        </p>
+      <footer className="py-4 px-6 bg-white border-t border-gray-200 mt-auto">
+        <div className="max-w-full mx-auto">
+          <p className="text-center text-sm" style={{ color: "#666" }}>
+            Ideation by <strong>Shivam Kaushik</strong> Developed with AI
+          </p>
+        </div>
       </footer>
 
       {/* Login Modal */}

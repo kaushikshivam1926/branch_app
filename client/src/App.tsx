@@ -18,8 +18,10 @@ import WebResourceHub from "./pages/WebResourceHub";
 import LetterGenerator from "./pages/LetterGenerator";
 import RLMSSupplementer from "./pages/RLMSSupplementer";
 import BranchPortfolioDashboard from "./pages/BranchPortfolioDashboard";
+import VisitLogBook from "./pages/VisitLogBook";
 import FloatingCalculator from "./components/FloatingCalculator";
-
+import NotificationManager from "./components/NotificationManager";
+import FloatingNotificationBell from "./components/FloatingNotificationBell";
 
 function AppRouter() {
   return (
@@ -35,6 +37,7 @@ function AppRouter() {
       <Route path={"/letter-generator"} component={LetterGenerator} />
       <Route path={"/branch-portfolio"} component={BranchPortfolioDashboard} />
       <Route path={"/rlms-supplementer"} component={RLMSSupplementer} />
+      <Route path={"/visit-log-book"} component={VisitLogBook} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -57,6 +60,7 @@ function App() {
         <BranchProvider>
           <TooltipProvider>
             <Toaster />
+            <NotificationManager />
             {/* Hash-based routing ensures the app works when opened as a standalone
                 file:// URL without any web server (e.g., index.html on desktop).
                 Routes become /#/path instead of /path. */}
@@ -64,6 +68,7 @@ function App() {
               <AppRouter />
             </Router>
             <FloatingCalculator />
+            <FloatingNotificationBell />
           </TooltipProvider>
         </BranchProvider>
       </ThemeProvider>
