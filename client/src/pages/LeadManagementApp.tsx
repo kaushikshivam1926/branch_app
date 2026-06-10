@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { loadData, saveData } from "@/lib/db";
+import { validateAdmin } from "@/lib/auth";
 
 interface Lead {
   id: string;
@@ -49,9 +50,6 @@ interface Lead {
   details: string;
   createdAt: string;
 }
-
-const ADMIN_USERNAME = "Admin";
-const ADMIN_PASSWORD = "Sbi@12345";
 
 export default function LeadManagementApp() {
   const { branchName } = useBranch();
@@ -126,7 +124,7 @@ export default function LeadManagementApp() {
   }, [leads]);
 
   const handleLogin = () => {
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    if (validateAdmin(username, password)) {
       setIsAdmin(true);
       setShowLoginDialog(false);
       setUsername("");

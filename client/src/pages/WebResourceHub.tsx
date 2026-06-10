@@ -32,6 +32,7 @@ import {
   Star
 } from "lucide-react";
 import { saveData, loadData } from "@/lib/db";
+import { validateAdminPassword } from "@/lib/auth";
 
 interface WebResource {
   id: string;
@@ -97,7 +98,7 @@ export default function WebResourceHub() {
   }, [resources]);
 
   const handleLogin = () => {
-    if (password === "Sbi@12345") {
+    if (validateAdminPassword(password)) {
       setIsAdmin(true);
       setShowLoginModal(false);
       setPassword("");

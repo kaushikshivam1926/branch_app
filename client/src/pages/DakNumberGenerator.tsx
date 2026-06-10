@@ -16,8 +16,8 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, RotateCcw, Printer, FileText, LogIn, LogOut, Pencil, Trash2, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { loadData, saveData } from "@/lib/db";
 import { useBranch } from "@/contexts/BranchContext";
+import { validateAdminPassword } from "@/lib/auth";
 
-const ADMIN_PASSWORD = "Sbi@12345";
 const STORAGE_KEY = "sbi_letter_refs_13042";
 
 interface DakRecord {
@@ -312,7 +312,7 @@ export default function DakNumberGenerator() {
   };
 
   const handleAdminLogin = () => {
-    if (adminPassword === ADMIN_PASSWORD) {
+    if (validateAdminPassword(adminPassword)) {
       setIsAdminLoggedIn(true);
       setShowLoginModal(false);
       setAdminLoginStatus("");

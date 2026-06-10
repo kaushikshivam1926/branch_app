@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { db, loadData, saveData } from "@/lib/db";
 import { exportAllData as exportAllIndexedDB, importAllData as importAllIndexedDB, downloadBackup } from "@/lib/dataBackup";
+import { validateAdminPassword } from "@/lib/auth";
 
 type IconName = "Mail" | "FileText" | "Calculator" | "CheckSquare" | "UserPlus" | "Globe" | "Shield" | "Building2" | "FileSpreadsheet" | "Receipt" | "IndianRupee" | "FileEdit" | "BarChart3";
 
@@ -450,7 +451,7 @@ export default function Landing() {
   }, [appCards]);
 
   const handleLogin = () => {
-    if (password === "Sbi@12345") {
+    if (validateAdminPassword(password)) {
       setIsAdmin(true);
       setShowLoginModal(false);
       setPassword("");

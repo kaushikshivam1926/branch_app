@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { loadData, saveData } from "@/lib/db";
+import { ADMIN_USERNAME, validateAdmin } from "@/lib/auth";
 
 interface Task {
   id: string;
@@ -54,9 +55,6 @@ interface CompletionRecord {
   completedDate: string;
   originalDueDate: string;
 }
-
-const ADMIN_USERNAME = "Admin";
-const ADMIN_PASSWORD = "Sbi@12345";
 
 // Pre-configured common branch tasks for Indian banking operations
 const PRECONFIGURED_TASKS: Task[] = [
@@ -368,7 +366,7 @@ export default function RemindersApp() {
   };
 
   const handleLogin = () => {
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    if (validateAdmin(username, password)) {
       setIsAdmin(true);
       setShowLoginDialog(false);
       setUsername("");

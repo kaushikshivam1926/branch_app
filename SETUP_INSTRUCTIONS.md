@@ -192,15 +192,14 @@ The application creates the following IndexedDB databases:
 
 ### Admin Password
 
-**Default Password:** `sbi@13042`
+**Default Password:** `Sbi@12345`
 
 **To change the password:**
-1. Edit the file: `client/src/pages/Landing.tsx`
-2. Find: `const ADMIN_PASSWORD = "sbi@13042";`
-3. Change to your desired password
-4. Rebuild the application: `pnpm build`
+1. Create a `.env` file in the project root based on `.env.example`.
+2. Set `VITE_ADMIN_USERNAME` and `VITE_ADMIN_PASSWORD` to your desired values.
+3. Rebuild the application: `pnpm build`
 
-**Important:** The password is stored in the source code. For production use, consider implementing a more secure authentication system.
+**Important:** The password is compiled into the frontend bundle. While more secure than hardcoding in the source, it is still accessible in the client-side code. For high-security environments, consider a server-side authentication solution.
 
 ### Data Security
 
